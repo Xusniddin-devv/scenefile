@@ -37,7 +37,7 @@ export const titleDefinition: SceneDefinition<TitleProps> = {
   },
   css: `
 .sf-title{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*54);column-gap:calc(var(--sf-unit)*6);align-items:end}
-.sf-title__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
+.sf-title__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-display);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
 .sf-title__heading:only-child{grid-column:1/-1}
 .sf-title__heading em{font-style:normal;color:var(--sf-accent)}
 .sf-title__sub{min-width:0;font:400 calc(var(--sf-unit)*4.6)/1.28 var(--sf-font-sans);color:var(--sf-muted);padding-bottom:calc(var(--sf-unit)*1.4);text-wrap:pretty}

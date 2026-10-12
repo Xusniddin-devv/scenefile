@@ -82,7 +82,7 @@ export const chartDefinition: SceneDefinition<ChartProps> = {
 .sf-chart__track{display:block;height:0.66em;border-bottom:1px solid var(--sf-line)}
 .sf-chart__fill{display:block;height:100%;background:var(--sf-text);transform-origin:left center}
 .sf-chart__fill--some{min-width:calc(var(--sf-unit)*0.5)}
-.sf-chart__value{font:800 1em/1 var(--sf-font-sans);letter-spacing:-0.045em;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sf-chart__value{font:800 1em/1 var(--sf-font-display);letter-spacing:-0.045em;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sf-chart__row--lit .sf-chart__fill{background:var(--sf-accent)}
 .sf-chart__row--lit .sf-chart__label{color:var(--sf-text)}
 .sf-chart__row--lit .sf-chart__value{color:var(--sf-accent)}

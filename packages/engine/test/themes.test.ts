@@ -75,7 +75,31 @@ describe("every theme can be read", () => {
     expect(getTheme("paper").background).toBe("#FFFFFF");
     const light = [...THEMES].filter((name) => contrastRatio(getTheme(name).background, "#000000") > 4);
     // White and yellow are light; blue is a color, neither light nor black.
-    expect(light).toEqual(["paper", "solar"]);
+    expect(light).toEqual(["paper", "solar", "mint", "studio"]);
     expect(getTheme("cobalt").background).not.toMatch(/^#0[0-9A-F]0[0-9A-F]0[0-9A-F]$/i);
+  });
+});
+
+describe("themes with a voice of their own", () => {
+  it("offers at least ten, in more than one typeface", () => {
+    expect(THEMES.length).toBeGreaterThanOrEqual(10);
+    expect([...THEMES]).toEqual(expect.arrayContaining(["terminal", "ink", "mint", "studio", "forest"]));
+    const displays = new Set([...THEMES].map((name) => getTheme(name).fontDisplay));
+    expect(displays.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("sets headings in the theme's display face, falling back to its text face", () => {
+    const css = themeCss("ink", undefined, 1920, 1080);
+    expect(css).toContain('--sf-font-display:"Unbounded","Onest",sans-serif');
+    expect(themeCss("terminal", undefined, 1920, 1080)).toContain('--sf-font-display:"Cascadia Code"');
+    expect(themeCss("signal", undefined, 1920, 1080)).toContain('--sf-font-display:"Onest",sans-serif');
+  });
+
+  it("embeds the display face only for themes that use one", () => {
+    const html = (theme: string) => compile(resolved({ version: 1, theme, scenes }).video).html;
+    expect(html("ink")).toContain('font-family:"Unbounded"');
+    expect(html("ink")).toMatch(/\.sf-title__heading\{[^}]*var\(--sf-font-display\)/);
+    expect(html("signal")).not.toContain('font-family:"Unbounded"');
+    expect(html("studio")).toContain('font-family:"Geologica"');
   });
 });

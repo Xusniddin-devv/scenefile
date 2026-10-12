@@ -357,3 +357,30 @@ describe("setup", () => {
     expect(await run(["setup"], { ...io, installBrowser: async () => 1 })).toBe(2);
   });
 });
+
+describe("capture", () => {
+  it("saves a picture of a page and says how to use it", async () => {
+    const asked: unknown[] = [];
+    const { io, out } = capture();
+    const shoot = async (options: { output: string; device?: string }) => {
+      asked.push(options);
+      return { output: options.output, width: 1170, height: 2532, device: "phone" as const };
+    };
+    expect(await run(["capture", "http://localhost:3000", "-o", "shots/home.png", "--device", "phone", "--dark"], { ...io, capture: shoot })).toBe(0);
+    expect(asked).toEqual([{ url: "http://localhost:3000", output: "shots/home.png", device: "phone", fullPage: false, dark: true }]);
+    expect(out()).toContain("1170x2532");
+    expect(out()).toContain('{ "type": "screenshot", "src": "home.png", "device": "phone" }');
+  });
+
+  it("explains what is missing or wrong", async () => {
+    const { io, err } = capture();
+    expect(await run(["capture", "http://localhost:3000"], io)).toBe(2);
+    expect(await run(["capture", "http://localhost:3000", "-o", "a.png", "--device", "watch"], io)).toBe(2);
+    expect(err()).toContain("desktop, phone");
+    const refusing = async () => {
+      throw new Error("Only http and https addresses can be captured.");
+    };
+    expect(await run(["capture", "ftp://x", "-o", "a.png"], { ...io, capture: refusing })).toBe(2);
+    expect(err()).toContain("Only http and https");
+  });
+});

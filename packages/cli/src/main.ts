@@ -17,9 +17,17 @@ if (argv[0] === "mcp") {
   try {
     const { values } = parseArgs({
       args: argv.slice(1),
-      options: { root: { type: "string" }, "allow-remote-images": { type: "boolean", default: false } },
+      options: {
+        root: { type: "string" },
+        "allow-remote-images": { type: "boolean", default: false },
+        "allow-capture": { type: "boolean", default: false },
+      },
     });
-    serveStdio({ root: values.root ?? process.cwd(), allowRemoteImages: values["allow-remote-images"] }).catch(
+    serveStdio({
+      root: values.root ?? process.cwd(),
+      allowRemoteImages: values["allow-remote-images"],
+      allowCapture: values["allow-capture"],
+    }).catch(
       (cause: unknown) => {
         // Failing to start is about how the server was started, not a bug: say why, plainly.
         console.error(cause instanceof Error ? cause.message : String(cause));
@@ -28,7 +36,7 @@ if (argv[0] === "mcp") {
     );
   } catch (cause) {
     console.error(cause instanceof Error ? cause.message : String(cause));
-    console.error("Usage: scenefile mcp [--root <folder>] [--allow-remote-images]");
+    console.error("Usage: scenefile mcp [--root <folder>] [--allow-remote-images] [--allow-capture]");
     process.exitCode = 2;
   }
 } else {

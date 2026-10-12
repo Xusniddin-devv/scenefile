@@ -107,7 +107,13 @@ export function compile(video: ResolvedVideo): Composition {
   const texts = videoTexts(video);
   const textIn = (font: "sans" | "mono"): string =>
     texts.filter((entry) => entry.font === font).map((entry) => entry.text).join("");
-  const fontCss = `${fontFaceCss(theme.fontSans, textIn("sans"))}\n${fontFaceCss(theme.fontMono, textIn("mono"))}`;
+  // Headings may be set in a third face, or in the monospace one; either then needs the headings' characters.
+  const monoText = textIn("mono") + (theme.fontDisplay === theme.fontMono ? textIn("sans") : "");
+  const displayCss =
+    theme.fontDisplay === theme.fontSans || theme.fontDisplay === theme.fontMono
+      ? ""
+      : `\n${fontFaceCss(theme.fontDisplay, textIn("sans"))}`;
+  const fontCss = `${fontFaceCss(theme.fontSans, textIn("sans"))}\n${fontFaceCss(theme.fontMono, monoText)}${displayCss}`;
   // One copy of each image, by id; the runtime attaches them to the images that name them.
   const assetData = Object.fromEntries([...video.assets.values()].map((asset) => [asset.id, asset.dataUri]));
   const assetsScript =

@@ -18,7 +18,7 @@ import {
   type RenderOptions,
   type RenderReport,
   prepareScenefile,
-  renderVideo, createSpeaker } from "@scenefile/render";
+  renderVideo, createSpeaker, type CaptureOptions, type CaptureReport, capturePage } from "@scenefile/render";
 import { type Diagnostic, nearest, parseScenefileText } from "@scenefile/schema";
 import { SCENE_TYPES, isSceneType } from "@scenefile/scenes";
 import { z } from "zod";
@@ -35,6 +35,13 @@ export interface ServerOptions {
   inspect?: (composition: Composition) => Promise<InspectReport>;
   /** Replaces asking ffprobe whether music has a sound track. For tests. */
   hasSound?: (file: string) => Promise<boolean>;
+  /**
+   * Offer the `capture` tool, which opens any web address the caller gives, including ones
+   * on this machine and its network, and saves a picture of it. Off unless asked for.
+   */
+  allowCapture?: boolean;
+  /** Replaces opening a page in the browser. For tests. */
+  capture?: (options: CaptureOptions) => Promise<CaptureReport>;
   /** Makes narration. The server never downloads a voice; one that is missing is reported with how to install it. */
   speak?: Speak;
   /** Replaces name lookup and https requests for image downloads. For tests. */
@@ -92,7 +99,7 @@ const SOURCE = {
  */
 export function createServer(options: ServerOptions): McpServer {
   const root = resolveRoot(options.root);
-  const server = new McpServer({ name: "scenefile", version: "0.1.0" });
+  const server = new McpServer({ name: "scenefile", version: "0.2.0" });
   const jobs = new Map<string, Job>();
   let nextJob = 1;
   /** Renders run one after another; each waits on this. */
@@ -309,6 +316,53 @@ export function createServer(options: ServerOptions): McpServer {
       );
     },
   );
+
+  if (options.allowCapture === true) {
+    server.registerTool(
+      "capture",
+      {
+        description:
+          "Saves a picture of a web page as a PNG in the working folder, to use as the `src` of a `screenshot` scene. Works for sites and for apps running on this machine, at desktop or phone size.",
+        inputSchema: {
+          url: z.string().describe("The page's address, http or https, such as http://localhost:3000/dashboard."),
+          output: z.string().describe("Where to save the picture, inside the working folder, ending in .png."),
+          device: z.enum(["desktop", "phone"]).optional().describe('"desktop" (default) or "phone". With "phone", give the scene "device": "phone" too.'),
+          full_page: z.boolean().optional().describe("Set true for the whole page from the top, not only the first screen."),
+          dark: z.boolean().optional().describe("Set true to ask the page for its dark appearance."),
+          overwrite: z.boolean().optional().describe("Set true to replace a file that already exists at `output`."),
+        },
+      },
+      async (args) => {
+        if (extname(args.output).toLowerCase() !== ".png") return refuse(`The output must be a .png file; got "${args.output}".`);
+        const target = await writableInside(root, args.output);
+        if (!target.ok) return refuse(target.message);
+        const exists = await access(target.path).then(
+          () => true,
+          () => false,
+        );
+        if (exists && args.overwrite !== true) {
+          return refuse(`"${args.output}" already exists and was left alone. Choose another name, or pass \`overwrite: true\` to replace it.`);
+        }
+        try {
+          // One browser at a time, in turn with layout checks.
+          const shot = await oneAtATime(() =>
+            (options.capture ?? capturePage)({
+              url: args.url,
+              output: target.path,
+              ...(args.device ? { device: args.device } : {}),
+              ...(args.full_page ? { fullPage: true } : {}),
+              ...(args.dark ? { dark: true } : {}),
+            }),
+          );
+          return say(
+            `Saved ${args.output}: ${shot.width}x${shot.height} (${shot.device}). Use it as { "type": "screenshot", "src": "${args.output}"${shot.device === "phone" ? ', "device": "phone"' : ""} }.`,
+          );
+        } catch (cause) {
+          return refuse(withoutRoot(cause instanceof Error ? cause.message : String(cause)));
+        }
+      },
+    );
+  }
 
   server.registerTool(
     "job",

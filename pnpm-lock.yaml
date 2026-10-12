@@ -47,9 +47,15 @@ importers:
       '@fontsource-variable/cascadia-code':
         specifier: 5.3.0
         version: 5.3.0
+      '@fontsource-variable/geologica':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/onest':
         specifier: 5.3.1
         version: 5.3.1
+      '@fontsource-variable/unbounded':
+        specifier: 5.3.0
+        version: 5.3.0
       '@scenefile/scenes':
         specifier: workspace:*
         version: link:../scenes
@@ -282,8 +288,14 @@ packages:
   '@fontsource-variable/cascadia-code@5.3.0':
     resolution: {integrity: sha512-6I6M029Lum62MGmP0o+rXRrIBiIiptNDC4slPKLPUJiSB7NHZTLb+Ihk9G7jLvUfWziGXHJLjJPJLBzlEPjS1g==}
 
+  '@fontsource-variable/geologica@5.3.0':
+    resolution: {integrity: sha512-N4pGIVYOXkyXDMooL/HeNYWbx7aMxRP+xABgkjZwi6bVeM/GM/cqHdO8UNFQiR5QR52yLI1RrzgKxm0DKWO2wQ==}
+
   '@fontsource-variable/onest@5.3.1':
     resolution: {integrity: sha512-xaaw6G4HDB2/RczsWLD/2bnib4ykmQlTlBUN3GOEOiyErilZukQWVJG95h9zwAy0i8KY+QzDa+COPfqhI72Acw==}
+
+  '@fontsource-variable/unbounded@5.3.0':
+    resolution: {integrity: sha512-ea565Ncn4r7gPdBEHcmaF31V11hDfkL7b/JCklLobQbMfbu2ZZQrVWNgdeEFWFLqNh36yhieZWOgxdAnMTzrLg==}
 
   '@hono/node-server@2.1.4':
     resolution: {integrity: sha512-2g1qeHl4BduwDn6L8nkAvDrPUWPMlkQ//a5NhP/zIyaXKMjZNRV+cG9Csu+BiJFf6+68pqzjf4Hi5sJGKHuS1g==}
@@ -1743,7 +1755,11 @@ snapshots:
 
   '@fontsource-variable/cascadia-code@5.3.0': {}
 
+  '@fontsource-variable/geologica@5.3.0': {}
+
   '@fontsource-variable/onest@5.3.1': {}
+
+  '@fontsource-variable/unbounded@5.3.0': {}
 
   '@hono/node-server@2.1.4(hono@4.13.13)':
     dependencies:

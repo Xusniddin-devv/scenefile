@@ -43,9 +43,9 @@ export const statDefinition: SceneDefinition<StatProps> = {
   },
   css: `
 .sf-stat{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*9);display:flex;flex-direction:column;justify-content:space-between}
-.sf-stat__value{font:var(--sf-heading-weight) calc(var(--sf-unit)*56)/0.86 var(--sf-font-sans);letter-spacing:-0.07em;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--sf-accent)}
+.sf-stat__value{font:var(--sf-heading-weight) calc(var(--sf-unit)*56)/0.86 var(--sf-font-display);letter-spacing:-0.07em;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--sf-accent)}
 .sf-stat__foot{display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*54);column-gap:calc(var(--sf-unit)*6);align-items:end}
-.sf-stat__label{min-width:0;font:800 calc(var(--sf-unit)*7.8)/1.02 var(--sf-font-sans);letter-spacing:-0.035em;color:var(--sf-text);text-wrap:balance}
+.sf-stat__label{min-width:0;font:800 calc(var(--sf-unit)*7.8)/1.02 var(--sf-font-display);letter-spacing:-0.035em;color:var(--sf-text);text-wrap:balance}
 .sf-stat__label:only-child{grid-column:1/-1}
 .sf-stat__note{min-width:0;font:400 calc(var(--sf-unit)*4.2)/1.3 var(--sf-font-sans);color:var(--sf-muted);text-wrap:pretty}
 @media (max-aspect-ratio:1/1){.sf-stat{justify-content:flex-end;gap:calc(var(--sf-unit)*7)}.sf-stat__foot{grid-template-columns:minmax(0,1fr);row-gap:calc(var(--sf-unit)*4)}}

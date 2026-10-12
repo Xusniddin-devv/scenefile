@@ -21,6 +21,8 @@ const require = createRequire(import.meta.url);
 const SOURCES: Record<FontKey, { pkg: string; slug: string; weight: string }> = {
   onest: { pkg: "@fontsource-variable/onest", slug: "onest", weight: "100 900" },
   cascadiaCode: { pkg: "@fontsource-variable/cascadia-code", slug: "cascadia-code", weight: "200 700" },
+  unbounded: { pkg: "@fontsource-variable/unbounded", slug: "unbounded", weight: "200 900" },
+  geologica: { pkg: "@fontsource-variable/geologica", slug: "geologica", weight: "100 900" },
 };
 
 export interface FontSubset {

@@ -10,6 +10,9 @@ const BOTTOM = 8;
 const SIDE = 9;
 const BAR = 5;
 const CAPTION = 9;
+/** A phone: the thickness of its body around the screen, and the share of a wide frame it may take. */
+const BEZEL = 1.6;
+const PHONE_SHARE = 0.42;
 /** Callout labels, in units: text size, padding inside the box, and distance from the dot. */
 const LABEL_SIZE = 3.4;
 const LABEL_PADDING = 3;
@@ -63,10 +66,18 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
   compile(props, ctx) {
     const { width, height, unit } = ctx.frame;
     const asset = ctx.asset(props.src);
-    const box = {
-      width: width - 2 * SIDE * unit,
-      height: height - (TOP + BOTTOM + (props.url ? BAR : 0) + (props.caption ? CAPTION : 0)) * unit,
-    };
+    const phone = props.device === "phone";
+    // In a wide frame a phone stands at the left with its caption beside it; otherwise the caption goes underneath.
+    const beside = phone && width > height;
+    const box = phone
+      ? {
+          width: (width - 2 * SIDE * unit) * (beside ? PHONE_SHARE : 1) - 2 * BEZEL * unit,
+          height: height - (TOP + BOTTOM + (props.caption && !beside ? CAPTION : 0) + 2 * BEZEL) * unit,
+        }
+      : {
+          width: width - 2 * SIDE * unit,
+          height: height - (TOP + BOTTOM + (props.url ? BAR : 0) + (props.caption ? CAPTION : 0)) * unit,
+        };
     // 16:9 stands in for an image that is not available, so the layout still holds.
     const size = containSize(asset ?? { width: 16, height: 9 }, box);
     const pins = (props.callouts ?? [])
@@ -75,11 +86,11 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
           `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed data-sf-path="${ctx.path}.callouts[${i}].label" style="${labelStyle(callout.x, callout.label, size.width, ctx)}">${escapeHtml(callout.label)}</b></span>`,
       )
       .join("");
-    const bar = props.url ? `<div class="sf-shot__bar" data-sf-fixed data-sf-path="${ctx.path}.url">${escapeHtml(props.url)}</div>` : "";
+    const bar = props.url && !phone ? `<div class="sf-shot__bar" data-sf-fixed data-sf-path="${ctx.path}.url">${escapeHtml(props.url)}</div>` : "";
     const caption = props.caption
-      ? `<p class="sf-shot__caption" data-sf-enter="1" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
+      ? `<p class="sf-shot__caption" data-sf-enter="1" data-sf-fit="${beside ? "4.6,8,0.4" : "3.4,4.6,0.2"}" data-sf-lines="${beside ? 4 : 2}" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
       : "";
-    return `<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
+    return `<div class="sf-shot${phone ? " sf-shot--phone" : ""}"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
   },
   doc: {
     purpose: "An image, such as a screenshot, with an optional address bar, caption and up to three callouts.",
@@ -87,6 +98,7 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
       "src": "The image: a PNG, JPEG or WebP file in the scenefile's folder. Required.",
       "url": "An address to show above the image, up to 80 characters.",
       "caption": "A line under the image, up to 80 characters.",
+      "device": 'Set to "phone" to draw a tall mobile screenshot inside a phone.',
       "callouts": "Up to 3 pointers: { \"x\": 0.5, \"y\": 0.5, \"label\": \"up to 40 characters\" }. x and y are fractions of the image, from its left and top."
     },
     example: {
@@ -107,5 +119,10 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
 .sf-shot__pin::before{content:"";position:absolute;left:calc(var(--sf-unit)*-1);top:calc(var(--sf-unit)*-1);width:calc(var(--sf-unit)*2);height:calc(var(--sf-unit)*2);border-radius:50%;background:var(--sf-accent);box-shadow:0 0 0 calc(var(--sf-unit)*0.5) var(--sf-bg)}
 .sf-shot__pin b{position:absolute;top:calc(var(--sf-unit)*-2.6);width:max-content;padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text);overflow-wrap:anywhere}
 .sf-shot__caption{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
+.sf-shot--phone{flex-direction:row;align-items:center;justify-content:flex-start;gap:calc(var(--sf-unit)*8)}
+.sf-shot--phone .sf-shot__frame{flex:none;margin:0;padding:calc(var(--sf-unit)*1.6);border-radius:calc(var(--sf-unit)*6.4);background:#0A0A0A}
+.sf-shot--phone .sf-shot__view{border-radius:calc(var(--sf-unit)*4.8)}
+.sf-shot--phone .sf-shot__caption{flex:1;min-width:0;font:800 calc(var(--sf-unit)*8)/1.06 var(--sf-font-display);letter-spacing:-0.035em;color:var(--sf-text);text-wrap:balance}
+@media (max-aspect-ratio:1/1){.sf-shot--phone{flex-direction:column;align-items:flex-start;justify-content:space-between;gap:0}.sf-shot--phone .sf-shot__caption{flex:none;font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);letter-spacing:0;color:var(--sf-muted)}}
 `,
 };

@@ -45,7 +45,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, highlight: [1], caption: NASTY },
   outro: { type: "outro", heading: NASTY, highlight: "<u>x</u>", command: NASTY, url: NASTY },
-  screenshot: { type: "screenshot", src: NASTY, url: NASTY, caption: NASTY, callouts: [{ x: 0.5, y: 0.5, label: SHORT_NASTY }] },
+  screenshot: { type: "screenshot", device: "phone", src: NASTY, url: NASTY, caption: NASTY, callouts: [{ x: 0.5, y: 0.5, label: SHORT_NASTY }] },
   compare: { type: "compare", before: { label: SHORT_NASTY, text: NASTY }, after: { label: SHORT_NASTY, src: NASTY } },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };

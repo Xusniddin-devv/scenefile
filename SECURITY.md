@@ -20,6 +20,9 @@ treated as hostile:
 - The MCP server reads and writes only inside the folder it was started with, does not
   download images unless started with `--allow-remote-images`, never downloads a voice,
   and does not replace an existing file unless asked to.
+- `scenefile capture`, and the MCP `capture` tool when the server is started with
+  `--allow-capture`, load whatever address they are given, by design. Rendering and
+  checking never do.
 - A narrator's voice is downloaded from one fixed address and used only if its checksum
   matches.
 

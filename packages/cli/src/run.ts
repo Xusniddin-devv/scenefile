@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, extname, join, resolve as resolvePath } from "node:path";
+import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import {
   type CheckResult,
@@ -30,6 +30,11 @@ import {
   type Finding,
   diagnose,
   installBrowser,
+  CAPTURE_DEVICES,
+  type CaptureDevice,
+  type CaptureOptions,
+  type CaptureReport,
+  capturePage,
 } from "@scenefile/render";
 import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -49,6 +54,8 @@ export interface Io {
   diagnose?: () => Promise<Finding[]>;
   /** Test seam. Defaults to downloading Chromium. */
   installBrowser?: (withDeps: boolean) => Promise<number>;
+  /** Test seam. Defaults to opening the page in the bundled browser. */
+  capture?: (options: CaptureOptions) => Promise<CaptureReport>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -56,6 +63,8 @@ type ExitCode = 0 | 1 | 2;
 const USAGE = `Usage:
   scenefile check <file> [--json]
   scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--workers <n>] [--json]
+  scenefile capture <url> -o <shot.png> [--device desktop|phone] [--full] [--dark] [--wait <seconds>]
+                                   save a picture of a web page, to use in a screenshot scene
   scenefile guide                  how to write a scenefile
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
@@ -181,6 +190,33 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);
       return 0;
     }
+    if (command === "capture") {
+      if (!file) throw new UsageError('"capture" needs a web address, such as http://localhost:3000.');
+      if (!values.output) throw new UsageError('"capture" needs somewhere to save the picture: -o shot.png');
+      const device = values.device ?? "desktop";
+      if (!(device in CAPTURE_DEVICES)) {
+        throw new UsageError(`Unknown device "${device}". Use one of: ${Object.keys(CAPTURE_DEVICES).join(", ")}.`);
+      }
+      const wait = values.wait === undefined ? undefined : Number(values.wait);
+      if (wait !== undefined && !(wait >= 0 && wait <= 30)) throw new UsageError(`--wait is a number of seconds from 0 to 30; got "${values.wait}".`);
+      let shot: CaptureReport;
+      try {
+        shot = await (io.capture ?? capturePage)({
+          url: file,
+          output: values.output,
+          device: device as CaptureDevice,
+          fullPage: values.full,
+          dark: values.dark,
+          ...(wait === undefined ? {} : { waitSeconds: wait }),
+        });
+      } catch (cause) {
+        if (cause instanceof EnvironmentError) throw cause;
+        throw new UsageError(cause instanceof Error ? cause.message : String(cause));
+      }
+      io.out(`Captured ${shot.output}: ${shot.width}x${shot.height} (${shot.device}).`);
+      io.out(`Use it in a scene: { "type": "screenshot", "src": "${basename(shot.output)}"${shot.device === "phone" ? ', "device": "phone"' : ""} }`);
+      return 0;
+    }
     if (command === "setup") {
       const code = await (io.installBrowser ?? installBrowser)(values["with-deps"]);
       if (code !== 0) {
@@ -226,7 +262,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, setup, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, capture, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -299,6 +335,10 @@ function parse(argv: readonly string[]) {
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", short: "v", default: false },
       "with-deps": { type: "boolean", default: false },
+      device: { type: "string" },
+      full: { type: "boolean", default: false },
+      dark: { type: "boolean", default: false },
+      wait: { type: "string" },
     },
   });
 }

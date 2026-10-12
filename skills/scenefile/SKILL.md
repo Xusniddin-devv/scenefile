@@ -65,7 +65,7 @@ A scenefile is a JSON object that says what each scene of a video shows. You nev
 - `version`: Always 1. Required.
 - `format`: "landscape-1080p" (default), "portrait-1080p" for phones, or "square-1080p".
 - `fps`: 30 (default) or 60.
-- `theme`: "signal" (default: black, lime accent), "midnight" (black, orange), "paper" (white, red), "cobalt" (blue, yellow) or "solar" (yellow, blue).
+- `theme`: The look. Black: "signal" (default, lime), "midnight" (orange), "terminal" (monospace, green), "ink" (wide type, red). White: "paper" (red), "studio" (blue). Color: "cobalt" (blue), "solar" (yellow), "mint" (green), "forest" (dark green).
 - `accent`: The accent color as "#RRGGBB". Leave it out to use the theme's.
 - `audio`: Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile's folder.
 - `voice`: Who reads the `say` lines aloud: { "name": "en-kristin", "captions": true }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". No other languages. `captions` also shows the words on screen.
@@ -130,6 +130,7 @@ An image, such as a screenshot, with an optional address bar, caption and up to 
 - `src`: The image: a PNG, JPEG or WebP file in the scenefile's folder. Required.
 - `url`: An address to show above the image, up to 80 characters.
 - `caption`: A line under the image, up to 80 characters.
+- `device`: Set to "phone" to draw a tall mobile screenshot inside a phone.
 - `callouts`: Up to 3 pointers: { "x": 0.5, "y": 0.5, "label": "up to 40 characters" }. x and y are fractions of the image, from its left and top.
 Example: `{"type":"screenshot","src":"dashboard.png","caption":"Your own screenshot, framed and captioned."}`
 

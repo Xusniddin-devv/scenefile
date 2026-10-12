@@ -7,8 +7,8 @@ Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
 **Status: early development.** Eleven scene types (`title`, `statement`, `quote`,
-`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `outro`, `terminal`), five
-themes, narration in English and Russian made on your own machine, captions and a music
+`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `outro`, `terminal`), ten
+themes, screenshots captured from your own web app, narration in English and Russian made on your own machine, captions and a music
 bed work today. Fonts are bundled, so Latin and
 Cyrillic text is set in the same typefaces and layout on every machine (edges differ
 slightly between operating systems); emoji use the machine's own emoji font.
@@ -104,6 +104,9 @@ What the server can touch:
   failed check may quote a few characters of a file that was not a scenefile.
 - It does not replace an existing file unless the caller passes `overwrite: true`.
 - It does not download images unless started with `--allow-remote-images`.
+- It offers no `capture` tool unless started with `--allow-capture`. With it, the model
+  can open any address this machine can reach, including local and private ones, and
+  save a picture of it inside the root. Turn it on only for a model you trust with that.
 - It renders one video at a time, keeps at most five waiting, and stops at once when
   its client disconnects.
 
@@ -143,8 +146,8 @@ server never downloads: it uses voices that are already installed.
 not scenefile's own code: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 (installed with scenefile as an optional dependency; Apache-2.0, with espeak-ng,
 GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voices (downloaded on
-first use), each with the history in the table. The bundled fonts, Onest and Cascadia
-Code, are OFL-1.1. For commercial work, use `en-kristin` or check the
+first use), each with the history in the table. The bundled fonts (Onest, Cascadia
+Code, Unbounded, Geologica) are OFL-1.1. For commercial work, use `en-kristin` or check the
 voice's model card first.
 
 **Captions.** Add `"captions": true` to `voice` and the words appear in a band at the
@@ -160,12 +163,49 @@ What it is not:
   same machine reuses the saved lines and gives the same video; saved lines live in
   `~/.cache/scenefile` (or `$SCENEFILE_HOME`), capped at 500 MB.
 
+## Screenshots of your app
+
+`scenefile capture` opens a page in the bundled browser and saves a picture of it, ready
+for a `screenshot` scene. It works on any site and on an app running on your machine.
+
+```bash
+scenefile capture http://localhost:3000 -o home.png
+scenefile capture http://localhost:3000 -o home-phone.png --device phone
+```
+
+```json
+{ "type": "screenshot", "src": "home-phone.png", "device": "phone", "caption": "Sign in with one tap." }
+```
+
+`--device phone` captures at a phone's size, and `"device": "phone"` draws the picture
+inside a phone. `--full` takes the whole page, `--dark` asks for the page's dark look,
+`--wait 2` gives a slow page two more seconds.
+
+What it is not: it captures web pages, so a native iOS or Android app cannot be opened
+this way. Take those pictures with the simulator or the phone itself and use them the
+same way; the phone frame fits any tall screenshot. Capturing is the one command that
+loads an address you give it, so it is separate from `render`, which never uses the
+network.
+
 ## Themes
 
-![The same scene in each of the five themes](docs/media/themes.png)
+![The same scene in each of the ten themes](docs/media/themes.png)
 
-`signal` (black, lime), `midnight` (black, orange), `paper` (white, red), `cobalt`
-(blue, yellow), `solar` (yellow, blue). Set `"theme"`, and optionally your own `"accent"`.
+| Theme | Background | Accent | Headings |
+|---|---|---|---|
+| `signal` (default) | black | lime | Onest, heavy |
+| `midnight` | black | orange | Onest |
+| `terminal` | black | green | Cascadia Code (monospace) |
+| `ink` | black | red | Unbounded (wide) |
+| `paper` | white | red | Onest, heavy |
+| `studio` | white | blue | Geologica |
+| `cobalt` | blue | yellow | Onest, heavy |
+| `solar` | yellow | blue | Onest, heavy |
+| `mint` | green | blue | Unbounded (wide) |
+| `forest` | dark green | lime | Geologica |
+
+Set `"theme"`, and optionally your own `"accent"`. All four typefaces are bundled, are
+OFL-1.1, and cover Latin and Cyrillic.
 
 ## Transitions
 

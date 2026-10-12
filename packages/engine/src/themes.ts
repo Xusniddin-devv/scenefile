@@ -1,11 +1,13 @@
 import type { ThemeName } from "@scenefile/schema";
 
-export type FontKey = "onest" | "cascadiaCode";
+export type FontKey = "onest" | "cascadiaCode" | "unbounded" | "geologica";
 
 /** CSS family name for each bundled font. */
 export const FONT_FAMILIES: Record<FontKey, string> = {
   onest: "Onest",
   cascadiaCode: "Cascadia Code",
+  unbounded: "Unbounded",
+  geologica: "Geologica",
 };
 
 export interface Theme {
@@ -17,6 +19,8 @@ export interface Theme {
   accent: string;
   fontSans: FontKey;
   fontMono: FontKey;
+  /** The face headings are set in. Characters it lacks fall back to `fontSans`. */
+  fontDisplay: FontKey;
   headingWeight: number;
   headingTracking: string;
 }
@@ -32,6 +36,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     accent: "#C8FF00",
     fontSans: "onest",
     fontMono: "cascadiaCode",
+    fontDisplay: "onest",
     headingWeight: 900,
     headingTracking: "-0.035em",
   },
@@ -44,6 +49,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     accent: "#FF5A1F",
     fontSans: "onest",
     fontMono: "cascadiaCode",
+    fontDisplay: "onest",
     headingWeight: 800,
     headingTracking: "-0.04em",
   },
@@ -57,6 +63,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     accent: "#E63200",
     fontSans: "onest",
     fontMono: "cascadiaCode",
+    fontDisplay: "onest",
     headingWeight: 900,
     headingTracking: "-0.035em",
   },
@@ -70,6 +77,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     accent: "#FFE500",
     fontSans: "onest",
     fontMono: "cascadiaCode",
+    fontDisplay: "onest",
     headingWeight: 900,
     headingTracking: "-0.035em",
   },
@@ -83,7 +91,78 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     accent: "#1433E6",
     fontSans: "onest",
     fontMono: "cascadiaCode",
+    fontDisplay: "onest",
     headingWeight: 900,
+    headingTracking: "-0.035em",
+  },
+  // Everything in the monospace face, green on black: a command line.
+  terminal: {
+    background: "#000000",
+    surface: "#0A0A0A",
+    line: "#262626",
+    text: "#E8E8E8",
+    muted: "#8F8F8F",
+    accent: "#33FF66",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    fontDisplay: "cascadiaCode",
+    headingWeight: 700,
+    headingTracking: "-0.02em",
+  },
+  // Wide, heavy display type on black with a red accent: a poster.
+  ink: {
+    background: "#000000",
+    surface: "#0D0D0D",
+    line: "#2B2B2B",
+    text: "#FFFFFF",
+    muted: "#9A9A9A",
+    accent: "#FF3B30",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    fontDisplay: "unbounded",
+    headingWeight: 800,
+    headingTracking: "-0.03em",
+  },
+  // The same wide type in black on a flat green, with a blue accent.
+  mint: {
+    background: "#00E676",
+    surface: "#00D46C",
+    line: "#00A857",
+    text: "#0A0A0A",
+    muted: "#004D27",
+    accent: "#1433E6",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    fontDisplay: "unbounded",
+    headingWeight: 800,
+    headingTracking: "-0.03em",
+  },
+  // A softer geometric face on white with a blue accent: product pages.
+  studio: {
+    background: "#FFFFFF",
+    surface: "#F0F0F0",
+    line: "#D4D4D4",
+    text: "#0A0A0A",
+    muted: "#5C5C5C",
+    accent: "#1433E6",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    fontDisplay: "geologica",
+    headingWeight: 700,
+    headingTracking: "-0.035em",
+  },
+  // The geometric face in white on a deep green, with a lime accent.
+  forest: {
+    background: "#0F3D2E",
+    surface: "#0B3023",
+    line: "#2A5E4C",
+    text: "#FFFFFF",
+    muted: "#B5CFC5",
+    accent: "#C8FF00",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    fontDisplay: "geologica",
+    headingWeight: 700,
     headingTracking: "-0.035em",
   },
 };
@@ -119,6 +198,7 @@ export function themeCss(name: ThemeName, accent: string | undefined, width: num
     `--sf-accent:${accent ?? theme.accent};`,
     `--sf-font-sans:"${FONT_FAMILIES[theme.fontSans]}",sans-serif;`,
     `--sf-font-mono:"${FONT_FAMILIES[theme.fontMono]}",monospace;`,
+    `--sf-font-display:${theme.fontDisplay === theme.fontSans ? "" : `"${FONT_FAMILIES[theme.fontDisplay]}",`}"${FONT_FAMILIES[theme.fontSans]}",sans-serif;`,
     `--sf-heading-weight:${theme.headingWeight};`,
     `--sf-heading-tracking:${theme.headingTracking};`,
     `--sf-unit:${Math.min(width, height) / 100}px`,

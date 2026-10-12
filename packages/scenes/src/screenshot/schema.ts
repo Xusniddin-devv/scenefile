@@ -16,6 +16,8 @@ export const screenshotSchema = z.strictObject({
   /** An address to show above the image, as in a browser. */
   url: z.string().min(1).max(80).optional(),
   caption: z.string().min(1).max(80).optional(),
+  /** Draw the image inside a phone. For a tall screenshot of a mobile app or site. */
+  device: z.enum(["phone"]).optional(),
   callouts: z.array(calloutSchema).min(1).max(3).optional(),
   duration: durationSchema.default("auto"),
   /** How this scene arrives from the one before it. */

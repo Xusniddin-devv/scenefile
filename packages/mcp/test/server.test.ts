@@ -443,6 +443,38 @@ describe("narration through the server", () => {
   });
 });
 
+describe("capturing a web page through the server", () => {
+  const shoot = (seen: string[]) => async (options: { output: string; device?: string }) => {
+    seen.push(options.output);
+    return { output: options.output, width: 2880, height: 1800, device: "desktop" as const };
+  };
+
+  it("is not offered unless the server was started to allow it", async () => {
+    const seen: string[] = [];
+    const { call, close } = await connect({ capture: shoot(seen) });
+    const reply = await call("capture", { url: "http://localhost:3000", output: "home.png" }).catch(() => ({ isError: true, text: "" }));
+    expect(reply.isError).toBe(true);
+    expect(seen).toEqual([]);
+    await close();
+  });
+
+  it("saves only inside the root, as a PNG, and never over a file that is there", async () => {
+    const seen: string[] = [];
+    writeFileSync(join(root, "kept.png"), "mine");
+    const { call, close } = await connect({ allowCapture: true, capture: shoot(seen) });
+    for (const output of ["../out.png", join(outer, "x.png"), "page.html", "kept.png"]) {
+      const { isError } = await call("capture", { url: "http://localhost:3000", output });
+      expect(isError, output).toBe(true);
+    }
+    expect(seen).toEqual([]);
+    const { text, isError } = await call("capture", { url: "http://localhost:3000", output: "shots/home.png" });
+    expect(isError).toBe(false);
+    expect(seen).toEqual([join(root, "shots", "home.png")]);
+    expect(text).toContain('"src": "shots/home.png"');
+    await close();
+  });
+});
+
 describe("where the server may work", () => {
   it("refuses a root that is not an existing folder", () => {
     expect(() => createServer({ root: join(outer, "no-such-folder") })).toThrow(/folder/);

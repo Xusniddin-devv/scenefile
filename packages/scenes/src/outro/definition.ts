@@ -55,7 +55,7 @@ export const outroDefinition: SceneDefinition<OutroProps> = {
   },
   css: `
 .sf-outro{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*60);column-gap:calc(var(--sf-unit)*6);align-items:end}
-.sf-outro__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
+.sf-outro__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-display);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
 .sf-outro__heading:only-child{grid-column:1/-1}
 .sf-outro__heading em{font-style:normal;color:var(--sf-accent)}
 .sf-outro__side{min-width:0;padding-bottom:calc(var(--sf-unit)*1.4)}

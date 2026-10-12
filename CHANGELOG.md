@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+- `scenefile capture <url>` saves a picture of a web page, at desktop or phone size,
+  for use in a `screenshot` scene. The MCP server offers it as a tool when started
+  with `--allow-capture`.
+- `screenshot` scenes take `"device": "phone"` to draw a tall screenshot inside a phone.
+- Five more themes (`terminal`, `ink`, `mint`, `studio`, `forest`) and two more bundled
+  typefaces (Unbounded, Geologica). Headings and other heavy text are set in each
+  theme's own display face.
+
 ## 0.1.0 (12 October 2026)
 
 First version.

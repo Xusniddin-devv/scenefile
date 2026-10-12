@@ -100,7 +100,7 @@ export const compareDefinition: SceneDefinition<CompareProps> = {
 .sf-compare__label{flex:none;height:calc(var(--sf-unit)*7);font:500 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*4) var(--sf-font-mono);font-variant-ligatures:none;color:var(--sf-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sf-compare__side.is-after .sf-compare__label{color:var(--sf-accent)}
 .sf-compare__body{flex:1;min-height:0;overflow:hidden;display:flex;align-items:flex-start;border-top:1px solid var(--sf-line);font-size:calc(var(--sf-unit)*9)}
-.sf-compare__text{padding-top:calc(var(--sf-unit)*3);font:800 1em/1.05 var(--sf-font-sans);letter-spacing:-0.04em;color:var(--sf-text);text-wrap:balance}
+.sf-compare__text{padding-top:calc(var(--sf-unit)*3);font:800 1em/1.05 var(--sf-font-display);letter-spacing:-0.04em;color:var(--sf-text);text-wrap:balance}
 .sf-compare__side.is-before .sf-compare__text{color:var(--sf-muted)}
 .sf-compare__img,.sf-compare .sf-shot__missing{display:block;margin-top:-1px;background:var(--sf-surface)}
 @media (max-aspect-ratio:1/1){.sf-compare{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);row-gap:calc(var(--sf-unit)*6)}}

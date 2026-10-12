@@ -47,7 +47,7 @@ export const statementDefinition: SceneDefinition<StatementProps> = {
   },
   css: `
 .sf-statement{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*10);display:flex;align-items:flex-end}
-.sf-statement__text{width:100%;font:var(--sf-heading-weight) calc(var(--sf-unit)*15)/0.98 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
+.sf-statement__text{width:100%;font:var(--sf-heading-weight) calc(var(--sf-unit)*15)/0.98 var(--sf-font-display);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}
 .sf-statement__word{display:inline-block}
 .sf-statement__word.is-accent{color:var(--sf-accent)}
 `,

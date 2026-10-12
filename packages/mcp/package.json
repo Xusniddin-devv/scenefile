@@ -1,6 +1,6 @@
 {
   "name": "@scenefile/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Model Context Protocol server for scenefile: check and render videos from any MCP client.",
   "type": "module",
   "license": "MIT",
