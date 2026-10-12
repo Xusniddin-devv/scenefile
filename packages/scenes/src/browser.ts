@@ -1,4 +1,6 @@
+import { mountBullets } from "./bullets/mount";
 import { mountQuote } from "./quote/mount";
+import { mountStat } from "./stat/mount";
 import { mountStatement } from "./statement/mount";
 import { mountTerminal } from "./terminal/mount";
 import { mountTitle } from "./title/mount";
@@ -9,6 +11,8 @@ export const mounts: Record<string, SceneMount> = {
   title: mountTitle,
   statement: mountStatement,
   quote: mountQuote,
+  bullets: mountBullets,
+  stat: mountStat,
   terminal: mountTerminal,
 };
 

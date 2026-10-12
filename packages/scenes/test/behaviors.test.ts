@@ -2,6 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { mounts } from "../src/browser";
 import { type SceneType, getScene, sceneSchema } from "../src/index";
+import { bulletSchedule, bulletsHoldSeconds } from "../src/bullets/timing";
+import { COUNT_SECONDS, statText } from "../src/stat/timing";
 import { statementRevealSeconds } from "../src/statement/timing";
 import type { MountContext } from "../src/types";
 
@@ -53,6 +55,81 @@ describe("statement", () => {
     const { props, definition } = stage(input);
     expect(definition.holdSeconds(props)).toBeCloseTo(statementRevealSeconds(8) + 8 / 3);
     expect(statementRevealSeconds(1)).toBeCloseTo(0.35);
+  });
+});
+
+describe("bullets", () => {
+  const items = ["Write JSON, not keyframes", "Errors a model can fix", "Same input, same frames"];
+  const input = { type: "bullets", items };
+
+  it("needs between two and five items", () => {
+    expect(sceneSchema.safeParse({ type: "bullets", items: ["one"] }).success).toBe(false);
+    expect(sceneSchema.safeParse({ type: "bullets", items: ["1", "2", "3", "4", "5", "6"] }).success).toBe(false);
+    expect(sceneSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("schedules each item after the previous one has been read", () => {
+    const starts = bulletSchedule(["one two three", "four", "five six"]);
+    expect(starts[0]).toBe(0);
+    expect(starts[1]).toBeCloseTo(0.5 + 1);
+    expect(starts[2]).toBeCloseTo(0.5 + 1 + 0.5 + 1 / 3);
+    expect(bulletsHoldSeconds(["one two three", "four", "five six"])).toBeCloseTo((starts[2] ?? 0) + 0.35 + 2 / 3 + 0.4);
+  });
+
+  it("numbers the items and lights them up in order, leaving later ones dim", () => {
+    const { el, ctx, handle, revealed } = stage(input);
+    const rows = all(el, "[data-sf-item]");
+    expect(rows.map((row) => row.querySelector("i")?.textContent)).toEqual(["01", "02", "03"]);
+    const starts = bulletSchedule(items);
+    handle.seek(ctx.enterFrames + Math.round(((starts[1] ?? 0) + 0.4) * FPS));
+    const mid = rows.map((row) => Number(row.style.opacity));
+    expect(mid[0]).toBe(1);
+    expect(mid[1]).toBe(1);
+    expect(mid[2]).toBeLessThan(0.3);
+    expect(mid[2]).toBeGreaterThan(0.1);
+    handle.seek(revealed);
+    expect(rows.every((row) => row.style.opacity === "1")).toBe(true);
+  });
+});
+
+describe("stat", () => {
+  it.each([
+    ["94%", 0, "0%"],
+    ["94%", 0.5, "47%"],
+    ["94%", 1, "94%"],
+    ["1,200+", 0.5, "600+"],
+    ["1,200+", 1, "1,200+"],
+    ["12,000", 0.5, "6,000"],
+    ["$3.20", 0.5, "$1.60"],
+    ["3.20x", 1, "3.20x"],
+    ["v2", 0.5, "v1"],
+    ["10k+", 0.3, "3k+"],
+    ["007", 1, "007"],
+    ["N/A", 0.3, "N/A"],
+    ["-5%", 1, "-5%"],
+  ])("draws %s at progress %s as %s", (value, progress, expected) => {
+    expect(statText(value, progress)).toBe(expected);
+  });
+
+  it("never produces NaN or changes the final text", () => {
+    for (const value of ["94%", "1,200+", "N/A", "∞", "3.20x", "0", "..."]) {
+      for (const progress of [-1, 0, 0.33, 0.999, 1, 2]) expect(statText(value, progress)).not.toContain("NaN");
+      expect(statText(value, 1)).toBe(value);
+    }
+  });
+
+  it("counts up to its value and stops there", () => {
+    const { el, ctx, handle, revealed } = stage({ type: "stat", value: "94%", label: "valid on first try" });
+    const value = el.querySelector<HTMLElement>(".sf-stat__value");
+    if (!value) throw new Error("no value element");
+    handle.seek(ctx.enterFrames);
+    expect(value.textContent).toBe("0%");
+    handle.seek(ctx.enterFrames + Math.round((COUNT_SECONDS * FPS) / 3));
+    const partway = Number.parseInt(value.textContent ?? "", 10);
+    expect(partway).toBeGreaterThan(0);
+    expect(partway).toBeLessThan(94);
+    handle.seek(revealed);
+    expect(value.textContent).toBe("94%");
   });
 });
 

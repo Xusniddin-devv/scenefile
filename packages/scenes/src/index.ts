@@ -1,6 +1,10 @@
 import { z } from "zod";
+import { bulletsDefinition } from "./bullets/definition";
+import { bulletsSchema } from "./bullets/schema";
 import { quoteDefinition } from "./quote/definition";
 import { quoteSchema } from "./quote/schema";
+import { statDefinition } from "./stat/definition";
+import { statSchema } from "./stat/schema";
 import { statementDefinition } from "./statement/definition";
 import { statementSchema } from "./statement/schema";
 import { terminalDefinition } from "./terminal/definition";
@@ -13,6 +17,8 @@ export const sceneSchema = z.discriminatedUnion("type", [
   titleSchema,
   statementSchema,
   quoteSchema,
+  bulletsSchema,
+  statSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -31,6 +37,8 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   title: widen(titleDefinition),
   statement: widen(statementDefinition),
   quote: widen(quoteDefinition),
+  bullets: widen(bulletsDefinition),
+  stat: widen(statDefinition),
   terminal: widen(terminalDefinition),
 };
 
