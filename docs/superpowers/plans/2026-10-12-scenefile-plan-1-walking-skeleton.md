@@ -42,7 +42,6 @@ Plans 2 and 3 are written after this one runs, because their details depend on m
 - Total video length must be between 3 s and 600 s.
 - Dependencies are added with `pnpm add` so versions resolve at install time; do not hand-write version numbers, except `zod@^4`.
 - **This machine only (do not commit):** `git-lfs` is marked required in `~/.gitconfig` but is not installed, so plain `git add`/`git commit` hang. Prefix every git command with `git -c filter.lfs.required=false -c filter.lfs.process= -c filter.lfs.clean=cat -c filter.lfs.smudge=cat`. Vitest sometimes stalls at 0% CPU under the agent sandbox; if a run shows no output for 60 s, kill it and rerun.
-- End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Review Focus
 
