@@ -55,7 +55,8 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
 
   it("draws every string it declares inside a text slot that is fitted", () => {
     const { props, definition, el } = build(type, FIXTURES[type]);
-    const fitted = Array.from(el.querySelectorAll<HTMLElement>("[data-sf-fit]"), (slot) => {
+    // Text is either fitted, or explicitly marked as a fixed-size label.
+    const fitted = Array.from(el.querySelectorAll<HTMLElement>("[data-sf-fit], [data-sf-fixed]"), (slot) => {
       const inner = [slot, ...Array.from(slot.querySelectorAll<HTMLElement>("*"))];
       const attributes = inner.flatMap((node) => [node.dataset.sfType ?? "", node.dataset.sfValue ?? ""]);
       return [slot.textContent ?? "", ...attributes].join("\n").replace(/\s+/g, " ");
@@ -69,7 +70,8 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
 
   it("turns none of its text into markup", () => {
     const { el } = build(type, HOSTILE[type]);
-    expect(el.querySelector("u, img, script")).toBeNull();
+    // The scene's own images are expected; an image that came from text is not.
+    expect(el.querySelector("u, script, img:not([data-sf-image])")).toBeNull();
   });
 
   it("marks each fitted text with a path to a real field of the scene", () => {
@@ -86,6 +88,21 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
       expect(max).toBeGreaterThanOrEqual(min);
       expect(step).toBeGreaterThan(0);
       expect("sfLines" in slot.dataset || "sfBox" in slot.dataset, path).toBe(true);
+    }
+  });
+
+  it("draws each image it declares, sized in whole pixels, with a path to the field that names it", () => {
+    const { props, definition, el } = build(type, FIXTURES[type]);
+    const declared = (definition.assets?.(props) ?? []).map((ref) => `scenes[2].${ref.path}`);
+    const images = Array.from(el.querySelectorAll<HTMLImageElement>("img"));
+    expect(images.map((image) => image.dataset.sfPath).sort()).toEqual([...declared].sort());
+    for (const image of images) {
+      expect("sfImage" in image.dataset).toBe(true);
+      expect(image.getAttribute("src")?.startsWith("data:image/")).toBe(true);
+      for (const side of ["width", "height"] as const) {
+        const value = Number(image.getAttribute(side));
+        expect(Number.isInteger(value) && value > 0, `${side}=${image.getAttribute(side)}`).toBe(true);
+      }
     }
   });
 

@@ -18,6 +18,15 @@ interface Manifest {
   scenes: ManifestScene[];
 }
 
+/** How an image ended up on screen. Mirrors `ImageReport` in @scenefile/engine. */
+interface ImageReport {
+  path: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  shownWidth: number;
+  shownHeight: number;
+}
+
 interface Mounted {
   scene: ManifestScene;
   el: HTMLElement;
@@ -27,7 +36,7 @@ interface Mounted {
 interface Api {
   seek(frame: number): void;
   totalFrames: number;
-  report: { slots: SlotReport[]; crowded: number[] };
+  report: { slots: SlotReport[]; crowded: number[]; images: ImageReport[] };
 }
 
 function init(): Api {
@@ -55,6 +64,7 @@ function init(): Api {
   const unitPx = Math.min(manifest.width, manifest.height) / 100;
   const slots: SlotReport[] = [];
   const crowded: number[] = [];
+  const images: ImageReport[] = [];
   for (const { scene, el, handle } of mounted) {
     el.hidden = false;
     handle.seek(Math.max(0, scene.durationFrames - scene.exitFrames - 1));
@@ -62,6 +72,16 @@ function init(): Api {
     relieveCrowding(el, unitPx, manifest, fitted);
     slots.push(...fitted);
     if (isCrowded(el)) crowded.push(scene.index);
+    for (const image of el.querySelectorAll<HTMLImageElement>("img[data-sf-image]")) {
+      images.push({
+        path: image.dataset.sfPath ?? "",
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        // The laid-out size, not the on-screen one: a scene may be mid-zoom.
+        shownWidth: image.offsetWidth,
+        shownHeight: image.offsetHeight,
+      });
+    }
     el.hidden = true;
   }
 
@@ -69,7 +89,7 @@ function init(): Api {
 
   return {
     totalFrames: manifest.totalFrames,
-    report: { slots, crowded },
+    report: { slots, crowded, images },
     seek(frame) {
       // Chromium carries paint and compositing state from one frame to the next,
       // so identical DOM can differ by one level on anti-aliased edges depending
@@ -95,6 +115,8 @@ function init(): Api {
 async function start(): Promise<void> {
   // Faces load lazily; text measured before they arrive would be measured in a fallback font.
   await Promise.all(Array.from(document.fonts, (face) => face.load()));
+  // Images decode off the main thread; a frame captured before they finish would show a blank box.
+  await Promise.all(Array.from(document.images, (image) => image.decode()));
   (window as unknown as { __scenefile: Api }).__scenefile = init();
 }
 

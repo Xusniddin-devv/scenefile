@@ -1,4 +1,4 @@
-import { type Diagnostic, error } from "@scenefile/schema";
+import { type Diagnostic, error, warning } from "@scenefile/schema";
 
 /** What the browser reports for one fitted piece of text. */
 export interface SlotReport {
@@ -17,8 +17,23 @@ export interface SlotReport {
   outside: boolean;
 }
 
+/** What the browser reports for one image. */
+export interface ImageReport {
+  /** Scenefile path of the field naming the image, e.g. `scenes[2].src`. */
+  path: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  /** The size the image is laid out at, in frame pixels. */
+  shownWidth: number;
+  shownHeight: number;
+}
+
+/** An image may be enlarged this much before it is called soft. */
+const MAX_UPSCALE = 1.25;
+
 export interface InspectReport {
   slots: SlotReport[];
+  images?: ImageReport[];
   /** Indexes of scenes whose content reaches up into the scene counter at the top of the frame. */
   crowded?: number[];
 }
@@ -66,6 +81,18 @@ export function verifyLayout(report: InspectReport): Diagnostic[] {
           slot.path,
           "This text reaches the edge of the frame, where players and phones may crop it.",
           "Shorten it.",
+        ),
+      );
+    }
+  }
+  for (const image of report.images ?? []) {
+    if (image.shownWidth > image.naturalWidth * MAX_UPSCALE) {
+      diagnostics.push(
+        warning(
+          "ASSET_LOW_RES",
+          image.path,
+          `This image is ${image.naturalWidth}x${image.naturalHeight} pixels but is shown at ${image.shownWidth}x${image.shownHeight}, so it will look soft.`,
+          `Use an image at least ${image.shownWidth} pixels wide.`,
         ),
       );
     }

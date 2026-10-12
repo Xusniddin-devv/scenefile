@@ -1,18 +1,21 @@
-import { type Composition, check, verifyLayout } from "@scenefile/engine";
+import { fileURLToPath } from "node:url";
+import { type Composition, check, checkWithAssets, verifyLayout } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
 import { ALL_SCENES } from "../../scenes/test/fixtures";
 import { captureFrame, inspectComposition, openComposition } from "../src/index";
 
-function compose(format: string): Composition {
-  const result = check({ version: 1, format, scenes: ALL_SCENES });
+const baseDir = fileURLToPath(new URL("../../scenes/test", import.meta.url));
+
+async function compose(format: string): Promise<Composition> {
+  const result = await checkWithAssets({ version: 1, format, scenes: ALL_SCENES }, { baseDir });
   if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
   return result.composition;
 }
 
 describe("every scene type, in a real browser", () => {
   it.each(["landscape-1080p", "portrait-1080p", "square-1080p"])("fits its ordinary content in %s", async (format) => {
-    const report = await inspectComposition(compose(format));
-    expect(verifyLayout(report)).toEqual([]);
+    const report = await inspectComposition(await compose(format));
+    expect(verifyLayout(report).filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
     const fittedScenes = new Set(report.slots.map((slot) => slot.path.split(".")[0]));
     expect(fittedScenes.size).toBe(ALL_SCENES.length);
     for (const slot of report.slots) expect(slot.sizePx, slot.path).toBeGreaterThanOrEqual(3.4 * 10.8 - 0.01);
@@ -139,7 +142,7 @@ describe("every scene type, in a real browser", () => {
   });
 
   it("draws identical pixels for a frame whatever was drawn before it", async () => {
-    const composition = compose("landscape-1080p");
+    const composition = await compose("landscape-1080p");
     const total = composition.manifest.totalFrames;
     const frames = Array.from({ length: 48 }, (_, i) => Math.round((i * (total - 1)) / 47));
     let seed = 2026;

@@ -7,6 +7,8 @@ import { outroDefinition } from "./outro/definition";
 import { outroSchema } from "./outro/schema";
 import { quoteDefinition } from "./quote/definition";
 import { quoteSchema } from "./quote/schema";
+import { screenshotDefinition } from "./screenshot/definition";
+import { screenshotSchema } from "./screenshot/schema";
 import { statDefinition } from "./stat/definition";
 import { statSchema } from "./stat/schema";
 import { statementDefinition } from "./statement/definition";
@@ -25,6 +27,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   statSchema,
   codeSchema,
   outroSchema,
+  screenshotSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -47,6 +50,7 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   stat: widen(statDefinition),
   code: widen(codeDefinition),
   outro: widen(outroDefinition),
+  screenshot: widen(screenshotDefinition),
   terminal: widen(terminalDefinition),
 };
 

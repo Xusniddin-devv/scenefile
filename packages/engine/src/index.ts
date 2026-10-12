@@ -10,7 +10,7 @@ export {
   loadAssets,
 } from "./assets";
 export { type CheckResult, applyLayout, check, checkWithAssets, storyboard } from "./check";
-export { type InspectReport, type SlotReport, verifyLayout } from "./layout";
+export { type ImageReport, type InspectReport, type SlotReport, verifyLayout } from "./layout";
 export { type Composition, type Manifest, type ManifestScene, compile } from "./compile";
 export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnostics, loadFont, videoTexts } from "./fonts";
 export { FORMAT_SIZES } from "./formats";

@@ -34,11 +34,18 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
     );
     const prefix = `scenes[${scene.index}].`;
     const slots = (report?.slots ?? []).filter((slot) => slot.path.startsWith(prefix));
-    const fieldWidth = Math.max(0, ...slots.map((slot) => slot.path.length - prefix.length));
+    const images = (report?.images ?? []).filter((image) => image.path.startsWith(prefix));
+    const fieldWidth = Math.max(0, ...[...slots, ...images].map((entry) => entry.path.length - prefix.length));
     for (const slot of slots) {
       const field = slot.path.slice(prefix.length).padEnd(fieldWidth);
       const count = slot.maxLines === null ? "" : `, ${slot.lines} ${slot.lines === 1 ? "line" : "lines"}`;
       lines.push(`     ${field}  ${Math.round(slot.sizePx)}px${count}`);
+    }
+    for (const image of images) {
+      const field = image.path.slice(prefix.length).padEnd(fieldWidth);
+      lines.push(
+        `     ${field}  ${image.naturalWidth}x${image.naturalHeight} image, shown at ${image.shownWidth}x${image.shownHeight}`,
+      );
     }
   }
   return lines.join("\n");

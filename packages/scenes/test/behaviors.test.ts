@@ -5,6 +5,8 @@ import { type SceneType, getScene, sceneSchema } from "../src/index";
 import { bulletSchedule, bulletsHoldSeconds } from "../src/bullets/timing";
 import { highlightLines } from "../src/code/highlight";
 import { codeHoldSeconds, codeRevealSeconds } from "../src/code/timing";
+import { containSize } from "../src/image";
+import { PIN_FADE_SECONDS, PIN_GAP_SECONDS, PIN_START_SECONDS, pinsRevealSeconds } from "../src/screenshot/timing";
 import { COUNT_SECONDS, statText } from "../src/stat/timing";
 import { statementRevealSeconds } from "../src/statement/timing";
 import type { MountContext } from "../src/types";
@@ -258,6 +260,85 @@ describe("outro", () => {
     handle.seek(revealed);
     expect(el.querySelector(".sf-outro__side")).toBeNull();
     expect(el.querySelector(".sf-outro__heading")?.textContent).toBe("Thanks.");
+  });
+});
+
+describe("images", () => {
+  it.each([
+    [{ width: 1280, height: 720 }, { width: 1000, height: 1000 }, { width: 1000, height: 563 }],
+    [{ width: 400, height: 2400 }, { width: 1000, height: 600 }, { width: 100, height: 600 }],
+    [{ width: 3000, height: 300 }, { width: 1000, height: 600 }, { width: 1000, height: 100 }],
+    [{ width: 320, height: 180 }, { width: 1600, height: 900 }, { width: 1600, height: 900 }],
+    [{ width: 1, height: 5000 }, { width: 800, height: 600 }, { width: 1, height: 600 }],
+  ])("fits %j inside %j as %j", (image, box, expected) => {
+    const size = containSize(image, box);
+    expect(size).toEqual(expected);
+    expect(size.width).toBeLessThanOrEqual(box.width);
+    expect(size.height).toBeLessThanOrEqual(box.height);
+  });
+});
+
+describe("screenshot", () => {
+  const input = {
+    type: "screenshot",
+    src: "shot.png",
+    url: "scenefile.dev",
+    caption: "One file.",
+    callouts: [{ x: 0.25, y: 0.3, label: "First" }, { x: 0.8, y: 0.6, label: "Second" }],
+  };
+
+  it("declares its image and its text", () => {
+    const { props, definition } = stage(input);
+    expect(definition.assets?.(props)).toEqual([{ path: "src", src: "shot.png" }]);
+    expect(definition.texts(props).map((entry) => entry.path)).toEqual(["url", "caption", "callouts[0].label", "callouts[1].label"]);
+  });
+
+  it("allows at most three callouts, each inside the image", () => {
+    const pin = { x: 0.5, y: 0.5, label: "x" };
+    expect(sceneSchema.safeParse({ type: "screenshot", src: "a.png", callouts: [pin, pin, pin, pin] }).success).toBe(false);
+    expect(sceneSchema.safeParse({ type: "screenshot", src: "a.png", callouts: [{ ...pin, x: 1.2 }] }).success).toBe(false);
+    expect(sceneSchema.safeParse({ type: "screenshot", src: "a.png" }).success).toBe(true);
+  });
+
+  it("places each callout by its fraction of the image, labels to the left when near the right edge", () => {
+    const { el } = stage(input);
+    const pins = all(el, "[data-sf-pin]");
+    expect(pins.map((pin) => [pin.style.left, pin.style.top])).toEqual([["25%", "30%"], ["80%", "60%"]]);
+    expect(pins.map((pin) => pin.classList.contains("is-left"))).toEqual([false, true]);
+    expect(pins.map((pin) => pin.textContent)).toEqual(["First", "Second"]);
+  });
+
+  it("sizes the image to its area: 1280x720 in a landscape frame keeps its shape", () => {
+    const { el } = stage(input);
+    const image = el.querySelector("img");
+    const width = Number(image?.getAttribute("width"));
+    const height = Number(image?.getAttribute("height"));
+    expect(width / height).toBeCloseTo(1280 / 720, 2);
+    expect(width).toBeLessThanOrEqual(1920 - 18 * 10.8);
+    expect(height).toBeLessThanOrEqual(1080 - 25 * 10.8);
+  });
+
+  it("reveals callouts one after another and slowly moves in on the image", () => {
+    const { el, ctx, handle, revealed } = stage(input);
+    const pins = all(el, "[data-sf-pin]");
+    const layer = el.querySelector<HTMLElement>(".sf-shot__layer");
+    handle.seek(ctx.enterFrames + Math.round((PIN_START_SECONDS + 0.2) * FPS));
+    expect(Number(pins[0]?.style.opacity)).toBeGreaterThan(0);
+    expect(Number(pins[1]?.style.opacity)).toBe(0);
+    const early = layer?.style.transform;
+    handle.seek(revealed);
+    expect(pins.every((pin) => pin.style.opacity === "1")).toBe(true);
+    expect(layer?.style.transform).not.toBe(early);
+    expect(layer?.style.transform).toMatch(/^scale\(1\.0\d+\)$/);
+    expect(pinsRevealSeconds(2)).toBeCloseTo(PIN_START_SECONDS + PIN_GAP_SECONDS + PIN_FADE_SECONDS);
+    expect(pinsRevealSeconds(0)).toBe(0);
+  });
+
+  it("draws an empty frame of the right size when the image is not available", () => {
+    const props = sceneSchema.parse({ type: "screenshot", src: "gone.png" });
+    const html = getScene("screenshot").compile(props, { ...context(), asset: () => undefined });
+    expect(html).not.toContain("<img");
+    expect(html).toContain("sf-shot__missing");
   });
 });
 

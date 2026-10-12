@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyLayout, check } from "../src/check";
-import { type SlotReport, verifyLayout } from "../src/layout";
+import { type ImageReport, type SlotReport, verifyLayout } from "../src/layout";
 
 const slot = (over: Partial<SlotReport>): SlotReport => ({
   path: "scenes[0].heading", sizePx: 100, lines: 2, maxLines: 3, chars: 40, overflow: false, outside: false, ...over,
@@ -59,6 +59,28 @@ describe("crowded scenes", () => {
   it("does not repeat itself for a scene that already has a layout error", () => {
     const diagnostics = verifyLayout({ slots: [slot({ overflow: true, lines: 5 })], crowded: [0] });
     expect(diagnostics.map((d) => d.code)).toEqual(["TEXT_OVERFLOW"]);
+  });
+});
+
+describe("images", () => {
+  const image = (over: Partial<ImageReport>): ImageReport => ({
+    path: "scenes[0].src", naturalWidth: 1280, naturalHeight: 720, shownWidth: 1280, shownHeight: 720, ...over,
+  });
+
+  it("accepts an image shown at or near its own size", () => {
+    expect(verifyLayout({ slots: [], images: [image({}), image({ shownWidth: 1500, shownHeight: 844 })] })).toEqual([]);
+  });
+
+  it("warns when an image is stretched well beyond its own size, and says what size is needed", () => {
+    const [diagnostic, ...rest] = verifyLayout({
+      slots: [],
+      images: [image({ naturalWidth: 320, naturalHeight: 180, shownWidth: 1600, shownHeight: 900 })],
+    });
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({ code: "ASSET_LOW_RES", severity: "warning", path: "scenes[0].src" });
+    expect(diagnostic?.message).toContain("320x180");
+    expect(diagnostic?.message).toContain("1600x900");
+    expect(diagnostic?.fix).toContain("1600");
   });
 });
 
