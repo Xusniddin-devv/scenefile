@@ -31,10 +31,10 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
   },
   css: `
 .sf-terminal{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:calc(var(--sf-unit)*10)}
-.sf-terminal__window{width:100%;max-width:calc(var(--sf-unit)*130);background:var(--sf-surface);border:1px solid var(--sf-line);border-radius:calc(var(--sf-unit)*1.2);overflow:hidden}
+.sf-terminal__window{width:100%;max-width:calc(var(--sf-unit)*150);background:var(--sf-surface);border:1px solid var(--sf-line);border-radius:calc(var(--sf-unit)*1.2);overflow:hidden}
 .sf-terminal__bar{display:flex;gap:calc(var(--sf-unit)*0.8);padding:calc(var(--sf-unit)*1.6) calc(var(--sf-unit)*2);border-bottom:1px solid var(--sf-line)}
 .sf-terminal__bar i{width:calc(var(--sf-unit)*1.2);height:calc(var(--sf-unit)*1.2);border-radius:50%;background:var(--sf-line)}
-.sf-terminal__body{display:flex;flex-direction:column;gap:calc(var(--sf-unit)*1.6);padding:calc(var(--sf-unit)*3.5);font:400 calc(var(--sf-unit)*3.2)/1.4 var(--sf-font-mono);color:var(--sf-text)}
+.sf-terminal__body{display:flex;flex-direction:column;gap:calc(var(--sf-unit)*1.6);padding:calc(var(--sf-unit)*3.5);font:400 calc(var(--sf-unit)*4)/1.45 var(--sf-font-mono);color:var(--sf-text)}
 .sf-terminal__cmd{display:flex;align-items:center;white-space:pre}
 .sf-terminal__prompt{color:var(--sf-accent);margin-right:1ch}
 .sf-terminal__caret{width:0.6em;height:1.1em;margin-left:2px;background:var(--sf-accent)}
