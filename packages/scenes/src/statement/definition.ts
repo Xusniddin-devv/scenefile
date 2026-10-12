@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml, readingSeconds } from "../text";
 import type { SceneDefinition } from "../types";
 import { type StatementProps, statementSchema } from "./schema";
@@ -32,7 +31,7 @@ export const statementDefinition: SceneDefinition<StatementProps> = {
   summary: (props) => props.text,
   texts: (props) => [{ path: "text", text: props.text, font: "sans" }],
   compile(props, ctx) {
-    return `${sceneChrome(ctx)}<div class="sf-statement"><p class="sf-statement__text" data-sf-fit="6,15,0.5" data-sf-lines="5" data-sf-path="${ctx.path}.text">${wordsHtml(props.text, props.highlight)}</p></div>`;
+    return `<div class="sf-statement"><p class="sf-statement__text" data-sf-fit="6,15,0.5" data-sf-lines="5" data-sf-path="${ctx.path}.text">${wordsHtml(props.text, props.highlight)}</p></div>`;
   },
   css: `
 .sf-statement{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*10);display:flex;align-items:flex-end}

@@ -9,6 +9,7 @@ import { EnvironmentError, captureFrame, openComposition, probeVideo, renderVide
 function fixture(): Composition {
   const result = check({
     version: 1,
+    transition: "fade",
     format: "square-1080p",
     scenes: [
       { type: "title", heading: "Ship faster", sub: "A CLI", duration: 1.5 },

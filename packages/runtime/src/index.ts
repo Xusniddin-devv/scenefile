@@ -8,6 +8,7 @@ import {
   isCrowded,
   relieveCrowding,
 } from "./fit";
+import { applyTransition } from "./transitions";
 
 interface ManifestScene {
   index: number;
@@ -16,6 +17,8 @@ interface ManifestScene {
   durationFrames: number;
   enterFrames: number;
   exitFrames: number;
+  transition: string;
+  overlapFrames: number;
 }
 
 interface Manifest {
@@ -106,6 +109,8 @@ function init(broken: string[]): Api {
   }
 
   const root = document.documentElement;
+  const wipe = document.querySelector<HTMLElement>(".sf-wipe");
+  const counter = document.querySelector<HTMLElement>(".sf-chrome__index b");
 
   return {
     totalFrames: manifest.totalFrames,
@@ -120,12 +125,36 @@ function init(broken: string[]): Api {
       // without them the browser coalesces the two style changes.
       root.style.display = "none";
       void root.offsetHeight;
+      let current = 0;
       for (const { scene, el, handle } of mounted) {
         const local = frame - scene.startFrame;
         const active = local >= 0 && local < scene.durationFrames;
         el.hidden = !active;
+        // Whatever a transition did to this scene on an earlier frame is undone first.
+        el.style.transform = "";
+        el.style.clipPath = "";
+        el.style.zIndex = "";
         if (active) handle.seek(local);
+        if (local >= 0) current = scene.index;
       }
+      if (wipe) wipe.hidden = true;
+      for (let i = 1; i < mounted.length; i++) {
+        const arriving = mounted[i];
+        const leaving = mounted[i - 1];
+        if (!arriving || !leaving) continue;
+        const { overlapFrames, startFrame, transition } = arriving.scene;
+        const into = frame - startFrame;
+        if (overlapFrames > 0 && into >= 0 && into < overlapFrames) {
+          // Progress never reaches 0 or 1 inside the window: the first shared frame
+          // already shows movement, and the last still shows a little of the old scene.
+          applyTransition(transition, leaving.el, arriving.el, (into + 1) / (overlapFrames + 1), {
+            wipe,
+            width: manifest.width,
+          });
+        }
+      }
+      // The counter names the newest scene to have started, so it changes as a transition begins.
+      if (counter) counter.textContent = String(current + 1).padStart(2, "0");
       root.style.display = "";
       void root.offsetHeight;
     },

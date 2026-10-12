@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { containSize, imageHtml } from "../image";
 import { escapeHtml, readingSeconds } from "../text";
 import type { CompileContext, SceneDefinition, SceneText } from "../types";
@@ -75,7 +74,7 @@ export const compareDefinition: SceneDefinition<CompareProps> = {
   },
   compile(props, ctx) {
     const sides = SIDES.map(({ key, fallback }, index) => sideHtml(props[key], key, fallback, index, ctx)).join("");
-    return `${sceneChrome(ctx)}<div class="sf-compare">${sides}</div>`;
+    return `<div class="sf-compare">${sides}</div>`;
   },
   css: `
 .sf-compare{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*9);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:calc(var(--sf-unit)*6)}

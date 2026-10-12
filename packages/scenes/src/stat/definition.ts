@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml, readingSeconds } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { type StatProps, statSchema } from "./schema";
@@ -26,7 +25,7 @@ export const statDefinition: SceneDefinition<StatProps> = {
     const note = props.note
       ? `<p class="sf-stat__note" data-sf-enter="2" data-sf-fit="3.4,4.2,0.2" data-sf-lines="4" data-sf-path="${ctx.path}.note">${escapeHtml(props.note)}</p>`
       : "";
-    return `${sceneChrome(ctx)}<div class="sf-stat"><div class="sf-stat__value" data-sf-enter="0" data-sf-fit="18,56,2" data-sf-lines="1" data-sf-path="${ctx.path}.value" data-sf-value="${value}">${value}</div><div class="sf-stat__foot"><p class="sf-stat__label" data-sf-enter="1" data-sf-fit="4.6,7.8,0.4" data-sf-lines="2" data-sf-path="${ctx.path}.label">${escapeHtml(props.label)}</p>${note}</div></div>`;
+    return `<div class="sf-stat"><div class="sf-stat__value" data-sf-enter="0" data-sf-fit="18,56,2" data-sf-lines="1" data-sf-path="${ctx.path}.value" data-sf-value="${value}">${value}</div><div class="sf-stat__foot"><p class="sf-stat__label" data-sf-enter="1" data-sf-fit="4.6,7.8,0.4" data-sf-lines="2" data-sf-path="${ctx.path}.label">${escapeHtml(props.label)}</p>${note}</div></div>`;
   },
   css: `
 .sf-stat{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*9);display:flex;flex-direction:column;justify-content:space-between}

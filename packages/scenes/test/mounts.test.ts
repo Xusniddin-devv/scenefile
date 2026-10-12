@@ -48,6 +48,34 @@ describe("title mount", () => {
     expect(Number(el.style.opacity)).toBeLessThan(0.3);
   });
 
+  it("stays fully drawn to its last frame when it has no exit of its own", () => {
+    const el = document.createElement("section");
+    el.innerHTML = titleHtml;
+    document.body.append(el);
+    const mount = mounts.title;
+    if (!mount) throw new Error("no title mount");
+    const handle = mount(el, { ...ctx, exitFrames: 0 });
+    for (const frame of [100, 118, 119]) {
+      handle.seek(frame);
+      expect(el.style.opacity).toBe("1");
+    }
+  });
+
+  it("staggers by time, not by frame count: the same moment looks the same at 60 fps", () => {
+    const at = (fps: number, seconds: number): string => {
+      const el = document.createElement("section");
+      el.innerHTML = titleHtml;
+      document.body.append(el);
+      const mount = mounts.title;
+      if (!mount) throw new Error("no title mount");
+      mount(el, { fps, durationFrames: fps * 4, enterFrames: Math.round(0.6 * fps), exitFrames: Math.round(0.4 * fps) }).seek(Math.round(seconds * fps));
+      return must<HTMLElement>(el, ".sf-title__sub").style.opacity;
+    };
+    expect(Number(at(60, 0.3))).toBeCloseTo(Number(at(30, 0.3)), 5);
+    expect(Number(at(30, 0.3))).toBeGreaterThan(0);
+    expect(Number(at(30, 0.3))).toBeLessThan(1);
+  });
+
   it("staggers the sub line behind the heading", () => {
     const { el, handle } = mountScene("title", titleHtml);
     handle.seek(6);

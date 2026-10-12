@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml, highlightHtml, readingSeconds } from "../text";
 import type { SceneDefinition } from "../types";
 import { type TitleProps, titleSchema } from "./schema";
@@ -20,7 +19,7 @@ export const titleDefinition: SceneDefinition<TitleProps> = {
     const sub = props.sub
       ? `<p class="sf-title__sub" data-sf-enter="1" data-sf-fit="3.4,4.6,0.2" data-sf-lines="4" data-sf-path="${ctx.path}.sub">${escapeHtml(props.sub)}</p>`
       : "";
-    return `${sceneChrome(ctx)}<div class="sf-title"><h1 class="sf-title__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${sub}</div>`;
+    return `<div class="sf-title"><h1 class="sf-title__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${sub}</div>`;
   },
   css: `
 .sf-title{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*54);column-gap:calc(var(--sf-unit)*6);align-items:end}

@@ -10,7 +10,8 @@ const baseDir = fileURLToPath(new URL("../../scenes/test", import.meta.url));
 const filler = { type: "title", heading: "one two three four five six seven eight nine" };
 
 async function compose(input: Record<string, unknown>) {
-  const result = await checkWithAssets({ version: 1, ...input }, { baseDir });
+  // These tests measure positions on a scene's last frames; a cut keeps scenes still there.
+  const result = await checkWithAssets({ version: 1, transition: "cut", ...input }, { baseDir });
   if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
   return { result, composition: result.composition };
 }
@@ -38,7 +39,7 @@ describe("images in a real browser", () => {
             const image = visible?.querySelector("img");
             const view = visible?.querySelector(".sf-shot__view");
             const caption = visible?.querySelector(".sf-shot__caption");
-            const chrome = visible?.querySelector(".sf-chrome");
+            const chrome = document.querySelector(".sf-chrome");
             if (!image || !view || !caption || !chrome) return null;
             const rect = view.getBoundingClientRect();
             return {
@@ -84,7 +85,7 @@ describe("images in a real browser", () => {
           await captureFrame(session.page, scene.startFrame + scene.durationFrames - scene.exitFrames - 1);
           const sides = await session.page.evaluate(() => {
             const visible = document.querySelector(".sf-scene:not([hidden])");
-            const chromeBottom = visible?.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
+            const chromeBottom = document.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
             return Array.from(visible?.querySelectorAll(".sf-compare__body") ?? [], (body) => {
               const rect = (body.firstElementChild ?? body).getBoundingClientRect();
               return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, chromeBottom };
@@ -131,7 +132,7 @@ describe("images in a real browser", () => {
           const overhangs = await session.page.evaluate(
             ({ frameWidth, frameHeight }) => {
               const visible = document.querySelector(".sf-scene:not([hidden])");
-              const top = visible?.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
+              const top = document.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
               return Array.from(visible?.querySelectorAll(".sf-shot__pin b") ?? [], (label) => {
                 const rect = label.getBoundingClientRect();
                 return Math.max(-rect.left, rect.right - frameWidth, top - rect.top, rect.bottom - frameHeight);

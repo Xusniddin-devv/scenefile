@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml, readingSeconds } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { type QuoteProps, quoteSchema } from "./schema";
@@ -23,7 +22,7 @@ export const quoteDefinition: SceneDefinition<QuoteProps> = {
       : "";
     // The figure as a whole is the slot: mark, text and attribution scale
     // together until all three fit the area below the scene counter.
-    return `${sceneChrome(ctx)}<figure class="sf-quote" data-sf-fit="4.6,10,0.4" data-sf-box data-sf-path="${ctx.path}.text"><span class="sf-quote__mark" data-sf-enter="0" aria-hidden="true">\u201C</span><blockquote class="sf-quote__text" data-sf-enter="1">${escapeHtml(props.text)}</blockquote>${by}</figure>`;
+    return `<figure class="sf-quote" data-sf-fit="4.6,10,0.4" data-sf-box data-sf-path="${ctx.path}.text"><span class="sf-quote__mark" data-sf-enter="0" aria-hidden="true">\u201C</span><blockquote class="sf-quote__text" data-sf-enter="1">${escapeHtml(props.text)}</blockquote>${by}</figure>`;
   },
   css: `
 .sf-quote{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*10);display:flex;flex-direction:column;overflow:hidden;font-size:calc(var(--sf-unit)*10);font-family:var(--sf-font-sans)}

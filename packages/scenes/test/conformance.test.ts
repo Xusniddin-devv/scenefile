@@ -45,7 +45,8 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
         expect(drawn, `${entry.path}: ${line}`).toContain(line.replace(/\s+/g, " "));
       }
     }
-    expect(el.querySelector(".sf-chrome__index")?.textContent).toBe("03 / 08");
+    // The scene counter belongs to the video, not to any one scene.
+    expect(el.querySelector(".sf-chrome")).toBeNull();
   });
 
   it("has a hostile fixture that exercises every field", () => {

@@ -52,9 +52,10 @@ describe("themes", () => {
   it("gives each scene its position and includes the shared chrome styles once", () => {
     const { video } = resolved({ version: 1, scenes: [...scenes, { type: "terminal", steps: [{ run: "ls" }] }] });
     const { html } = compile(video);
+    expect(html.match(/<div class="sf-chrome">/g)).toHaveLength(1);
     expect(html).toContain("<b>01</b> / 02");
-    expect(html).toContain("<b>02</b> / 02");
     expect(html.match(/\.sf-chrome\{/g)).toHaveLength(1);
+    expect(html.match(/class="sf-wipe"/g)).toHaveLength(1);
     expect(html).toContain('data-sf-path="scenes[1].steps"');
   });
 });

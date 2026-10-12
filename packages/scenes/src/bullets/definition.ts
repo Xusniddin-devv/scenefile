@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml, readingSeconds } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { type BulletsProps, bulletsSchema } from "./schema";
@@ -28,7 +27,7 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
           `<li class="sf-bullets__item" data-sf-item="${i}"><i>${String(i + 1).padStart(2, "0")}</i><span>${escapeHtml(item)}</span></li>`,
       )
       .join("");
-    return `${sceneChrome(ctx)}<div class="sf-bullets">${heading}<ol class="sf-bullets__list" data-sf-enter="1" data-sf-fit="4,9.6,0.4" data-sf-box data-sf-path="${ctx.path}.items">${items}</ol></div>`;
+    return `<div class="sf-bullets">${heading}<ol class="sf-bullets__list" data-sf-enter="1" data-sf-fit="4,9.6,0.4" data-sf-box data-sf-path="${ctx.path}.items">${items}</ol></div>`;
   },
   css: `
 .sf-bullets{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;gap:calc(var(--sf-unit)*3)}

@@ -60,10 +60,6 @@ describe("title scene", () => {
     expect(html.match(/<em>/g)).toHaveLength(1);
   });
 
-  it("shows the scene's position in the video", () => {
-    expect(compile({ heading: "x" }, context(2, 8))).toContain("<b>03</b> / 08");
-  });
-
   it("omits the sub element when there is no sub", () => {
     expect(compile({ heading: "Solo" })).not.toContain("sf-title__sub");
   });

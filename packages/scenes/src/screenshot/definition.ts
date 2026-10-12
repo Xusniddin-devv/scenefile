@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { containSize, imageHtml } from "../image";
 import { escapeHtml, readingSeconds } from "../text";
 import type { CompileContext, SceneDefinition, SceneText } from "../types";
@@ -80,7 +79,7 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
     const caption = props.caption
       ? `<p class="sf-shot__caption" data-sf-enter="1" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
       : "";
-    return `${sceneChrome(ctx)}<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
+    return `<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
   },
   css: `
 .sf-shot{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;justify-content:space-between}

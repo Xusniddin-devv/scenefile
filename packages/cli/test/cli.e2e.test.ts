@@ -32,6 +32,7 @@ describe("built CLI", () => {
       input,
       JSON.stringify({
         version: 1,
+        transition: "fade",
         format: "square-1080p",
         scenes: [
           { type: "title", heading: "Hello", duration: 1.5 },

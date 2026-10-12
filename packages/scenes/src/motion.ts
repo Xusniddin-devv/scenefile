@@ -1,6 +1,7 @@
 import type { MountContext } from "./types";
 
-const STAGGER_FRAMES = 4;
+/** Delay between one staggered element and the next. */
+export const STAGGER_SECONDS = 4 / 30;
 const ENTER_OFFSET_PX = 40;
 
 export function clamp01(value: number): number {
@@ -31,12 +32,17 @@ export function reveal(
 /** Reveals every [data-sf-enter] element, in the order its value gives. */
 export function staggerEnter(el: HTMLElement, ctx: MountContext, frame: number): void {
   for (const item of el.querySelectorAll<HTMLElement>("[data-sf-enter]")) {
-    reveal(item, frame, Number(item.dataset.sfEnter) * STAGGER_FRAMES, ctx.enterFrames);
+    reveal(item, frame, Number(item.dataset.sfEnter) * STAGGER_SECONDS * ctx.fps, ctx.enterFrames);
   }
 }
 
 /** Fades the whole scene out over its last `exitFrames` frames. */
 export function fadeExit(el: HTMLElement, ctx: MountContext, frame: number): void {
+  // With no exit of its own (a transition takes the scene away) it stays fully drawn.
+  if (ctx.exitFrames <= 0) {
+    el.style.opacity = "1";
+    return;
+  }
   const start = ctx.durationFrames - ctx.exitFrames;
   const t = easeInCubic(clamp01((frame - start) / ctx.exitFrames));
   el.style.opacity = String(1 - t);

@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { CHARS_PER_SECOND, graphemes } from "../terminal/timing";
 import { escapeHtml, highlightHtml, readingSeconds } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
@@ -37,7 +36,7 @@ export const outroDefinition: SceneDefinition<OutroProps> = {
       ? `<p class="sf-outro__url" data-sf-enter="2" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.url">${escapeHtml(props.url)}</p>`
       : "";
     const side = command || url ? `<div class="sf-outro__side">${command}${url}</div>` : "";
-    return `${sceneChrome(ctx)}<div class="sf-outro"><h1 class="sf-outro__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${side}</div>`;
+    return `<div class="sf-outro"><h1 class="sf-outro__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${side}</div>`;
   },
   css: `
 .sf-outro{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*60);column-gap:calc(var(--sf-unit)*6);align-items:end}

@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { type TerminalProps, terminalSchema } from "./schema";
@@ -36,7 +35,7 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
         return `<div class="sf-terminal__step"><div class="sf-terminal__cmd"><span class="sf-terminal__prompt">$</span><span data-sf-type="${escapeHtml(step.run)}"></span><span class="sf-terminal__caret"></span></div>${output}</div>`;
       })
       .join("");
-    return `${sceneChrome(ctx)}<div class="sf-terminal"><div class="sf-terminal__body" data-sf-enter="0" data-sf-fit="3.4,6,0.2" data-sf-box data-sf-path="${ctx.path}.steps">${steps}</div></div>`;
+    return `<div class="sf-terminal"><div class="sf-terminal__body" data-sf-enter="0" data-sf-fit="3.4,6,0.2" data-sf-box data-sf-path="${ctx.path}.steps">${steps}</div></div>`;
   },
   css: `
 .sf-terminal{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*9)}

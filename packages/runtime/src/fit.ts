@@ -15,7 +15,7 @@ export interface SlotReport {
  * the bottom of the frame, so too much of it climbs into the counter.
  */
 export function isCrowded(scene: HTMLElement): boolean {
-  const chrome = scene.querySelector(".sf-chrome");
+  const chrome = document.querySelector(".sf-chrome");
   if (!chrome) return false;
   const limit = chrome.getBoundingClientRect().bottom - 1;
   const range = document.createRange();
@@ -84,7 +84,7 @@ export function inspectLabels(
     path: el.dataset.sfPath ?? "",
     rects: textRects(el),
   }));
-  const counter = scene.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
+  const counter = document.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
   const conflicts: ConflictReport[] = [];
 
   found.forEach((label, i) => {

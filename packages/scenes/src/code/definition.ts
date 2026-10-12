@@ -1,4 +1,3 @@
-import { sceneChrome } from "../chrome";
 import { escapeHtml } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { highlightLines } from "./highlight";
@@ -46,7 +45,7 @@ export const codeDefinition: SceneDefinition<CodeProps> = {
     const caption = props.caption
       ? `<p class="sf-code__caption" data-sf-enter="0" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
       : "";
-    return `${sceneChrome(ctx)}<div class="sf-code"><div class="sf-code__block" data-sf-fit="3.4,5,0.2" data-sf-box data-sf-path="${ctx.path}.source">${rows}</div>${caption}</div>`;
+    return `<div class="sf-code"><div class="sf-code__block" data-sf-fit="3.4,5,0.2" data-sf-box data-sf-path="${ctx.path}.source">${rows}</div>${caption}</div>`;
   },
   css: `
 .sf-code{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;gap:calc(var(--sf-unit)*3)}

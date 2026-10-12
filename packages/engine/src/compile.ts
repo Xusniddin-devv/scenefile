@@ -1,4 +1,4 @@
-import { SHARED_CSS, getScene } from "@scenefile/scenes";
+import { SHARED_CSS, getScene, sceneChrome } from "@scenefile/scenes";
 import { fontFaceCss, videoTexts } from "./fonts";
 import type { ResolvedVideo } from "./resolve";
 import { getTheme, themeCss } from "./themes";
@@ -35,7 +35,11 @@ function baseCss(width: number, height: number): string {
     "*{box-sizing:border-box;margin:0;padding:0}",
     `html,body{width:${width}px;height:${height}px;overflow:hidden;background:var(--sf-bg);color:var(--sf-text);-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}`,
     "#sf-stage{position:relative;width:100%;height:100%}",
-    ".sf-scene{position:absolute;inset:0}",
+    // Opaque, so a scene arriving over another covers it.
+    ".sf-scene{position:absolute;inset:0;background:var(--sf-bg)}",
+    // The lime edge that leads a wipe.
+    ".sf-wipe{z-index:2;position:absolute;top:0;bottom:0;width:calc(var(--sf-unit)*0.4);margin-left:calc(var(--sf-unit)*-0.2);background:var(--sf-accent)}",
+    ".sf-wipe[hidden]{display:none}",
     ".sf-scene[hidden]{display:none}",
   ].join("");
 }
@@ -95,6 +99,8 @@ ${sceneCss}</style>
 <body>
 <div id="sf-stage">
 ${sections}
+<div class="sf-wipe" hidden></div>
+${sceneChrome(total)}
 </div>
 <script id="sf-manifest" type="application/json">${manifestJson}</script>${assetsScript}
 </body>
