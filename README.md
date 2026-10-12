@@ -1,7 +1,6 @@
 # scenefile
 
 [![CI](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml/badge.svg)](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/scenefile)](https://www.npmjs.com/package/scenefile)
 
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
@@ -22,6 +21,10 @@ no drawing, narrated and captioned on the machine that rendered it.
 
 You need Node 22 or newer and `ffmpeg` on your `PATH`. macOS and Linux are tested (CI
 runs on Linux x64; development is on Apple silicon); Windows is untested.
+
+> The npm packages are not published yet. Until they are, build from source as
+> [CONTRIBUTING.md](CONTRIBUTING.md) describes; `scenefile` then means
+> `node packages/cli/dist/main.js`.
 
 ```bash
 npm install -g scenefile
