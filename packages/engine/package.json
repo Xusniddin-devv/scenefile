@@ -1,0 +1,15 @@
+{
+  "name": "@scenefile/engine",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist"],
+  "scripts": { "build": "tsup && tsc -p tsconfig.build.json" },
+  "dependencies": {
+    "@scenefile/scenes": "workspace:*",
+    "@scenefile/schema": "workspace:*"
+  }
+}
