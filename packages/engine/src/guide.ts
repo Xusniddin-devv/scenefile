@@ -44,7 +44,7 @@ function sceneSection(type: SceneType, example: "inline" | "block"): string {
 }
 
 const EVERY_SCENE =
-  'Every scene needs `type`. Any scene may also set `duration` (seconds on screen; leave it out and the scene is timed by how long it takes to read) and `transition` (how it arrives, if not the scenefile\'s).';
+  'Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) and `transition` (how it arrives, if not the scenefile\'s).';
 
 /**
  * Everything a model needs to write a scenefile, in under 2,000 tokens. It is
@@ -71,7 +71,9 @@ export function authoringGuide(): string {
     ...SCENE_TYPES.map((type) => sceneSection(type, "inline")),
     "## Rules that save a round of fixes",
     [
+      "- Use only the facts you were given. Do not invent numbers, quotations, people's names or web addresses.",
       "- Keep text short. If check reports `TEXT_OVERFLOW`, shorten the text to the number of characters it gives.",
+      "- The whole video must last between 3 seconds and 10 minutes.",
       "- `highlight` must be copied exactly, letter for letter, from the text it belongs to.",
       "- Images and music are files in the same folder as the scenefile, named by their file name.",
       '- Write in Latin or Cyrillic letters. Avoid arrows, check marks and emoji: write "->" and "ok".',

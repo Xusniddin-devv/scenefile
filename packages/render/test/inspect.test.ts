@@ -89,13 +89,29 @@ describe("text fitting", () => {
     expect(long.length).toBeGreaterThan(100);
     expect(slot("scenes[0].steps").overflow).toBe(false);
     expect(slot("scenes[0].steps").sizePx).toBeGreaterThanOrEqual(5 * UNIT);
-    expect(diagnostics).toEqual([]);
+    // The long command wraps, which is allowed but said.
+    expect(diagnostics.map((d) => [d.code, d.severity])).toEqual([["TEXT_WRAPPED", "warning"]]);
   });
 
   it("never sets terminal text below the minimum readable size", async () => {
     const step = { run: "x".repeat(120), output: "y ".repeat(200).trim() };
     const { slot } = await inspect({ scenes: [{ type: "terminal", steps: Array.from({ length: 6 }, () => step) }] });
     expect(slot("scenes[0].steps").sizePx).toBeGreaterThanOrEqual(3.4 * UNIT - 0.01);
+  });
+
+  it("says when code lines were too long to stay on one line", async () => {
+    const lines = [
+      'const account = await api.accounts.create({ email: "ada@example.com", plan: "team" });',
+      "await api.profiles.update(account.id, { name: user.name, timezone: user.timezone });",
+    ];
+    const long = await inspect({ scenes: [{ type: "code", lang: "ts", source: lines.join("\n") }, filler] });
+    expect(long.slot("scenes[0].source").wrapped).toBe(true);
+    expect(long.diagnostics).toEqual([
+      expect.objectContaining({ code: "TEXT_WRAPPED", severity: "warning", path: "scenes[0].source" }),
+    ]);
+    const short = await inspect({ scenes: [{ type: "code", lang: "ts", source: "const a = 1;\nconst b = 2;" }, filler] });
+    expect(short.slot("scenes[0].source").wrapped).toBeFalsy();
+    expect(short.diagnostics).toEqual([]);
   });
 
   it("keeps the heading wide in portrait and square formats", async () => {

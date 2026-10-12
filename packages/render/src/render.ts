@@ -41,6 +41,8 @@ export interface RenderOptions {
   ffmpegPath?: string;
   ffprobePath?: string;
   onProgress?: (done: number, total: number) => void;
+  /** Aborting this stops the render and removes what it had made so far. */
+  signal?: AbortSignal;
 }
 
 export interface RenderReport {
@@ -152,7 +154,10 @@ export async function renderVideo(composition: Composition, options: RenderOptio
   try {
     const queue = [...segments];
     let done = 0;
-    let stopped = false;
+    let stopped = options.signal?.aborted ?? false;
+    options.signal?.addEventListener("abort", () => {
+      stopped = true;
+    });
 
     /** One worker: its own browser, taking segments until none are left or another worker has failed. */
     const work = async (): Promise<void> => {
@@ -199,6 +204,9 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         }),
       ),
     );
+    if (options.signal?.aborted) {
+      throw new EnvironmentError("The render was cancelled.", "Start it again if you still want the video.");
+    }
     const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason as unknown] : []));
     if (failures.length > 0) {
       // A problem with the machine is the more useful thing to report than whatever it caused elsewhere.

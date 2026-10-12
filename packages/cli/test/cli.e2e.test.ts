@@ -93,6 +93,9 @@ describe("built CLI", () => {
     expect(result.code).toBe(2);
     expect(result.stderr).toContain("filesystem root");
     expect(result.stderr).not.toMatch(/\bat .+:\d+:\d+/);
+    const missing = await scenefile(["mcp", "--root", join(dir, "no-such-folder")]);
+    expect(missing.code).toBe(2);
+    expect(missing.stderr).toMatch(/folder/);
     const unknown = await scenefile(["mcp", "--bogus"]);
     expect(unknown.code).toBe(2);
     expect(unknown.stderr).toContain("Usage: scenefile mcp");

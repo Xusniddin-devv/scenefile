@@ -70,6 +70,13 @@ describe("the authoring guide", () => {
     }
   });
 
+  it("warns against the mistakes real models made when they were tried", () => {
+    // Measured: models invented statistics, testimonials and addresses, and wrote code lines too long to fit.
+    expect(guide).toMatch(/[Dd]o not invent/);
+    expect(guide).toMatch(/60 characters/);
+    expect(guide).toMatch(/3 seconds|3 to 600/);
+  });
+
   it("contains a complete example scenefile that passes a full check", () => {
     const block = /```json\n([\s\S]*?)\n```/.exec(guide)?.[1] ?? "";
     const example = JSON.parse(block) as { scenes: unknown[] };

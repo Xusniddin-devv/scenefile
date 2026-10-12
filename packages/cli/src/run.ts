@@ -128,14 +128,20 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command === "init") {
-      const target = join(resolvePath(file ?? "."), "scenefile.json");
+      const folder = resolvePath(file ?? ".");
+      const target = join(folder, "scenefile.json");
       try {
-        await mkdir(dirname(target), { recursive: true });
+        await mkdir(folder, { recursive: true });
+      } catch {
+        io.err(`"${folder}" is a file, not a folder, or cannot be created. Give a folder to put scenefile.json in.`);
+        return 1;
+      }
+      try {
         // "wx": fail rather than replace a file that is already there.
         await writeFile(target, `${JSON.stringify(exampleScenefile(), null, 2)}\n`, { flag: "wx" });
       } catch (cause) {
-        if ((cause as NodeJS.ErrnoException).code !== "EEXIST") throw cause;
-        io.err(`${target} already exists; it was left as it is.`);
+        const code = (cause as NodeJS.ErrnoException).code;
+        io.err(code === "EEXIST" ? `${target} already exists; it was left as it is.` : `Cannot write ${target}: ${code ?? "unknown error"}.`);
         return 1;
       }
       io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);

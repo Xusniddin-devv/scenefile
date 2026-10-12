@@ -51,7 +51,7 @@ export const codeDefinition: SceneDefinition<CodeProps> = {
     purpose: "Source code with line numbers; chosen lines can be marked so they stand out.",
     fields: {
       "lang": "The language: \"typescript\", \"python\", \"bash\", \"json\", \"go\", \"rust\" and others, or \"text\".",
-      "source": "The code. Required, at most 12 lines and 2,000 characters. Use \\n between lines.",
+      "source": "The code. Required, at most 12 lines; keep each line under 60 characters. Use \\n between lines.",
       "highlight": "Line numbers, counted from 1, to mark: [2, 3].",
       "caption": "A line under the code, up to 80 characters."
     },

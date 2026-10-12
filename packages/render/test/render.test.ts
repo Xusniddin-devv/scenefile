@@ -271,6 +271,23 @@ describe("renderVideo", () => {
     expect(partialFiles(join(dir, "it's odd\nhere"))).toEqual([]);
   });
 
+  it("stops when told to, leaving nothing behind", async () => {
+    const stopper = new AbortController();
+    const output = join(dir, "cancelled.mp4");
+    const attempt = renderVideo(fixture(), {
+      output,
+      quality: "draft",
+      signal: stopper.signal,
+      onProgress: (done) => {
+        if (done === 10) stopper.abort();
+      },
+    });
+    await expect(attempt).rejects.toBeInstanceOf(EnvironmentError);
+    await expect(attempt).rejects.toThrow(/cancelled/);
+    expect(existsSync(output)).toBe(false);
+    expect(partialFiles(dir)).toEqual([]);
+  });
+
   it("does not start further segments once one has failed", async () => {
     // Four segments, two workers. The first segment's encoder dies at once; segments three and four must never begin.
     const result = check({

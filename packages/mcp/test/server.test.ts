@@ -292,7 +292,145 @@ describe("render and job", () => {
   });
 });
 
+describe("limits on what a caller can make the server do", () => {
+  const blocked = () => {
+    const releases: (() => void)[] = [];
+    const aborted: string[] = [];
+    const render: NonNullable<ServerOptions["render"]> = (_composition, options) =>
+      new Promise<RenderReport>((resolve, reject) => {
+        releases.push(() => resolve(report(options.output)));
+        options.signal?.addEventListener("abort", () => {
+          aborted.push(options.output);
+          reject(new EnvironmentError("The render was cancelled.", "Start it again if you still want the video."));
+        });
+      });
+    return { render, releases, aborted };
+  };
+  const jobId = (text: string): string => /job-\d+/.exec(text)?.[0] ?? "";
+
+  it("does not replace a video that is already there unless told to, and says when it does", async () => {
+    writeFileSync(join(root, "precious.mp4"), "a recording");
+    const { render } = blocked();
+    const { call, close } = await connect({ render });
+    const refused = await call("render", { path: "video.json", output: "precious.mp4" });
+    expect(refused.isError).toBe(true);
+    expect(refused.text).toMatch(/already exists/);
+    expect(refused.text).toContain("overwrite");
+    const allowed = await call("render", { path: "video.json", output: "precious.mp4", overwrite: true });
+    expect(allowed.isError).toBe(false);
+    expect(allowed.text).toMatch(/replac/);
+    await close();
+  });
+
+  it("never writes the video over the scenefile, however the two paths are spelt", async () => {
+    // A scenefile with a video's name, reached through a link to the root, and in another letter case.
+    writeFileSync(join(root, "clip.mp4"), JSON.stringify(valid));
+    symlinkSync(root, join(outer, "rootlink"));
+    const { render, releases } = blocked();
+    const { call, close } = await connect({ render, root: join(outer, "rootlink") });
+    for (const output of ["clip.mp4", "./sub/../clip.mp4"]) {
+      const { text, isError } = await call("render", { path: "clip.mp4", output, overwrite: true });
+      expect(isError, output).toBe(true);
+      expect(text, output).toMatch(/scenefile itself/);
+    }
+    expect(releases).toHaveLength(0);
+    await close();
+  });
+
+  it("holds only so many renders in line, and can cancel one that is waiting or running", async () => {
+    const { render, releases, aborted } = blocked();
+    const { call, close } = await connect({ render });
+    const ids: string[] = [];
+    for (let i = 0; i < 6; i++) ids.push(jobId((await call("render", { path: "video.json", output: `q${i}.mp4` })).text));
+    expect(ids.every((id) => id !== "")).toBe(true);
+    const tooMany = await call("render", { path: "video.json", output: "q6.mp4" });
+    expect(tooMany.isError).toBe(true);
+    expect(tooMany.text).toMatch(/waiting/);
+
+    // Cancel one that has not started: it never renders.
+    const waiting = await call("job", { id: ids[3] ?? "", cancel: true });
+    expect(waiting.text).toMatch(/cancelled/);
+    // Cancel the one that is running: its renderer is told to stop.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const running = await call("job", { id: ids[0] ?? "", cancel: true });
+    expect(running.text).toMatch(/cancel/);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(aborted).toEqual([join(root, "q0.mp4")]);
+    expect((await call("job", { id: ids[0] ?? "" })).text).toMatch(/cancelled/);
+
+    for (let turn = 0; turn < 8; turn++) {
+      releases.shift()?.();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect((await call("job", { id: ids[1] ?? "" })).text).toMatch(/finished/);
+    expect((await call("job", { id: ids[3] ?? "" })).text).toMatch(/cancelled/);
+    expect((await call("job", { id: ids[5] ?? "" })).text).toMatch(/finished/);
+    await close();
+  });
+
+  it("checks one scenefile at a time, however many arrive together", async () => {
+    let busy = 0;
+    let most = 0;
+    const { call, close } = await connect({
+      inspect: async () => {
+        busy += 1;
+        most = Math.max(most, busy);
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        busy -= 1;
+        return { slots: [] };
+      },
+    });
+    const replies = await Promise.all(Array.from({ length: 6 }, () => call("check", { scenefile: valid })));
+    expect(replies.every((reply) => reply.text.includes("No problems found."))).toBe(true);
+    expect(most).toBe(1);
+    await close();
+  });
+
+  it("explains a path that is not a file in plain words", async () => {
+    const { call, close } = await connect();
+    const { text, isError } = await call("check", { path: "sub" });
+    expect(isError).toBe(true);
+    expect(text).toMatch(/folder|not a file/);
+    expect(text).not.toMatch(/EISDIR|ENOENT/);
+    await close();
+  });
+
+  it("downloads images only when started to allow it", async () => {
+    const png = Buffer.alloc(57);
+    png.writeUInt32BE(0x89504e47, 0);
+    png.writeUInt32BE(0x0d0a1a0a, 4);
+    png.writeUInt32BE(13, 8);
+    png.write("IHDR", 12, "latin1");
+    png.writeUInt32BE(640, 16);
+    png.writeUInt32BE(360, 20);
+    png.write("IDAT", 37, "latin1");
+    const requested: string[] = [];
+    const network = {
+      lookup: async () => [{ address: "93.184.216.34", family: 4 as const }],
+      request: async (url: URL) => {
+        requested.push(url.href);
+        return { status: 200, headers: {}, body: (async function* () { yield new Uint8Array(png); })(), close: () => undefined };
+      },
+    };
+    const scenefile = { version: 1, scenes: [{ type: "screenshot", src: "https://example.com/a.png" }, valid.scenes[0]] };
+    const off = await connect({ network });
+    expect((await off.call("check", { scenefile })).text).toMatch(/turned off/);
+    expect(requested).toEqual([]);
+    await off.close();
+    const on = await connect({ network, allowRemoteImages: true });
+    const allowed = await on.call("check", { scenefile });
+    expect(allowed.text).not.toContain("ASSET_");
+    expect(requested).toEqual(["https://example.com/a.png"]);
+    await on.close();
+  });
+});
+
 describe("where the server may work", () => {
+  it("refuses a root that is not an existing folder", () => {
+    expect(() => createServer({ root: join(outer, "no-such-folder") })).toThrow(/folder/);
+    expect(() => createServer({ root: join(root, "video.json") })).toThrow(/folder/);
+  });
+
   it("refuses to treat the whole disk as its root", () => {
     expect(() => createServer({ root: "/" })).toThrow(/root/);
   });

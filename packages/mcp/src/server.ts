@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { dirname, extname, relative } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  type AssetSources,
   type CheckResult,
   type Composition,
   type InspectReport,
@@ -21,7 +22,7 @@ import {
 import { type Diagnostic, nearest, parseScenefileText } from "@scenefile/schema";
 import { SCENE_TYPES, isSceneType } from "@scenefile/scenes";
 import { z } from "zod";
-import { existingInside, resolveRoot, writableInside } from "./paths";
+import { existingInside, resolveRoot, sameFile, writableInside } from "./paths";
 
 export interface ServerOptions {
   /** The folder the server works in. Nothing outside it is read or written. */
@@ -34,6 +35,8 @@ export interface ServerOptions {
   inspect?: (composition: Composition) => Promise<InspectReport>;
   /** Replaces asking ffprobe whether music has a sound track. For tests. */
   hasSound?: (file: string) => Promise<boolean>;
+  /** Replaces name lookup and https requests for image downloads. For tests. */
+  network?: Pick<AssetSources, "lookup" | "request">;
 }
 
 type Reply = { content: { type: "text"; text: string }[]; isError: boolean };
@@ -45,7 +48,9 @@ interface Job {
   id: string;
   /** Where the video goes, relative to the root. */
   output: string;
-  state: "waiting" | "rendering" | "finished" | "failed";
+  state: "waiting" | "rendering" | "finished" | "failed" | "cancelled";
+  /** Stops the render when aborted. */
+  stop: AbortController;
   done: number;
   total: number;
   report?: RenderReport;
@@ -54,6 +59,10 @@ interface Job {
 
 /** How many finished jobs are remembered. */
 const MAX_JOBS = 50;
+/** How many renders may wait behind the one that is running. Each holds a whole video's images in memory. */
+const MAX_WAITING = 5;
+/** A render that runs longer than this is stopped: something has hung. */
+const MAX_RENDER_MS = 30 * 60 * 1000;
 
 const TOOLS_NOTE = [
   "## Tools",
@@ -86,6 +95,15 @@ export function createServer(options: ServerOptions): McpServer {
   let nextJob = 1;
   /** Renders run one after another; each waits on this. */
   let line: Promise<void> = Promise.resolve();
+  /** Checks run one after another too: each one starts a browser. */
+  let checks: Promise<unknown> = Promise.resolve();
+  function oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+    const turn = checks.then(work, work);
+    checks = turn.catch(() => undefined);
+    return turn;
+  }
+  /** Absolute paths mean nothing to the caller and say more about the machine than it needs to know. */
+  const withoutRoot = (text: string): string => text.split(root).join(".");
 
   /** Turns a tool's `scenefile` or `path` argument into a checked scenefile, or a refusal. */
   async function prepare(args: { scenefile?: unknown; path?: string | undefined }): Promise<
@@ -106,7 +124,11 @@ export function createServer(options: ServerOptions): McpServer {
       if (!located.ok) return refuse(located.message);
       source = located.path;
       baseDir = dirname(located.path);
-      value = await readFile(located.path, "utf8");
+      try {
+        value = await readFile(located.path, "utf8");
+      } catch {
+        return refuse(`"${args.path}" could not be read.`);
+      }
     }
     if (typeof value === "string") {
       const parsed = parseScenefileText(value);
@@ -115,12 +137,15 @@ export function createServer(options: ServerOptions): McpServer {
       notes = parsed.diagnostics;
     }
 
-    const result = await prepareScenefile(value, {
-      baseDir,
-      allowRemote: options.allowRemoteImages === true,
-      ...(options.inspect ? { inspect: options.inspect } : {}),
-      ...(options.hasSound ? { hasSound: options.hasSound } : {}),
-    });
+    const result = await oneAtATime(() =>
+      prepareScenefile(value, {
+        baseDir,
+        allowRemote: options.allowRemoteImages === true,
+        ...options.network,
+        ...(options.inspect ? { inspect: options.inspect } : {}),
+        ...(options.hasSound ? { hasSound: options.hasSound } : {}),
+      }),
+    );
     return { result: { ...result, diagnostics: [...notes, ...result.diagnostics] }, source, notes };
   }
 
@@ -129,7 +154,8 @@ export function createServer(options: ServerOptions): McpServer {
     const parts = [];
     if (result.storyboard) parts.push(result.storyboard);
     parts.push(formatDiagnostics(result.diagnostics));
-    const repaired = result.diagnostics.some((diagnostic) => diagnostic.code === "AUTOFIXED");
+    // Only when a field was repaired; unwrapping a code fence changes nothing the caller should copy.
+    const repaired = result.diagnostics.some((diagnostic) => diagnostic.code === "AUTOFIXED" && diagnostic.path !== "");
     if (repaired && result.scenefile) {
       parts.push(`Corrected scenefile (use this from now on):\n${JSON.stringify(result.scenefile, null, 2)}`);
     }
@@ -185,6 +211,7 @@ export function createServer(options: ServerOptions): McpServer {
         output: z.string().describe('Where to write the video, relative to the folder the server works in. Must end in ".mp4".'),
         quality: z.enum(QUALITIES).optional().describe('"draft" (fast, smaller), "standard" (default) or "high".'),
         workers: z.number().int().min(1).max(MAX_WORKERS).optional().describe("Browsers to render with at once. Leave out for a sensible default."),
+        overwrite: z.boolean().optional().describe("Set true to replace a file that already exists at `output`. Without it, an existing file is left alone."),
       },
     },
     async (args) => {
@@ -199,13 +226,29 @@ export function createServer(options: ServerOptions): McpServer {
       if ("content" in prepared) return { ...prepared, isError: true };
       const { result, source } = prepared;
       if (!result.ok || !result.composition) return refuse(describe(result));
-      if (source === target.path) return refuse("The output path is the scenefile itself. Choose a different output.");
+      if (source !== null && (await sameFile(source, target.path))) {
+        return refuse("The output path is the scenefile itself. Choose a different output.");
+      }
+      const exists = await access(target.path).then(
+        () => true,
+        () => false,
+      );
+      if (exists && args.overwrite !== true) {
+        return refuse(
+          `"${args.output}" already exists and was left alone. Choose another name, or pass \`overwrite: true\` to replace it.`,
+        );
+      }
+      const waiting = [...jobs.values()].filter((job) => job.state === "waiting").length;
+      if (waiting >= MAX_WAITING) {
+        return refuse(`${waiting} renders are already waiting. Wait for one to finish (see the \`job\` tool), or cancel one.`);
+      }
 
       const composition = result.composition;
       const job: Job = {
         id: `job-${nextJob++}`,
         output: relative(root, target.path),
         state: "waiting",
+        stop: new AbortController(),
         done: 0,
         total: composition.manifest.totalFrames,
       };
@@ -217,10 +260,19 @@ export function createServer(options: ServerOptions): McpServer {
       }
 
       line = line.then(async () => {
+        // Cancelled while it waited: it never starts.
+        if (job.state !== "waiting") return;
         job.state = "rendering";
+        let tookTooLong = false;
+        const limit = setTimeout(() => {
+          tookTooLong = true;
+          job.stop.abort();
+        }, MAX_RENDER_MS);
+        limit.unref();
         try {
           job.report = await (options.render ?? renderVideo)(composition, {
             output: target.path,
+            signal: job.stop.signal,
             ...(args.quality ? { quality: args.quality } : {}),
             ...(args.workers ? { workers: args.workers } : {}),
             onProgress: (done) => {
@@ -229,18 +281,27 @@ export function createServer(options: ServerOptions): McpServer {
           });
           job.state = "finished";
         } catch (cause) {
+          if (job.stop.signal.aborted && !tookTooLong) {
+            job.state = "cancelled";
+            return;
+          }
           job.state = "failed";
-          job.failure =
-            cause instanceof EnvironmentError
-              ? `${cause.message}\n${cause.remedy}`
-              : `The renderer failed: ${cause instanceof Error ? cause.message : String(cause)}`;
+          job.failure = tookTooLong
+            ? "The render ran for half an hour without finishing and was stopped."
+            : withoutRoot(
+                cause instanceof EnvironmentError
+                  ? `${cause.message}\n${cause.remedy}`
+                  : `The renderer failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+              );
+        } finally {
+          clearTimeout(limit);
         }
       });
 
       const seconds = (job.total / composition.manifest.fps).toFixed(1);
       const warnings = result.diagnostics.length > 0 ? `\n\n${formatDiagnostics(result.diagnostics)}` : "";
       return say(
-        `Rendering started as ${job.id}: ${job.total} frames, ${seconds}s of video, to ${job.output}. ` +
+        `Rendering started as ${job.id}: ${job.total} frames, ${seconds}s of video, to ${job.output}${exists ? " (replacing the file that was there)" : ""}. ` +
           `Call the \`job\` tool with id "${job.id}" to see progress and the result.${warnings}`,
       );
     },
@@ -249,15 +310,30 @@ export function createServer(options: ServerOptions): McpServer {
   server.registerTool(
     "job",
     {
-      description: "Reports on a render started with `render`: waiting, how far it has got, finished (with the file), or failed (with why).",
-      inputSchema: { id: z.string().describe('The job id that `render` returned, such as "job-1".') },
+      description:
+        "Reports on a render started with `render`: waiting, how far it has got, finished (with the file), or failed (with why). Can also cancel it.",
+      inputSchema: {
+        id: z.string().describe('The job id that `render` returned, such as "job-1".'),
+        cancel: z.boolean().optional().describe("Set true to stop this render."),
+      },
     },
-    async ({ id }) => {
+    async ({ id, cancel }) => {
       const job = jobs.get(id.trim());
       if (!job) {
         const known = [...jobs.keys()];
-        return refuse(`There is no job "${id}".${known.length > 0 ? ` Jobs: ${known.join(", ")}.` : " No render has been started."}`);
+        return refuse(
+          `There is no job "${id.slice(0, 40)}".${known.length > 0 ? ` Jobs: ${known.join(", ")}.` : " No render has been started."}`,
+        );
       }
+      if (cancel === true && job.state === "waiting") {
+        job.state = "cancelled";
+        return say(`${job.id}: cancelled before it started.`);
+      }
+      if (cancel === true && job.state === "rendering") {
+        job.stop.abort();
+        return say(`${job.id}: cancelling. Nothing will be written to ${job.output}.`);
+      }
+      if (job.state === "cancelled") return say(`${job.id}: cancelled. Nothing was written to ${job.output}.`);
       if (job.state === "waiting") return say(`${job.id}: waiting for an earlier render to finish.`);
       if (job.state === "rendering") {
         const percent = Math.floor((job.done / Math.max(1, job.total)) * 100);

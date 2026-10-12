@@ -273,6 +273,11 @@ describe("commands that explain", () => {
       expect(await run(["check", written], checked.io)).toBe(0);
       expect(checked.out()).toContain("No problems found.");
 
+      const onFile = capture();
+      expect(await run(["init", written], onFile.io)).toBe(1);
+      expect(onFile.err()).toMatch(/not a folder|is a file/);
+      expect(onFile.err()).not.toMatch(/\bat .+:\d+:\d+/);
+
       writeFileSync(written, "mine");
       const second = capture();
       expect(await run(["init", folder], second.io)).toBe(1);

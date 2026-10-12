@@ -7,6 +7,8 @@ export interface SlotReport {
   chars: number;
   overflow: boolean;
   outside: boolean;
+  /** True when lines that should have stayed whole had to be wrapped to fit. */
+  wrapped?: boolean;
 }
 
 /**
@@ -207,6 +209,7 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       size = next;
     }
     let fits = result.fits;
+    let wrapped = false;
     el.classList.remove("sf-fitting");
     if (!boxed) {
       // A heading that only fits by breaking a word is drawn broken, as damage
@@ -226,6 +229,7 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
         size = next;
       }
       fits = result.fits;
+      wrapped = fits;
     }
 
     reports.push({
@@ -235,6 +239,7 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       maxLines,
       chars: Array.from(el.textContent ?? "").length,
       overflow: !fits,
+      ...(wrapped ? { wrapped: true } : {}),
       outside: isOutside(el, unitPx, frame),
     });
   }

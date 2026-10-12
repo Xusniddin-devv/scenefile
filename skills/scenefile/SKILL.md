@@ -73,7 +73,7 @@ A scenefile is a JSON object that says what each scene of a video shows. You nev
 
 ## Scene types
 
-Every scene needs `type`. Any scene may also set `duration` (seconds on screen; leave it out and the scene is timed by how long it takes to read) and `transition` (how it arrives, if not the scenefile's).
+Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) and `transition` (how it arrives, if not the scenefile's).
 
 ### title
 An opening or section heading: one large line, with an optional smaller line beside it.
@@ -111,7 +111,7 @@ Example: `{"type":"stat","value":"60x","label":"faster releases","note":"Measure
 ### code
 Source code with line numbers; chosen lines can be marked so they stand out.
 - `lang`: The language: "typescript", "python", "bash", "json", "go", "rust" and others, or "text".
-- `source`: The code. Required, at most 12 lines and 2,000 characters. Use \n between lines.
+- `source`: The code. Required, at most 12 lines; keep each line under 60 characters. Use \n between lines.
 - `highlight`: Line numbers, counted from 1, to mark: [2, 3].
 - `caption`: A line under the code, up to 80 characters.
 Example: `{"type":"code","lang":"bash","source":"npm install -g shipit\nshipit deploy","highlight":[2],"caption":"Two lines from install to live."}`
@@ -145,7 +145,9 @@ Example: `{"type":"terminal","steps":[{"run":"shipit deploy","output":"Deployed 
 
 ## Rules that save a round of fixes
 
+- Use only the facts you were given. Do not invent numbers, quotations, people's names or web addresses.
 - Keep text short. If check reports `TEXT_OVERFLOW`, shorten the text to the number of characters it gives.
+- The whole video must last between 3 seconds and 10 minutes.
 - `highlight` must be copied exactly, letter for letter, from the text it belongs to.
 - Images and music are files in the same folder as the scenefile, named by their file name.
 - Write in Latin or Cyrillic letters. Avoid arrows, check marks and emoji: write "->" and "ok".

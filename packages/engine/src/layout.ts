@@ -15,6 +15,8 @@ export interface SlotReport {
   overflow: boolean;
   /** True when the text reaches into the frame's safe margin. */
   outside: boolean;
+  /** True when lines that should have stayed whole (code, commands) had to be wrapped to fit. */
+  wrapped?: boolean;
 }
 
 /** What the browser reports for one image. */
@@ -94,6 +96,15 @@ export function verifyLayout(report: InspectReport): Diagnostic[] {
           slot.path,
           "This content is taller than the scene, even at its smallest size.",
           "Use fewer or shorter lines or items, or split them across two scenes.",
+        ),
+      );
+    } else if (slot.wrapped) {
+      diagnostics.push(
+        warning(
+          "TEXT_WRAPPED",
+          slot.path,
+          "Some lines here are too long for the frame and continue on the next line.",
+          "Make the longest lines shorter: about 60 characters fit across a wide frame, about 30 across a tall one.",
         ),
       );
     } else if (slot.outside) {

@@ -35,6 +35,13 @@ describe("verifyLayout", () => {
     expect(diagnostic?.fix).toMatch(/shorter words/);
   });
 
+  it("warns when lines had to be wrapped to fit, without failing the check", () => {
+    const [diagnostic, ...rest] = verifyLayout({ slots: [slot({ path: "scenes[1].source", maxLines: null, wrapped: true })] });
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({ code: "TEXT_WRAPPED", severity: "warning", path: "scenes[1].source" });
+    expect(diagnostic?.fix).toMatch(/shorter|shorten/i);
+  });
+
   it("asks for less content when a block is too tall", () => {
     const [diagnostic] = verifyLayout({ slots: [slot({ path: "scenes[1].steps", maxLines: null, overflow: true })] });
     expect(diagnostic).toMatchObject({ code: "TEXT_OVERFLOW", path: "scenes[1].steps" });

@@ -55,7 +55,7 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
 ## Use from an AI agent
 
 **With a shell** (Claude Code, Codex, and similar): `skills/scenefile/SKILL.md` is a
-skill file that teaches the format and the two commands. `scenefile guide` prints the
+skill file that teaches the format and the commands. `scenefile guide` prints the
 same guide; `scenefile scenes <type>` one scene type in full; `scenefile schema` a JSON
 Schema for tools that can enforce one on a model's output.
 
@@ -72,19 +72,28 @@ Schema for tools that can enforce one on a model's output.
 }
 ```
 
-The server offers five tools: `guide` (how to write a scenefile, under 2,000 tokens),
+The server offers five tools: `guide` (how to write a scenefile, in about 2,000 tokens),
 `scene_docs`, `check`, `render` (returns a job id at once) and `job` (progress, then the
-finished file). A scenefile can be passed inline or as a path.
+finished file; it can also cancel). A scenefile can be passed inline or as a path.
 
 What the server can touch:
 
 - It reads and writes only inside `--root` (the folder it was started in, if not given).
   Paths that leave it, or links that lead out of it, are refused.
+- Inside the root it can read any scenefile, image or music file it is pointed at, and a
+  failed check may quote a few characters of a file that was not a scenefile.
+- It does not replace an existing file unless the caller passes `overwrite: true`.
 - It does not download images unless started with `--allow-remote-images`.
-- It renders one video at a time.
+- It renders one video at a time, keeps at most five waiting, and stops at once when
+  its client disconnects.
 
-The guide, the skill file and the tool descriptions are generated from the scene types
-themselves (`pnpm generate`), and a test fails if they fall out of step.
+The guide and the skill file are generated from the scene types themselves
+(`pnpm generate`), and a test fails if they fall out of step.
+
+Tried on 12 October 2026 with four inexpensive models through OpenRouter (DeepSeek v4
+flash, MiniMax M3, Qwen 3.7 flash, GLM 5.3 flash), each given only the guide and a
+one-paragraph brief, three briefs each: 11 of 12 scenefiles passed the full check on the
+first reply and all 12 by the second. That is one run of a small test, not a benchmark.
 
 ## Transitions
 
