@@ -22,6 +22,11 @@ export const FIXTURES: Record<SceneType, Record<string, unknown>> = {
     caption: "Every frame comes from one file.",
     callouts: [{ x: 0.25, y: 0.3, label: "Scene counter" }, { x: 0.7, y: 0.6, label: "Fitted text" }],
   },
+  compare: {
+    type: "compare",
+    before: { text: "Forty lines of animation code the model cannot check." },
+    after: { label: "With scenefile", text: "Six lines of JSON it can." },
+  },
   terminal: { type: "terminal", steps: [{ run: "scenefile check a.json", output: "No problems found." }] },
 };
 
@@ -39,6 +44,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, highlight: [1], caption: NASTY },
   outro: { type: "outro", heading: NASTY, highlight: "<u>x</u>", command: NASTY, url: NASTY },
   screenshot: { type: "screenshot", src: NASTY, url: NASTY, caption: NASTY, callouts: [{ x: 0.5, y: 0.5, label: SHORT_NASTY }] },
+  compare: { type: "compare", before: { label: SHORT_NASTY, text: NASTY }, after: { label: SHORT_NASTY, src: NASTY } },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 

@@ -300,12 +300,18 @@ describe("screenshot", () => {
     expect(sceneSchema.safeParse({ type: "screenshot", src: "a.png" }).success).toBe(true);
   });
 
-  it("places each callout by its fraction of the image, labels to the left when near the right edge", () => {
-    const { el } = stage(input);
+  it("places each callout by its fraction of the image, and its label on whichever side has room", () => {
+    const { el } = stage({ ...input, callouts: [{ x: 0.25, y: 0.3, label: "First" }, { x: 0.97, y: 0.6, label: "Second, with a longer label" }] });
     const pins = all(el, "[data-sf-pin]");
-    expect(pins.map((pin) => [pin.style.left, pin.style.top])).toEqual([["25%", "30%"], ["80%", "60%"]]);
-    expect(pins.map((pin) => pin.classList.contains("is-left"))).toEqual([false, true]);
-    expect(pins.map((pin) => pin.textContent)).toEqual(["First", "Second"]);
+    expect(pins.map((pin) => [pin.style.left, pin.style.top])).toEqual([["25%", "30%"], ["97%", "60%"]]);
+    expect(pins.map((pin) => pin.textContent)).toEqual(["First", "Second, with a longer label"]);
+    const labels = pins.map((pin) => pin.querySelector("b")?.style);
+    expect(Number.parseFloat(labels[0]?.left ?? "")).toBeGreaterThan(0);
+    expect(labels[0]?.right).toBe("");
+    // Near the right edge the label hangs to the left of its dot.
+    expect(Number.parseFloat(labels[1]?.right ?? "")).toBeGreaterThan(0);
+    expect(labels[1]?.left).toBe("");
+    for (const label of labels) expect(Number.parseFloat(label?.maxWidth ?? "")).toBeGreaterThan(80);
   });
 
   it("sizes the image to its area: 1280x720 in a landscape frame keeps its shape", () => {
@@ -339,6 +345,51 @@ describe("screenshot", () => {
     const html = getScene("screenshot").compile(props, { ...context(), asset: () => undefined });
     expect(html).not.toContain("<img");
     expect(html).toContain("sf-shot__missing");
+  });
+});
+
+describe("compare", () => {
+  const input = { type: "compare", before: { text: "Slow and manual." }, after: { label: "Now", text: "One command." } };
+
+  it("needs exactly one of text or image on each side", () => {
+    expect(sceneSchema.safeParse(input).success).toBe(true);
+    expect(sceneSchema.safeParse({ ...input, after: { label: "Now" } }).success).toBe(false);
+    expect(sceneSchema.safeParse({ ...input, after: { text: "a", src: "b.png" } }).success).toBe(false);
+    expect(sceneSchema.safeParse({ type: "compare", before: { src: "a.png" }, after: { src: "b.png" } }).success).toBe(true);
+  });
+
+  it("labels the sides Before and After unless told otherwise", () => {
+    const { el } = stage(input);
+    expect(all(el, ".sf-compare__label").map((label) => label.textContent)).toEqual(["Before", "Now"]);
+  });
+
+  it("declares its text and its images, with paths into each side", () => {
+    const text = stage(input);
+    expect(text.definition.texts(text.props).map((entry) => entry.path)).toEqual(["before.text", "after.label", "after.text"]);
+    expect(text.definition.assets?.(text.props)).toEqual([]);
+    const images = stage({ type: "compare", before: { src: "a.png" }, after: { src: "b.png" } });
+    expect(images.definition.assets?.(images.props)).toEqual([{ path: "before.src", src: "a.png" }, { path: "after.src", src: "b.png" }]);
+    expect(all(images.el, "img").map((image) => image.dataset.sfPath)).toEqual(["scenes[0].before.src", "scenes[0].after.src"]);
+  });
+
+  it("shows the before side first, then brings in the after side and lets the before side recede", () => {
+    const { el, ctx, handle, revealed } = stage(input);
+    const [before, after] = all(el, "[data-sf-side]");
+    if (!before || !after) throw new Error("missing sides");
+    handle.seek(ctx.enterFrames + 6);
+    expect(Number(before.style.opacity)).toBeGreaterThan(0.5);
+    expect(Number(after.style.opacity)).toBe(0);
+    handle.seek(revealed);
+    expect(after.style.opacity).toBe("1");
+    expect(Number(before.style.opacity)).toBeLessThan(0.6);
+    expect(Number(before.style.opacity)).toBeGreaterThan(0.3);
+  });
+
+  it("gives two images equal boxes side by side", () => {
+    const { el } = stage({ type: "compare", before: { src: "a.png" }, after: { src: "b.png" } });
+    const [first, second] = all(el, "img");
+    expect(first?.getAttribute("width")).toBe(second?.getAttribute("width"));
+    expect(Number(first?.getAttribute("width"))).toBeLessThanOrEqual((1920 - 18 * 10.8 - 6 * 10.8) / 2);
   });
 });
 

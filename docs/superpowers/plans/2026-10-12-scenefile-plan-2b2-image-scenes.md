@@ -1948,7 +1948,8 @@ const SIDES = [
 /** The space one side's image may fill: half the width side by side, half the height when stacked. */
 function imageBox(ctx: CompileContext): { width: number; height: number } {
   const { width, height, unit } = ctx.frame;
-  const stacked = height > width;
+  // Must agree with the CSS, which stacks the sides when the frame is square or taller.
+  const stacked = height >= width;
   const innerWidth = width - 2 * SIDE * unit;
   const innerHeight = height - (TOP + BOTTOM) * unit;
   return stacked

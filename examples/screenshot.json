@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "screenshot",
+      "src": "assets/frame.png",
+      "caption": "A frame from the launch example, used here as an image.",
+      "callouts": [
+        {
+          "x": 0.06,
+          "y": 0.075,
+          "label": "Scene counter"
+        },
+        {
+          "x": 0.55,
+          "y": 0.46,
+          "label": "Marked lines stay bright"
+        }
+      ]
+    },
+    {
+      "type": "compare",
+      "before": {
+        "label": "The image",
+        "src": "assets/frame.png"
+      },
+      "after": {
+        "label": "What it shows",
+        "text": "Code with two lines marked."
+      }
+    }
+  ]
+}

@@ -13,6 +13,17 @@
       "highlight": "Not at drawing it."
     },
     {
+      "type": "compare",
+      "before": {
+        "label": "Animation code",
+        "text": "Forty lines a model cannot check."
+      },
+      "after": {
+        "label": "A scenefile",
+        "text": "Six lines it can."
+      }
+    },
+    {
       "type": "code",
       "lang": "json",
       "source": "{\n  \"version\": 1,\n  \"scenes\": [\n    { \"type\": \"title\", \"heading\": \"Ship faster\" },\n    { \"type\": \"terminal\", \"steps\": [{ \"run\": \"npm test\" }] }\n  ]\n}",

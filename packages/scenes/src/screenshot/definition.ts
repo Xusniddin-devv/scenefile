@@ -1,7 +1,7 @@
 import { sceneChrome } from "../chrome";
 import { containSize, imageHtml } from "../image";
 import { escapeHtml, readingSeconds } from "../text";
-import type { SceneDefinition, SceneText } from "../types";
+import type { CompileContext, SceneDefinition, SceneText } from "../types";
 import { type ScreenshotProps, screenshotSchema } from "./schema";
 import { pinsRevealSeconds } from "./timing";
 
@@ -11,8 +11,30 @@ const BOTTOM = 8;
 const SIDE = 9;
 const BAR = 5;
 const CAPTION = 9;
-/** A callout this far right puts its label on the left, so it stays inside the image. */
-const LABEL_FLIPS_AT = 0.6;
+/** Callout labels, in units: text size, padding inside the box, and distance from the dot. */
+const LABEL_SIZE = 3.4;
+const LABEL_PADDING = 3;
+const LABEL_GAP = 2.6;
+/** Labels stay this far from the frame's edge. */
+const SAFE = 4;
+/** Average width of a character as a share of the text size; on the generous side, so labels are not placed too tight. */
+const CHARACTER_WIDTH = 0.6;
+
+/**
+ * Which side of its dot a label goes, and how wide it may be before wrapping.
+ * A label may extend past a narrow image, but not past the frame: the side
+ * with room is chosen, and the width is capped to the room there is.
+ */
+function labelStyle(x: number, label: string, imageWidth: number, ctx: CompileContext): string {
+  const { width, unit } = ctx.frame;
+  const dot = SIDE * unit + x * imageWidth;
+  const needed = (Array.from(label).length * CHARACTER_WIDTH * LABEL_SIZE + LABEL_PADDING) * unit;
+  const roomRight = width - SAFE * unit - dot - LABEL_GAP * unit;
+  const roomLeft = dot - LABEL_GAP * unit - SAFE * unit;
+  const onRight = needed <= roomRight || roomRight >= roomLeft;
+  const room = Math.max(8 * unit, Math.floor(onRight ? roomRight : roomLeft));
+  return `${onRight ? "left" : "right"}:${Math.round(LABEL_GAP * unit)}px;max-width:${room}px`;
+}
 
 /** A fraction as a CSS percentage, without floating-point noise (0.3 is "30%", not "30.000000000000004%"). */
 function percent(fraction: number): string {
@@ -51,26 +73,26 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
     const pins = (props.callouts ?? [])
       .map(
         (callout, i) =>
-          `<span class="sf-shot__pin${callout.x > LABEL_FLIPS_AT ? " is-left" : ""}" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed>${escapeHtml(callout.label)}</b></span>`,
+          `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed style="${labelStyle(callout.x, callout.label, size.width, ctx)}">${escapeHtml(callout.label)}</b></span>`,
       )
       .join("");
     const bar = props.url ? `<div class="sf-shot__bar" data-sf-fixed>${escapeHtml(props.url)}</div>` : "";
     const caption = props.caption
       ? `<p class="sf-shot__caption" data-sf-enter="1" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
       : "";
-    return `${sceneChrome(ctx)}<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}${pins}</div></div></figure>${caption}</div>`;
+    return `${sceneChrome(ctx)}<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
   },
   css: `
 .sf-shot{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;justify-content:space-between}
 .sf-shot__frame{box-sizing:content-box;border:1px solid var(--sf-line);margin:-1px}
 .sf-shot__bar{height:calc(var(--sf-unit)*5);padding:0 calc(var(--sf-unit)*2);border-bottom:1px solid var(--sf-line);font:500 calc(var(--sf-unit)*2.4)/calc(var(--sf-unit)*5) var(--sf-font-mono);font-variant-ligatures:none;color:var(--sf-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-shot__stage{position:relative}
 .sf-shot__view{position:relative;overflow:hidden;background:var(--sf-surface)}
-.sf-shot__layer{position:absolute;inset:0}
+.sf-shot__layer,.sf-shot__pins{position:absolute;inset:0}
 .sf-shot__img,.sf-shot__missing{display:block}
 .sf-shot__pin{position:absolute;width:0;height:0}
 .sf-shot__pin::before{content:"";position:absolute;left:calc(var(--sf-unit)*-1);top:calc(var(--sf-unit)*-1);width:calc(var(--sf-unit)*2);height:calc(var(--sf-unit)*2);border-radius:50%;background:var(--sf-accent);box-shadow:0 0 0 calc(var(--sf-unit)*0.5) var(--sf-bg)}
-.sf-shot__pin b{position:absolute;left:calc(var(--sf-unit)*2.6);top:calc(var(--sf-unit)*-2.6);padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text);white-space:nowrap}
-.sf-shot__pin.is-left b{left:auto;right:calc(var(--sf-unit)*2.6)}
+.sf-shot__pin b{position:absolute;top:calc(var(--sf-unit)*-2.6);width:max-content;padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text)}
 .sf-shot__caption{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
 `,
 };
