@@ -52,6 +52,13 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
   fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, screenshot, compare, terminal.
 ```
 
+## Transitions
+
+Scenes give way to one another by `cut`, `fade`, `crossfade`, `push`, `wipe` or `zoom`.
+Left alone, the engine picks one that suits the scene being arrived at and never uses
+the same one twice running. Set `"transition"` on the scenefile to use one kind
+throughout, or on a scene to choose how that scene arrives.
+
 ## Images, files and the network
 
 A scenefile can show images (`screenshot` and `compare` scenes). `check` and `render`
