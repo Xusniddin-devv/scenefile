@@ -30,6 +30,15 @@ importers:
         specifier: ^4
         version: 4.6.6
 
+  packages/schema:
+    dependencies:
+      '@scenefile/scenes':
+        specifier: workspace:*
+        version: link:../scenes
+      zod:
+        specifier: ^4
+        version: 4.6.6
+
 packages:
 
   '@esbuild/aix-ppc64@0.27.7':
