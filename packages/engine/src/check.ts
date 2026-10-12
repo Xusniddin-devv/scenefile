@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, error, hasErrors, normalize } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
-import { type AssetSources, type LoadedAssets, assetRefs, loadAssets } from "./assets";
+import { type AssetSources, type LoadedAssets, assetRefs, loadAssets, loadAudio } from "./assets";
 import { type Composition, compile } from "./compile";
 import { glyphDiagnostics } from "./fonts";
 import { type InspectReport, verifyLayout } from "./layout";
@@ -21,11 +21,11 @@ export interface CheckResult {
  * A plain-text description of the video, so a model without vision can review
  * it. With a layout report, each scene also lists its text sizes and line counts.
  */
-export function storyboard(video: ResolvedVideo, report?: InspectReport): string {
+export function storyboard(video: ResolvedVideo, report?: InspectReport, music = false): string {
   const seconds = (frames: number): string => `${(frames / video.fps).toFixed(2)}s`;
   const typeWidth = Math.max(...video.scenes.map((scene) => scene.type.length));
   const lines = [
-    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes`,
+    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}`,
   ];
   for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
@@ -95,6 +95,18 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     }
   }
 
+  const wantedMusic = normalized.scenefile.audio;
+  if (wantedMusic && !loaded?.audio && !assetDiagnostics.some((diagnostic) => diagnostic.path === "audio.src")) {
+    assetDiagnostics.push(
+      error(
+        "ASSET_NOT_FOUND",
+        "audio.src",
+        `The music "${wantedMusic.src}" has not been loaded.`,
+        "Check the scenefile with the scenefile command, which loads its files.",
+      ),
+    );
+  }
+
   const resolved = resolve(normalized.scenefile, loaded?.assets);
   const diagnostics = [
     ...normalized.diagnostics,
@@ -113,13 +125,14 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     };
   }
 
+  const music = loaded?.audio ?? undefined;
   return {
     ok: true,
     diagnostics,
     scenefile: normalized.scenefile,
     video: resolved.video,
-    composition: compile(resolved.video),
-    storyboard: storyboard(resolved.video),
+    composition: { ...compile(resolved.video), ...(music ? { audio: music } : {}) },
+    storyboard: storyboard(resolved.video, undefined, Boolean(music)),
   };
 }
 
@@ -127,7 +140,9 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
 export async function checkWithAssets(input: unknown, sources: AssetSources): Promise<CheckResult> {
   const { scenefile } = normalize(input);
   if (!scenefile) return check(input);
-  return check(input, await loadAssets(assetRefs(scenefile), sources));
+  const images = await loadAssets(assetRefs(scenefile), sources);
+  const music = await loadAudio(scenefile, sources);
+  return check(input, { ...images, audio: music.audio, diagnostics: [...images.diagnostics, ...music.diagnostics] });
 }
 
 /**
@@ -143,6 +158,6 @@ export function applyLayout(result: CheckResult, report: InspectReport): CheckRe
     ok,
     diagnostics,
     composition: ok ? result.composition : null,
-    storyboard: storyboard(result.video, report),
+    storyboard: storyboard(result.video, report, Boolean(result.composition?.audio)),
   };
 }

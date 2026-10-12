@@ -28,6 +28,8 @@ export interface Manifest {
 export interface Composition {
   html: string;
   manifest: Manifest;
+  /** Music to mix under the video: a checked local file and its volume. */
+  audio?: { file: string; volume: number };
 }
 
 function baseCss(width: number, height: number): string {

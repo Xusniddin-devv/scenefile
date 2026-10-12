@@ -1,5 +1,5 @@
 import { lookup as dnsLookup } from "node:dns/promises";
-import { readFile, realpath, stat } from "node:fs/promises";
+import { open, readFile, realpath, stat } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
 import { isAbsolute, parse as parsePath, relative, resolve as resolvePath, sep } from "node:path";
@@ -37,6 +37,8 @@ export interface AssetRef {
 export interface LoadedAssets {
   assets: Map<string, LoadedAsset>;
   diagnostics: Diagnostic[];
+  /** The scenefile's music, once found; null or absent when there is none. */
+  audio?: LoadedAudio | null;
 }
 
 export interface ResolvedAddress {
@@ -184,11 +186,11 @@ function notFound(message: string, fix: string = USE_LOCAL): Failure {
   return { code: "ASSET_NOT_FOUND", message, fix };
 }
 
-function tooLarge(src: string): Failure {
+function tooLarge(src: string, maxBytes: number = MAX_ASSET_BYTES): Failure {
   return {
     code: "ASSET_TOO_LARGE",
-    message: `"${src}" is larger than ${MAX_ASSET_BYTES / 1024 / 1024} MB.`,
-    fix: "Resize or compress the image; 1920 pixels wide is enough for a full frame.",
+    message: `"${src}" is larger than ${maxBytes / 1024 / 1024} MB.`,
+    fix: "Use a smaller file; for an image, 1920 pixels wide is enough for a full frame.",
   };
 }
 
@@ -375,10 +377,15 @@ function isInside(folder: string, file: string): boolean {
   return fromFolder !== "" && fromFolder !== ".." && !fromFolder.startsWith(`..${sep}`) && !isAbsolute(fromFolder);
 }
 
-async function readLocal(src: string, sources: AssetSources): Promise<Buffer | Failure> {
+/**
+ * Finds a local file a scenefile names, refusing anything outside the
+ * scenefile's folder (links are followed before deciding), anything that is
+ * not a plain file, and anything over `maxBytes`. Returns its real path.
+ */
+async function locateLocal(src: string, sources: AssetSources, maxBytes: number): Promise<string | Failure> {
   const outside = notFound(
     `"${src}" is outside the scenefile's folder, so it was not read.`,
-    "Copy the image into the scenefile's folder and refer to it by a relative path.",
+    "Copy the file into the scenefile's folder and refer to it by a relative path.",
   );
   const missing = notFound(
     `There is no file "${src}" in the scenefile's folder.`,
@@ -387,7 +394,10 @@ async function readLocal(src: string, sources: AssetSources): Promise<Buffer | F
   const folder = resolvePath(sources.baseDir);
   // In the root folder "inside the scenefile's folder" would mean the whole disk.
   if (folder === parsePath(folder).root) {
-    return notFound("The scenefile is in the root folder, so local images are not read.", "Move the scenefile and its images into a folder of their own.");
+    return notFound(
+      "The scenefile is in the root folder, so local files are not read.",
+      "Move the scenefile and its files into a folder of their own.",
+    );
   }
   if (src.includes("\0")) return missing;
   const file = resolvePath(folder, src);
@@ -398,11 +408,21 @@ async function readLocal(src: string, sources: AssetSources): Promise<Buffer | F
     const [realFolder, realFile] = await Promise.all([realpath(folder), realpath(file)]);
     if (!isInside(realFolder, realFile)) return outside;
     const info = await stat(realFile);
-    if (!info.isFile()) return notFound(`"${src}" is a folder or a device, not a file.`, "Give the path of an image file.");
-    if (info.size > MAX_ASSET_BYTES) return tooLarge(src);
-    return await readFile(realFile);
+    if (!info.isFile()) return notFound(`"${src}" is a folder or a device, not a file.`, "Give the path of a file.");
+    if (info.size > maxBytes) return tooLarge(src, maxBytes);
+    return realFile;
   } catch {
     return missing;
+  }
+}
+
+async function readLocal(src: string, sources: AssetSources): Promise<Buffer | Failure> {
+  const located = await locateLocal(src, sources, MAX_ASSET_BYTES);
+  if (typeof located !== "string") return located;
+  try {
+    return await readFile(located);
+  } catch {
+    return notFound(`"${src}" could not be read.`, "Check the file's permissions.");
   }
 }
 
@@ -465,4 +485,71 @@ export async function loadAssets(refs: readonly AssetRef[], sources: AssetSource
     if (failure) diagnostics.push(error(failure.code, ref.path, failure.message, failure.fix));
   }
   return { assets, diagnostics };
+}
+
+/** Largest music file, in bytes. */
+export const MAX_AUDIO_BYTES = 30 * 1024 * 1024;
+
+export interface LoadedAudio {
+  /** The music file's real path. */
+  file: string;
+  volume: number;
+}
+
+/** True when a file's first bytes are those of MP3, AAC, WAV, M4A, Ogg or FLAC. */
+function looksLikeAudio(head: Buffer): boolean {
+  if (head.length < 12) return false;
+  const text = (from: number, to: number): string => head.toString("latin1", from, to);
+  return (
+    text(0, 3) === "ID3" ||
+    (head.readUInt8(0) === 0xff && (head.readUInt8(1) & 0xe0) === 0xe0) ||
+    (text(0, 4) === "RIFF" && text(8, 12) === "WAVE") ||
+    text(4, 8) === "ftyp" ||
+    text(0, 4) === "OggS" ||
+    text(0, 4) === "fLaC"
+  );
+}
+
+/**
+ * Finds the scenefile's music, if it names any. Music is a local file only:
+ * it is handed to ffmpeg by path, and a scenefile must not be able to point
+ * ffmpeg at anything outside its own folder.
+ */
+export async function loadAudio(
+  scenefile: Scenefile,
+  sources: AssetSources,
+): Promise<{ audio: LoadedAudio | null; diagnostics: Diagnostic[] }> {
+  const wanted = scenefile.audio;
+  if (!wanted) return { audio: null, diagnostics: [] };
+  const fail = (failure: Failure) => ({
+    audio: null,
+    diagnostics: [error(failure.code, "audio.src", failure.message, failure.fix)],
+  });
+
+  if (isAddress(wanted.src)) {
+    return fail(
+      notFound(
+        "Music must be a local file in the scenefile's folder; addresses are not downloaded.",
+        "Save the music beside the scenefile and give its file name.",
+      ),
+    );
+  }
+  const located = await locateLocal(wanted.src, sources, MAX_AUDIO_BYTES);
+  if (typeof located !== "string") return fail(located);
+
+  const head = Buffer.alloc(12);
+  const handle = await open(located, "r");
+  try {
+    await handle.read(head, 0, 12, 0);
+  } finally {
+    await handle.close();
+  }
+  if (!looksLikeAudio(head)) {
+    return fail({
+      code: "ASSET_UNSUPPORTED",
+      message: `"${wanted.src}" is not an MP3, WAV, M4A, AAC, Ogg or FLAC file.`,
+      fix: "Convert the music to MP3 or WAV.",
+    });
+  }
+  return { audio: { file: located, volume: wanted.volume }, diagnostics: [] };
 }

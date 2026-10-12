@@ -5,13 +5,16 @@ export {
   type HttpResponse,
   type LoadedAsset,
   type LoadedAssets,
+  type LoadedAudio,
   MAX_ASSET_BYTES,
+  MAX_AUDIO_BYTES,
   MAX_TOTAL_ASSET_BYTES,
   type ResolvedAddress,
   assetRefs,
   imageInfo,
   isPrivateAddress,
   loadAssets,
+  loadAudio,
 } from "./assets";
 export { type CheckResult, applyLayout, check, checkWithAssets, storyboard } from "./check";
 export {

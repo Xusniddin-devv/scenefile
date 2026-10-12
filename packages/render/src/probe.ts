@@ -11,6 +11,8 @@ export interface ProbeResult {
   colorSpace: string;
   colorPrimaries: string;
   colorTransfer: string;
+  /** Whether the file has a sound track. */
+  audio: boolean;
 }
 
 interface ProbeJson {
@@ -36,6 +38,9 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     "-show_entries", "stream=width,height,r_frame_rate,nb_frames,color_space,color_primaries,color_transfer:format=duration",
     "-of", "json", file,
   ]);
+  const sound = await run(ffprobePath, [
+    "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", file,
+  ]);
   const json = JSON.parse(stdout) as ProbeJson;
   const stream = json.streams?.[0];
   const [numerator, denominator] = (stream?.r_frame_rate ?? "0/1").split("/").map(Number);
@@ -48,5 +53,6 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     colorSpace: stream?.color_space ?? "",
     colorPrimaries: stream?.color_primaries ?? "",
     colorTransfer: stream?.color_transfer ?? "",
+    audio: sound.trim() !== "",
   };
 }

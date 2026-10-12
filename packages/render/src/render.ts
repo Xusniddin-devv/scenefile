@@ -20,6 +20,9 @@ const CRF: Record<Quality, number> = { draft: 28, standard: 20, high: 16 };
  */
 export const SEGMENT_SECONDS = 5;
 export const MAX_WORKERS = 8;
+/** The music comes up and goes down rather than starting and stopping dead. */
+const MUSIC_FADE_IN_SECONDS = 0.5;
+const MUSIC_FADE_OUT_SECONDS = 1.5;
 
 /**
  * Each worker runs its own browser. Measured: capture speeds up until about
@@ -161,8 +164,39 @@ export async function renderVideo(composition: Composition, options: RenderOptio
           `got ${probed.width}x${probed.height} with ${probed.frames}.`,
       );
     }
+
+    let finished = picture;
+    if (composition.audio) {
+      finished = join(scratch, "with-music.mp4");
+      const seconds = totalFrames / fps;
+      const fadeOut = Math.min(MUSIC_FADE_OUT_SECONDS, seconds / 3);
+      const filter =
+        `[1:a]volume=${composition.audio.volume},afade=t=in:st=0:d=${MUSIC_FADE_IN_SECONDS},` +
+        `afade=t=out:st=${(seconds - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}[music]`;
+      await runFfmpeg(
+        [
+          "-i", picture,
+          // The music is repeated without end and then cut to the picture's length.
+          "-stream_loop", "-1", "-i", composition.audio.file,
+          "-filter_complex", filter,
+          "-map", "0:v:0", "-map", "[music]",
+          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          "-t", seconds.toFixed(3),
+          "-movflags", "+faststart",
+          finished,
+        ],
+        options.ffmpegPath,
+      );
+      const mixed = await probeVideo(finished, options.ffprobePath);
+      if (!mixed.audio || mixed.frames !== totalFrames) {
+        throw new Error(
+          `Mixing in the music changed the video: expected ${totalFrames} frames with sound, ` +
+            `got ${mixed.frames}${mixed.audio ? "" : " without sound"}.`,
+        );
+      }
+    }
     try {
-      await rename(picture, output);
+      await rename(finished, output);
     } catch (cause) {
       throw unwritable(output, cause);
     }
@@ -179,6 +213,6 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     durationSeconds: probed.durationSeconds,
     elapsedMs: Date.now() - started,
     workers,
-    audio: false,
+    audio: Boolean(composition.audio),
   };
 }

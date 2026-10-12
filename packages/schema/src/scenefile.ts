@@ -13,6 +13,14 @@ export const scenefileSchema = z.strictObject({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be a six-digit hex color like #FF5722.")
     .optional(),
+  /** Music to play under the whole video: a file beside the scenefile. */
+  audio: z
+    .strictObject({
+      src: z.string().min(1).max(2000),
+      /** From 0 (silent) to 1 (as loud as the file). */
+      volume: z.number().min(0).max(1).default(0.4),
+    })
+    .optional(),
   /** How scenes give way to one another, unless a scene says otherwise. */
   transition: transitionSchema.default("auto"),
   scenes: z.array(sceneSchema).min(1).max(60),
