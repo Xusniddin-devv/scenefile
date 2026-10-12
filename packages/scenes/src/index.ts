@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { bulletsDefinition } from "./bullets/definition";
 import { bulletsSchema } from "./bullets/schema";
+import { codeDefinition } from "./code/definition";
+import { codeSchema } from "./code/schema";
 import { quoteDefinition } from "./quote/definition";
 import { quoteSchema } from "./quote/schema";
 import { statDefinition } from "./stat/definition";
@@ -19,6 +21,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   quoteSchema,
   bulletsSchema,
   statSchema,
+  codeSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -39,6 +42,7 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   quote: widen(quoteDefinition),
   bullets: widen(bulletsDefinition),
   stat: widen(statDefinition),
+  code: widen(codeDefinition),
   terminal: widen(terminalDefinition),
 };
 
@@ -53,6 +57,7 @@ export function getScene(type: SceneType): SceneDefinition<Scene> {
 }
 
 export { SHARED_CSS, sceneChrome } from "./chrome";
+export { CODE_LANGS, type CodeLang, MAX_CODE_LINES } from "./code/langs";
 export { durationSchema, type Duration } from "./common";
 export { escapeHtml, highlightHtml, readingSeconds } from "./text";
 export type {

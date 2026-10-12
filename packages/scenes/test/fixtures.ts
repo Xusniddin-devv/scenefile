@@ -7,6 +7,13 @@ export const FIXTURES: Record<SceneType, Record<string, unknown>> = {
   quote: { type: "quote", text: "It rendered correctly on the first try.", author: "Dilnoza K.", role: "Staff engineer" },
   bullets: { type: "bullets", heading: "Why it works", items: ["Write JSON, not keyframes", "Errors a model can fix", "Same input, same frames"] },
   stat: { type: "stat", value: "1,200+", label: "videos rendered", note: "In the first week, from four different models." },
+  code: {
+    type: "code",
+    lang: "typescript",
+    source: 'import { render } from "scenefile";\n\nconst video = await render({\n  version: 1,\n  scenes: [{ type: "title", heading: "Ship faster" }],\n});',
+    highlight: [5],
+    caption: "One call. One file. One video.",
+  },
   terminal: { type: "terminal", steps: [{ run: "scenefile check a.json", output: "No problems found." }] },
 };
 
@@ -19,6 +26,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   quote: { type: "quote", text: NASTY, author: NASTY, role: NASTY },
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
+  code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, caption: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { mounts } from "../src/browser";
 import { type SceneType, getScene, sceneSchema } from "../src/index";
 import { bulletSchedule, bulletsHoldSeconds } from "../src/bullets/timing";
+import { highlightLines } from "../src/code/highlight";
+import { codeHoldSeconds, codeRevealSeconds } from "../src/code/timing";
 import { COUNT_SECONDS, statText } from "../src/stat/timing";
 import { statementRevealSeconds } from "../src/statement/timing";
 import type { MountContext } from "../src/types";
@@ -130,6 +132,81 @@ describe("stat", () => {
     expect(partway).toBeLessThan(94);
     handle.seek(revealed);
     expect(value.textContent).toBe("94%");
+  });
+});
+
+describe("code", () => {
+  const source = 'const n = 1; // one\nreturn "two";\n\n\tdone();';
+
+  it("classifies tokens, keeping the text exactly", () => {
+    const lines = highlightLines(source, "typescript");
+    expect(lines.map((line) => line.map((token) => token.text).join(""))).toEqual(source.split("\n"));
+    const kinds = new Map(lines.flat().map((token) => [token.text.trim(), token.kind]));
+    expect(kinds.get("const")).toBe("keyword");
+    expect(kinds.get("1")).toBe("number");
+    expect(kinds.get("// one")).toBe("comment");
+    expect(kinds.get('"two"')).toBe("string");
+    expect(kinds.get("done")).toBe("function");
+  });
+
+  it("leaves plain text alone and survives Windows line endings", () => {
+    expect(highlightLines("a\r\nb", "text")).toEqual([[{ text: "a", kind: "plain" }], [{ text: "b", kind: "plain" }]]);
+  });
+
+  it("accepts the names models actually write for languages", () => {
+    const parse = (lang: unknown) => sceneSchema.safeParse({ type: "code", lang, source: "x" });
+    for (const [given, expected] of [["ts", "typescript"], ["JS", "javascript"], ["sh", "bash"], ["py", "python"], ["yml", "yaml"], [" Shell ", "bash"]]) {
+      const result = parse(given);
+      expect(result.success && result.data.type === "code" && result.data.lang, String(given)).toBe(expected);
+    }
+    expect(parse("klingon").success).toBe(false);
+    const fallback = sceneSchema.parse({ type: "code", source: "x" });
+    expect(fallback.type === "code" && fallback.lang).toBe("text");
+  });
+
+  it("rejects more lines than a scene can show, and marks for lines that do not exist", () => {
+    const tooLong = sceneSchema.safeParse({ type: "code", source: Array.from({ length: 17 }, (_, i) => `l${i}`).join("\n") });
+    expect(tooLong.success).toBe(false);
+    expect(tooLong.error?.issues[0]?.path).toEqual(["source"]);
+    expect(tooLong.error?.issues[0]?.message).toContain("16");
+    const badMark = sceneSchema.safeParse({ type: "code", source: "a\nb", highlight: [3] });
+    expect(badMark.success).toBe(false);
+    expect(badMark.error?.issues[0]?.path).toEqual(["highlight"]);
+  });
+
+  it("numbers every line, keeps blank lines, and marks the highlighted ones", () => {
+    const { el } = stage({ type: "code", lang: "ts", source, highlight: [2] });
+    const lines = all(el, "[data-sf-line]");
+    expect(lines).toHaveLength(4);
+    expect(lines.map((line) => line.querySelector(".sf-code__n")?.textContent)).toEqual(["1", "2", "3", "4"]);
+    expect(lines.map((line) => line.classList.contains("is-marked"))).toEqual([false, true, false, false]);
+    expect(lines[3]?.querySelector(".sf-code__src")?.textContent).toBe("\tdone();");
+    expect(el.querySelector(".sf-t-string")?.textContent).toBe('"two"');
+  });
+
+  it("reveals lines top to bottom, then dims the lines that are not marked", () => {
+    const { el, ctx, handle, revealed } = stage({ type: "code", lang: "ts", source, highlight: [2] });
+    const lines = all(el, "[data-sf-line]");
+    handle.seek(ctx.enterFrames + 2);
+    const early = lines.map((line) => Number(line.style.opacity));
+    expect(early[0]).toBeGreaterThan(early[2] ?? 1);
+    handle.seek(revealed);
+    const late = lines.map((line) => Number(line.style.opacity));
+    expect(late[1]).toBe(1);
+    expect(late[0]).toBeLessThan(0.5);
+    expect(late[0]).toBeGreaterThan(0.2);
+  });
+
+  it("keeps every line bright when nothing is marked", () => {
+    const { el, handle, revealed } = stage({ type: "code", lang: "ts", source });
+    handle.seek(revealed);
+    expect(all(el, "[data-sf-line]").every((line) => line.style.opacity === "1")).toBe(true);
+  });
+
+  it("holds longer for more lines to read", () => {
+    expect(codeHoldSeconds(6, 0, undefined)).toBeGreaterThan(codeHoldSeconds(2, 0, undefined));
+    expect(codeHoldSeconds(6, 1, undefined)).toBeLessThan(codeHoldSeconds(6, 0, undefined));
+    expect(codeRevealSeconds(1)).toBeCloseTo(0.3);
   });
 });
 

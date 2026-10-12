@@ -39,9 +39,9 @@ function partialFiles(folder: string): string[] {
 }
 
 describe("runtime bundle", () => {
-  it("is small, which proves zod was not bundled into the page", () => {
+  it("is small, which proves neither zod nor the syntax highlighter was bundled into the page", () => {
     const bundle = createRequire(import.meta.url).resolve("@scenefile/runtime/bundle");
-    expect(statSync(bundle).size).toBeLessThan(20_000);
+    expect(statSync(bundle).size).toBeLessThan(30_000);
     expect(readFileSync(bundle, "utf8")).toContain("__scenefile");
   });
 });
