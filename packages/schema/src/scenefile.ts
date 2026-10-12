@@ -1,4 +1,4 @@
-import { sceneSchema } from "@scenefile/scenes";
+import { sceneSchema, transitionSchema } from "@scenefile/scenes";
 import { z } from "zod";
 
 export const FORMATS = ["landscape-1080p", "portrait-1080p", "square-1080p"] as const;
@@ -13,6 +13,8 @@ export const scenefileSchema = z.strictObject({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be a six-digit hex color like #FF5722.")
     .optional(),
+  /** How scenes give way to one another, unless a scene says otherwise. */
+  transition: transitionSchema.default("auto"),
   scenes: z.array(sceneSchema).min(1).max(60),
 });
 

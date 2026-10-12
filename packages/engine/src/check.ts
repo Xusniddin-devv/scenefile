@@ -30,7 +30,9 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
   for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
     lines.push(
-      `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}`,
+      `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}${
+        scene.transition === "none" ? "" : `  (enters by ${scene.transition})`
+      }`,
     );
     const prefix = `scenes[${scene.index}].`;
     const slots = (report?.slots ?? []).filter((slot) => slot.path.startsWith(prefix));

@@ -8,6 +8,7 @@ const slot = (over: Partial<SlotReport>): SlotReport => ({
 
 const valid = {
   version: 1,
+  transition: "fade",
   scenes: [{ type: "title", heading: "Ship faster", sub: "A CLI for X" }, { type: "terminal", steps: [{ run: "npx x init" }] }],
 };
 
@@ -133,7 +134,7 @@ describe("applyLayout", () => {
       "1. title     0.00s-3.00s  Ship faster",
       "     heading  238px, 1 line",
       "     sub      50px, 1 line",
-      "2. terminal  3.00s-5.40s  $ npx x init",
+      "2. terminal  3.00s-5.40s  $ npx x init  (enters by fade)",
       "     steps  48px",
     ]);
   });

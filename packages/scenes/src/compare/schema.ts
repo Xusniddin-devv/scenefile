@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 
 const sideSchema = z
   .strictObject({
@@ -18,6 +18,8 @@ export const compareSchema = z.strictObject({
   before: sideSchema,
   after: sideSchema,
   duration: durationSchema.default("auto"),
+  /** How this scene arrives from the one before it. */
+  transition: transitionSchema.default("auto"),
 });
 
 export type CompareProps = z.infer<typeof compareSchema>;

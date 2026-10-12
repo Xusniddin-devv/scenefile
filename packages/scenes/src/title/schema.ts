@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 
 export const titleSchema = z
   .strictObject({
@@ -9,6 +9,8 @@ export const titleSchema = z
     highlight: z.string().min(1).max(80).optional(),
     sub: z.string().min(1).max(140).optional(),
     duration: durationSchema.default("auto"),
+    /** How this scene arrives from the one before it. */
+    transition: transitionSchema.default("auto"),
   })
   .refine((scene) => scene.highlight === undefined || scene.heading.includes(scene.highlight), {
     path: ["highlight"],

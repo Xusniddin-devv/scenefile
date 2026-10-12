@@ -27,3 +27,4 @@ export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnos
 export { FORMAT_SIZES } from "./formats";
 export { type FontKey, type Theme, contrastRatio, getTheme, themeCss } from "./themes";
 export { type ResolvedScene, type ResolvedVideo, resolve } from "./resolve";
+export { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";

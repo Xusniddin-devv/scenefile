@@ -10,6 +10,10 @@ export interface ManifestScene {
   durationFrames: number;
   enterFrames: number;
   exitFrames: number;
+  /** How this scene arrives; "none" for the first. */
+  transition: string;
+  /** Frames at the start of this scene shared with the scene before it. */
+  overlapFrames: number;
 }
 
 /** What the browser runtime needs to place scenes in time. Contains no user text. */
@@ -43,9 +47,11 @@ export function compile(video: ResolvedVideo): Composition {
     width: video.width,
     height: video.height,
     totalFrames: video.totalFrames,
-    scenes: video.scenes.map(({ index, type, startFrame, durationFrames, enterFrames, exitFrames }) => ({
-      index, type, startFrame, durationFrames, enterFrames, exitFrames,
-    })),
+    scenes: video.scenes.map(
+      ({ index, type, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames }) => ({
+        index, type, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames,
+      }),
+    ),
   };
 
   const usedTypes = [...new Set(video.scenes.map((scene) => scene.type))];

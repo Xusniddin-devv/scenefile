@@ -5,6 +5,7 @@ describe("check", () => {
   it("returns a composition and storyboard for a valid scenefile", () => {
     const result = check({
       version: 1,
+      transition: "fade",
       scenes: [
         { type: "title", heading: "Ship faster", sub: "A CLI for X" },
         { type: "terminal", steps: [{ run: "npx x init", output: "Done in 2s" }] },
@@ -16,7 +17,7 @@ describe("check", () => {
     expect(result.storyboard.split("\n")).toEqual([
       "1920x1080, 30 fps, 6.70s, 2 scenes",
       "1. title     0.00s-3.00s  Ship faster",
-      "2. terminal  3.00s-6.70s  $ npx x init",
+      "2. terminal  3.00s-6.70s  $ npx x init  (enters by fade)",
     ]);
   });
 

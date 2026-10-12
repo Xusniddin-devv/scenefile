@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 
 const calloutSchema = z.strictObject({
   /** Where the callout points: 0 is the image's left edge, 1 its right. */
@@ -18,6 +18,8 @@ export const screenshotSchema = z.strictObject({
   caption: z.string().min(1).max(80).optional(),
   callouts: z.array(calloutSchema).min(1).max(3).optional(),
   duration: durationSchema.default("auto"),
+  /** How this scene arrives from the one before it. */
+  transition: transitionSchema.default("auto"),
 });
 
 export type ScreenshotProps = z.infer<typeof screenshotSchema>;

@@ -33,11 +33,12 @@ describe("compile", () => {
     const match = /<script id="sf-manifest" type="application\/json">(.*?)<\/script>/s.exec(html);
     expect(JSON.parse(match?.[1] ?? "null")).toEqual(manifest);
     expect(manifest.scenes).toHaveLength(2);
+    // Scenes share the frames of an overlapping transition, so those count once.
     expect(manifest.totalFrames).toBe(
-      manifest.scenes.reduce((sum, scene) => sum + scene.durationFrames, 0),
+      manifest.scenes.reduce((sum, scene) => sum + scene.durationFrames - scene.overlapFrames, 0),
     );
     expect(manifest.scenes[0]).toEqual({
-      index: 0, type: "title", startFrame: 0, durationFrames: 75, enterFrames: 18, exitFrames: 12,
+      index: 0, type: "title", startFrame: 0, durationFrames: 75, enterFrames: 18, exitFrames: 0, transition: "none", overlapFrames: 0,
     });
   });
 

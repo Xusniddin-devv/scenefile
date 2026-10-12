@@ -2,8 +2,9 @@ import { normalize } from "@scenefile/schema";
 import { describe, expect, it } from "vitest";
 import { resolve } from "../src/resolve";
 
-function resolved(input: unknown) {
-  const { scenefile, diagnostics } = normalize(input);
+function resolved(input: Record<string, unknown>) {
+  // These tests are about durations; "fade" keeps scenes end to end, as they were when written.
+  const { scenefile, diagnostics } = normalize({ transition: "fade", ...input });
   if (!scenefile) throw new Error(JSON.stringify(diagnostics));
   return resolve(scenefile);
 }

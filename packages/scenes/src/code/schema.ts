@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 import { CODE_LANGS, LANG_ALIASES, MAX_CODE_LINES } from "./langs";
 
 function lineCount(source: string): number {
@@ -26,6 +26,8 @@ export const codeSchema = z
     highlight: z.array(z.number().int().min(1)).min(1).max(MAX_CODE_LINES).optional(),
     caption: z.string().min(1).max(80).optional(),
     duration: durationSchema.default("auto"),
+    /** How this scene arrives from the one before it. */
+    transition: transitionSchema.default("auto"),
   })
   .refine((scene) => lineCount(scene.source) <= MAX_CODE_LINES, {
     path: ["source"],

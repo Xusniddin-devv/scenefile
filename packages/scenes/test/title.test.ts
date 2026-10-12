@@ -34,7 +34,7 @@ describe("title scene", () => {
   });
 
   it("lists its fields", () => {
-    expect(titleDefinition.fields).toEqual(["type", "heading", "highlight", "sub", "duration"]);
+    expect(titleDefinition.fields).toEqual(["type", "heading", "highlight", "sub", "duration", "transition"]);
   });
 
   it("requires highlight to be part of the heading", () => {

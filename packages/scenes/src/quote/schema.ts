@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 
 export const quoteSchema = z
   .strictObject({
@@ -9,6 +9,8 @@ export const quoteSchema = z
     /** The author's job title or company. */
     role: z.string().min(1).max(60).optional(),
     duration: durationSchema.default("auto"),
+    /** How this scene arrives from the one before it. */
+    transition: transitionSchema.default("auto"),
   })
   .refine((scene) => scene.role === undefined || scene.author !== undefined, {
     path: ["role"],

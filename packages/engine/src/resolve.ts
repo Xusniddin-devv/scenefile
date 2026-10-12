@@ -1,8 +1,9 @@
 import { type Diagnostic, type Scenefile, type ThemeName, error, warning } from "@scenefile/schema";
-import { type Scene, getScene } from "@scenefile/scenes";
+import { type Scene, type TransitionKind, getScene } from "@scenefile/scenes";
 import type { AssetMap } from "./assets";
 import { FORMAT_SIZES } from "./formats";
 import { contrastRatio, getTheme } from "./themes";
+import { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
 
 export interface ResolvedScene {
   index: number;
@@ -12,6 +13,10 @@ export interface ResolvedScene {
   durationFrames: number;
   enterFrames: number;
   exitFrames: number;
+  /** How this scene arrives from the one before it; "none" for the first scene. */
+  transition: TransitionKind | "none";
+  /** Frames at the start of this scene during which the scene before it is still drawn. */
+  overlapFrames: number;
 }
 
 export interface ResolvedVideo {
@@ -63,7 +68,9 @@ export function resolve(
     }
   }
 
-  const scenes = scenefile.scenes.map((props, index): ResolvedScene => {
+  const transitions = pickTransitions(scenefile);
+  const scenes: ResolvedScene[] = [];
+  for (const [index, props] of scenefile.scenes.entries()) {
     const definition = getScene(props.type);
     const enterFrames = toFrames(definition.enterSeconds, fps);
     const exitFrames = toFrames(definition.exitSeconds, fps);
@@ -117,10 +124,25 @@ export function resolve(
 
     const requested = toFrames(props.duration === "auto" ? autoSeconds : props.duration, fps);
     const durationFrames = Math.max(requested, minFrames);
-    const scene = { index, type: props.type, props, startFrame: cursor, durationFrames, enterFrames, exitFrames };
-    cursor += durationFrames;
-    return scene;
-  });
+
+    const transition = transitions[index] ?? "none";
+    const before = scenes[index - 1];
+    let overlapFrames = 0;
+    if (before && transition !== "fade") {
+      // Anything but a fade leaves the earlier scene fully drawn to its last frame.
+      before.exitFrames = 0;
+      if (isOverlapping(transition)) {
+        // The shared frames may not eat into the time the earlier scene needs to
+        // finish appearing, nor be as long as either scene.
+        const beforeReveal = getScene(before.type).revealSeconds?.(before.props) ?? 0;
+        const beforeFree = before.durationFrames - before.enterFrames - Math.ceil(beforeReveal * fps) - 1;
+        overlapFrames = Math.max(0, Math.min(toFrames(TRANSITION_SECONDS, fps), beforeFree, durationFrames - 1));
+      }
+    }
+    const startFrame = cursor - overlapFrames;
+    scenes.push({ index, type: props.type, props, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames });
+    cursor = startFrame + durationFrames;
+  }
 
   const totalSeconds = cursor / fps;
   if (totalSeconds < MIN_TOTAL_SECONDS || totalSeconds > MAX_TOTAL_SECONDS) {

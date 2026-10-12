@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema } from "../common";
+import { durationSchema, transitionSchema } from "../common";
 
 export const statementSchema = z
   .strictObject({
@@ -8,6 +8,8 @@ export const statementSchema = z
     /** A part of the text to draw in the accent color. */
     highlight: z.string().min(1).max(140).optional(),
     duration: durationSchema.default("auto"),
+    /** How this scene arrives from the one before it. */
+    transition: transitionSchema.default("auto"),
   })
   .refine((scene) => scene.highlight === undefined || scene.text.includes(scene.highlight), {
     path: ["highlight"],
