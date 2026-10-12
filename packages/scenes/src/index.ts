@@ -1,11 +1,20 @@
 import { z } from "zod";
+import { quoteDefinition } from "./quote/definition";
+import { quoteSchema } from "./quote/schema";
+import { statementDefinition } from "./statement/definition";
+import { statementSchema } from "./statement/schema";
 import { terminalDefinition } from "./terminal/definition";
 import { terminalSchema } from "./terminal/schema";
 import { titleDefinition } from "./title/definition";
 import { titleSchema } from "./title/schema";
 import type { SceneDefinition } from "./types";
 
-export const sceneSchema = z.discriminatedUnion("type", [titleSchema, terminalSchema]);
+export const sceneSchema = z.discriminatedUnion("type", [
+  titleSchema,
+  statementSchema,
+  quoteSchema,
+  terminalSchema,
+]);
 export type Scene = z.infer<typeof sceneSchema>;
 export type SceneType = Scene["type"];
 
@@ -20,6 +29,8 @@ function widen<P extends Scene>(definition: SceneDefinition<P>): SceneDefinition
 
 const registry: Record<SceneType, SceneDefinition<Scene>> = {
   title: widen(titleDefinition),
+  statement: widen(statementDefinition),
+  quote: widen(quoteDefinition),
   terminal: widen(terminalDefinition),
 };
 
@@ -35,7 +46,7 @@ export function getScene(type: SceneType): SceneDefinition<Scene> {
 
 export { SHARED_CSS, sceneChrome } from "./chrome";
 export { durationSchema, type Duration } from "./common";
-export { escapeHtml, readingSeconds } from "./text";
+export { escapeHtml, highlightHtml, readingSeconds } from "./text";
 export type {
   CompileContext,
   MountContext,

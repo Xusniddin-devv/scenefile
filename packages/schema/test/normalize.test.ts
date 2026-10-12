@@ -93,7 +93,8 @@ describe("normalize", () => {
     expect(diagnostics).toEqual([
       expect.objectContaining({ code: "SCHEMA_UNKNOWN_SCENE", path: "scenes[0].type" }),
     ]);
-    expect(diagnostics[0]?.fix).toContain("title, terminal");
+    expect(diagnostics[0]?.fix).toContain("title, ");
+    expect(diagnostics[0]?.fix).toContain("terminal");
   });
 
   it("reports unknown top-level fields with a suggestion", () => {

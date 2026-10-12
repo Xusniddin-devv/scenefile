@@ -79,12 +79,12 @@ export const FIXTURES: Record<SceneType, Record<string, unknown>> = {
   terminal: { type: "terminal", steps: [{ run: "scenefile check a.json", output: "No problems found." }] },
 };
 
-const NASTY = `<b>x</b> & "q" '</script><img src=x onerror=1>`;
+const NASTY = `<u>x</u> & "q" '</script><img src=x onerror=1>`;
 
 /** The same scenes with markup in every text field. None of it may become an element. */
 export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
-  title: { type: "title", heading: NASTY, highlight: "<b>x</b>", sub: NASTY },
-  statement: { type: "statement", text: NASTY, highlight: "<b>x</b>" },
+  title: { type: "title", heading: NASTY, highlight: "<u>x</u>", sub: NASTY },
+  statement: { type: "statement", text: NASTY, highlight: "<u>x</u>" },
   quote: { type: "quote", text: NASTY, author: NASTY, role: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
@@ -147,7 +147,7 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
 
   it("turns none of its text into markup", () => {
     const { el } = build(type, HOSTILE[type]);
-    expect(el.querySelector("b, img, script")).toBeNull();
+    expect(el.querySelector("u, img, script")).toBeNull();
   });
 
   it("marks each fitted text with a path to a real field of the scene", () => {
@@ -727,7 +727,7 @@ FILE packages/scenes/test/fixtures.ts
 };
 ====
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
-  stat: { type: "stat", value: "<b>9</b>", label: NASTY, note: NASTY },
+  stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 >>>>
@@ -1193,9 +1193,9 @@ FILE packages/scenes/test/fixtures.ts
 ```text
 FILE packages/scenes/test/fixtures.ts
 <<<<
-  stat: { type: "stat", value: "<b>9</b>", label: NASTY, note: NASTY },
+  stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
 ====
-  stat: { type: "stat", value: "<b>9</b>", label: NASTY, note: NASTY },
+  stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, caption: NASTY },
 >>>>
 ```
@@ -1728,7 +1728,7 @@ FILE packages/scenes/test/fixtures.ts
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 ====
-  outro: { type: "outro", heading: NASTY, highlight: "<b>x</b>", command: NASTY, url: NASTY },
+  outro: { type: "outro", heading: NASTY, highlight: "<u>x</u>", command: NASTY, url: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 >>>>

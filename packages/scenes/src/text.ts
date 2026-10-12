@@ -6,6 +6,13 @@ export function readingSeconds(text: string): number {
   return words / WORDS_PER_SECOND;
 }
 
+/** Escaped `text`, with the first occurrence of `highlight` wrapped in <em>. */
+export function highlightHtml(text: string, highlight: string | undefined): string {
+  const at = highlight === undefined ? -1 : text.indexOf(highlight);
+  if (highlight === undefined || at < 0) return escapeHtml(text);
+  return `${escapeHtml(text.slice(0, at))}<em>${escapeHtml(highlight)}</em>${escapeHtml(text.slice(at + highlight.length))}`;
+}
+
 export function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
