@@ -36,5 +36,14 @@
     "ffmpeg",
     "scenefile"
   ],
-  "author": "Xusniddin Qalandarov"
+  "author": "Xusniddin Qalandarov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xusniddin-devv/scenefile.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile#readme",
+  "bugs": {
+    "url": "https://github.com/Xusniddin-devv/scenefile/issues"
+  }
 }

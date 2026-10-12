@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, join, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
@@ -62,6 +63,8 @@ const USAGE = `Usage:
   scenefile mcp [--root <folder>] [--allow-remote-images]
                                    serve these as tools to an MCP client
 
+  scenefile --version
+
 Exit codes: 0 success, 1 the scenefile has errors, 2 usage or environment problem.`;
 
 class UsageError extends Error {}
@@ -120,6 +123,10 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     }
     const { values, positionals } = parsed;
 
+    if (values.version) {
+      io.out((createRequire(import.meta.url)("../package.json") as { version: string }).version);
+      return 0;
+    }
     if (values.help) {
       io.out(USAGE);
       return 0;
@@ -277,6 +284,7 @@ function parse(argv: readonly string[]) {
       quality: { type: "string", default: "standard" },
       workers: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
+      version: { type: "boolean", short: "v", default: false },
     },
   });
 }

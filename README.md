@@ -1,5 +1,7 @@
 # scenefile
 
+[![CI](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml/badge.svg)](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml)
+
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
@@ -24,6 +26,8 @@ no drawing, narrated and captioned on the machine that rendered it.
 ## Try it
 
 ```bash
+git clone https://github.com/Xusniddin-devv/scenefile.git
+cd scenefile
 pnpm install
 pnpm --filter @scenefile/render exec playwright-core install chromium --only-shell
 pnpm build

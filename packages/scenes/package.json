@@ -15,10 +15,11 @@
   },
   "files": [
     "LICENSE",
+    "README.md",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json",
+    "build": "tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts.mjs",
     "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
@@ -42,5 +43,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "The scene types of scenefile."
+  "description": "The scene types of scenefile.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xusniddin-devv/scenefile.git",
+    "directory": "packages/scenes"
+  },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile#readme",
+  "bugs": {
+    "url": "https://github.com/Xusniddin-devv/scenefile/issues"
+  }
 }

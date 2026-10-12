@@ -11,10 +11,11 @@
   },
   "files": [
     "LICENSE",
+    "README.md",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json",
+    "build": "tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts.mjs",
     "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
@@ -38,5 +39,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "The scenefile format: schema, repair and diagnostics."
+  "description": "The scenefile format: schema, repair and diagnostics.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xusniddin-devv/scenefile.git",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile#readme",
+  "bugs": {
+    "url": "https://github.com/Xusniddin-devv/scenefile/issues"
+  }
 }

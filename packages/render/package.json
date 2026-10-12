@@ -11,10 +11,11 @@
   },
   "files": [
     "LICENSE",
+    "README.md",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json",
+    "build": "tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts.mjs",
     "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
@@ -43,5 +44,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Chromium frame capture, ffmpeg encoding and local narration for scenefile."
+  "description": "Chromium frame capture, ffmpeg encoding and local narration for scenefile.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xusniddin-devv/scenefile.git",
+    "directory": "packages/render"
+  },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile#readme",
+  "bugs": {
+    "url": "https://github.com/Xusniddin-devv/scenefile/issues"
+  }
 }

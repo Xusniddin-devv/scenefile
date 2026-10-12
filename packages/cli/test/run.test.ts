@@ -333,3 +333,11 @@ describe("doctor", () => {
     expect(out()).not.toContain("Ready to make videos.");
   });
 });
+
+describe("version", () => {
+  it("prints the version it was published as", async () => {
+    const { io, out } = capture();
+    expect(await run(["--version"], io)).toBe(0);
+    expect(out()).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+});

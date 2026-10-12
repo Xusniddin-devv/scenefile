@@ -28,6 +28,24 @@ try {
   console.log(run(bin, ["render", "scenefile.json", "-o", "video.mp4", "--quality", "draft"], { cwd: app }).trim().split("\n").slice(-1)[0]);
   if (statSync(join(app, "video.mp4")).size < 10_000) throw new Error("the rendered video is suspiciously small");
   if (run(bin, ["guide"], { cwd: app }).length < 5000) throw new Error("the guide is too short to be the guide");
+  // A consumer using Node's own module resolution gets real types, not `any`.
+  writeFileSync(join(app, "tsconfig.json"), JSON.stringify({ compilerOptions: { module: "nodenext", strict: true, noEmit: true, types: ["node"], typeRoots: [join(root, "node_modules", "@types")] }, files: ["consumer.ts"] }));
+  writeFileSync(
+    join(app, "consumer.ts"),
+    [
+      'import { check } from "@scenefile/engine";',
+      'import { renderVideo } from "@scenefile/render";',
+      'import { createServer } from "@scenefile/mcp";',
+      "const result = check({});",
+      "const ok: boolean = result.ok;",
+      "// @ts-expect-error a check result is not a number; this line fails if the types have decayed to `any`",
+      "const wrong: number = result;",
+      "void [ok, wrong, renderVideo, createServer];",
+      "",
+    ].join("\n"),
+  );
+  run(join(root, "node_modules", ".bin", "tsc"), ["-p", app], { stdio: ["ignore", "inherit", "inherit"] });
+  console.log("types ok");
   console.log("pack test passed");
 } finally {
   rmSync(work, { recursive: true, force: true });

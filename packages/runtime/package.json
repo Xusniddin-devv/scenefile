@@ -8,6 +8,7 @@
   },
   "files": [
     "LICENSE",
+    "README.md",
     "dist"
   ],
   "scripts": {
@@ -34,5 +35,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "The in-page runtime that draws a scenefile frame by frame."
+  "description": "The in-page runtime that draws a scenefile frame by frame.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xusniddin-devv/scenefile.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile#readme",
+  "bugs": {
+    "url": "https://github.com/Xusniddin-devv/scenefile/issues"
+  }
 }

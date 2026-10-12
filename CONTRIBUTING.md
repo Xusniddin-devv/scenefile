@@ -67,3 +67,10 @@ The mount file runs in the browser and must not import the schema or definition.
 Voices are listed in `packages/render/src/voice.ts` with a checksum. Read the voice's
 model card first and record where its training data came from; a voice whose terms are
 unclear is not added.
+
+## Releasing
+
+1. Update the version in every `packages/*/package.json` (they move together) and `CHANGELOG.md`.
+2. `pnpm install && pnpm test && pnpm typecheck && node scripts/pack-test.mjs`
+3. `pnpm -r publish` (pnpm replaces the `workspace:*` versions; plain `npm publish` would not).
+4. Tag the commit `v<version>` and push the tag.
