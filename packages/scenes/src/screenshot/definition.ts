@@ -81,6 +81,20 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
       : "";
     return `<div class="sf-shot"><figure class="sf-shot__frame" data-sf-enter="0" style="width:${size.width}px">${bar}<div class="sf-shot__stage"><div class="sf-shot__view" style="width:${size.width}px;height:${size.height}px"><div class="sf-shot__layer">${imageHtml(asset, `${ctx.path}.src`, size, "sf-shot__img")}</div></div><div class="sf-shot__pins">${pins}</div></div></figure>${caption}</div>`;
   },
+  doc: {
+    purpose: "An image, such as a screenshot, with an optional address bar, caption and up to three callouts.",
+    fields: {
+      "src": "The image: a PNG, JPEG or WebP file in the scenefile's folder. Required.",
+      "url": "An address to show above the image, up to 80 characters.",
+      "caption": "A line under the image, up to 80 characters.",
+      "callouts": "Up to 3 pointers: { \"x\": 0.5, \"y\": 0.5, \"label\": \"up to 40 characters\" }. x and y are fractions of the image, from its left and top."
+    },
+    example: {
+      "type": "screenshot",
+      "src": "dashboard.png",
+      "caption": "Every deploy, in one place."
+    },
+  },
   css: `
 .sf-shot{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;justify-content:space-between}
 .sf-shot__frame{box-sizing:content-box;border:1px solid var(--sf-line);margin:-1px}

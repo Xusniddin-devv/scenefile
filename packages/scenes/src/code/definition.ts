@@ -47,6 +47,24 @@ export const codeDefinition: SceneDefinition<CodeProps> = {
       : "";
     return `<div class="sf-code"><div class="sf-code__block" data-sf-fit="3.4,5,0.2" data-sf-box data-sf-path="${ctx.path}.source">${rows}</div>${caption}</div>`;
   },
+  doc: {
+    purpose: "Source code with line numbers; chosen lines can be marked so they stand out.",
+    fields: {
+      "lang": "The language: \"typescript\", \"python\", \"bash\", \"json\", \"go\", \"rust\" and others, or \"text\".",
+      "source": "The code. Required, at most 12 lines and 2,000 characters. Use \\n between lines.",
+      "highlight": "Line numbers, counted from 1, to mark: [2, 3].",
+      "caption": "A line under the code, up to 80 characters."
+    },
+    example: {
+      "type": "code",
+      "lang": "bash",
+      "source": "npm install -g shipit\nshipit deploy",
+      "highlight": [
+        2
+      ],
+      "caption": "Two lines from install to live."
+    },
+  },
   css: `
 .sf-code{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;gap:calc(var(--sf-unit)*3)}
 .sf-code__block{flex:1;min-height:0;overflow:hidden;font:400 calc(var(--sf-unit)*5)/1.7 var(--sf-font-mono);font-variant-ligatures:none;tab-size:2;color:var(--sf-text)}

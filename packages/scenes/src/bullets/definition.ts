@@ -29,6 +29,22 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
       .join("");
     return `<div class="sf-bullets">${heading}<ol class="sf-bullets__list" data-sf-enter="1" data-sf-fit="4,9.6,0.4" data-sf-box data-sf-path="${ctx.path}.items">${items}</ol></div>`;
   },
+  doc: {
+    purpose: "Two to five short points that light up one after another.",
+    fields: {
+      "heading": "A line above the list, up to 60 characters.",
+      "items": "The points: a list of 2 to 5 strings, each up to 70 characters. Required."
+    },
+    example: {
+      "type": "bullets",
+      "heading": "What you get",
+      "items": [
+        "One command to deploy",
+        "Rollbacks in seconds",
+        "Works with any host"
+      ]
+    },
+  },
   css: `
 .sf-bullets{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;gap:calc(var(--sf-unit)*3)}
 .sf-bullets__heading{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}

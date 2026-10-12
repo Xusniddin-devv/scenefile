@@ -60,6 +60,19 @@ export interface SceneDefinition<P> {
    */
   compile(props: P, ctx: CompileContext): string;
   readonly css: string;
+  /**
+   * What a writer of scenefiles needs to know about this scene. The authoring
+   * guide is assembled from these, so it cannot drift from the code; tests
+   * require every field to be documented and the example to pass a full check.
+   */
+  readonly doc: {
+    /** One line: what the scene is for. */
+    readonly purpose: string;
+    /** Each of the scene's own fields, described with its limits. */
+    readonly fields: Readonly<Record<string, string>>;
+    /** A complete, valid scene of this type. */
+    readonly example: Readonly<Record<string, unknown>>;
+  };
 }
 
 export interface MountContext {

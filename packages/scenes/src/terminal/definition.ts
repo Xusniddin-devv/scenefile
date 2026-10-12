@@ -37,6 +37,21 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
       .join("");
     return `<div class="sf-terminal"><div class="sf-terminal__body" data-sf-enter="0" data-sf-fit="3.4,6,0.2" data-sf-box data-sf-path="${ctx.path}.steps">${steps}</div></div>`;
   },
+  doc: {
+    purpose: "Commands typed into a terminal, each followed by what it prints.",
+    fields: {
+      "steps": "A list of 1 to 6 steps: { \"run\": \"command up to 120 characters\", \"output\": \"what it prints, up to 400, optional\" }. Required."
+    },
+    example: {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "shipit deploy",
+          "output": "Deployed in 58 seconds."
+        }
+      ]
+    },
+  },
   css: `
 .sf-terminal{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*9)}
 .sf-terminal__body{display:flex;flex-direction:column;gap:0.7em;height:100%;overflow:hidden;font:400 calc(var(--sf-unit)*6)/1.5 var(--sf-font-mono);font-variant-ligatures:none;color:var(--sf-text)}

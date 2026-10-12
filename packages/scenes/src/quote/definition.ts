@@ -24,6 +24,20 @@ export const quoteDefinition: SceneDefinition<QuoteProps> = {
     // together until all three fit the area below the scene counter.
     return `<figure class="sf-quote" data-sf-fit="4.6,10,0.4" data-sf-box data-sf-path="${ctx.path}.text"><span class="sf-quote__mark" data-sf-enter="0" aria-hidden="true">\u201C</span><blockquote class="sf-quote__text" data-sf-enter="1">${escapeHtml(props.text)}</blockquote>${by}</figure>`;
   },
+  doc: {
+    purpose: "Something a person said, with who said it.",
+    fields: {
+      "text": "The quotation, without quote marks. Required, up to 220 characters.",
+      "author": "Who said it, up to 60 characters.",
+      "role": "Their job or company, up to 60 characters. Needs author."
+    },
+    example: {
+      "type": "quote",
+      "text": "We cut our release time from an hour to a minute.",
+      "author": "Aziz Karimov",
+      "role": "Lead engineer"
+    },
+  },
   css: `
 .sf-quote{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*10);display:flex;flex-direction:column;overflow:hidden;font-size:calc(var(--sf-unit)*10);font-family:var(--sf-font-sans)}
 .sf-quote__mark{margin-top:auto;height:0.9em;font-size:2.2em;line-height:0.6;font-weight:var(--sf-heading-weight);color:var(--sf-accent)}

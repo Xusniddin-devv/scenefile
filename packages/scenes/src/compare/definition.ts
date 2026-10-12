@@ -76,6 +76,24 @@ export const compareDefinition: SceneDefinition<CompareProps> = {
     const sides = SIDES.map(({ key, fallback }, index) => sideHtml(props[key], key, fallback, index, ctx)).join("");
     return `<div class="sf-compare">${sides}</div>`;
   },
+  doc: {
+    purpose: "Before and after, side by side.",
+    fields: {
+      "before": "The old way: { \"label\": \"up to 24 characters, optional\", \"text\": \"up to 160 characters\" } or { \"src\": \"image file\" }. Required.",
+      "after": "The new way, in the same form. Required."
+    },
+    example: {
+      "type": "compare",
+      "before": {
+        "label": "Before",
+        "text": "An hour of manual steps."
+      },
+      "after": {
+        "label": "With shipit",
+        "text": "One command."
+      }
+    },
+  },
   css: `
 .sf-compare{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*9);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:calc(var(--sf-unit)*6)}
 .sf-compare__side{min-width:0;min-height:0;display:flex;flex-direction:column}

@@ -38,6 +38,22 @@ export const outroDefinition: SceneDefinition<OutroProps> = {
     const side = command || url ? `<div class="sf-outro__side">${command}${url}</div>` : "";
     return `<div class="sf-outro"><h1 class="sf-outro__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${side}</div>`;
   },
+  doc: {
+    purpose: "The closing scene: a last line, with a command to run or an address to visit.",
+    fields: {
+      "heading": "The closing line. Required, up to 60 characters.",
+      "highlight": "A part of the heading, copied exactly, to draw in the accent color.",
+      "command": "A command for the viewer to run, up to 80 characters. It is typed out.",
+      "url": "An address, up to 80 characters."
+    },
+    example: {
+      "type": "outro",
+      "heading": "Deploy in one command.",
+      "highlight": "one command.",
+      "command": "npm install -g shipit",
+      "url": "shipit.example"
+    },
+  },
   css: `
 .sf-outro{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*60);column-gap:calc(var(--sf-unit)*6);align-items:end}
 .sf-outro__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}

@@ -7,6 +7,7 @@ export {
   type Format,
   type Scenefile,
   THEMES,
+  TOP_LEVEL_FIELDS,
   type ThemeName,
   scenefileSchema,
 } from "./scenefile";

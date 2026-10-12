@@ -21,6 +21,20 @@ export const titleDefinition: SceneDefinition<TitleProps> = {
       : "";
     return `<div class="sf-title"><h1 class="sf-title__heading" data-sf-enter="0" data-sf-fit="8,22,1" data-sf-lines="3" data-sf-path="${ctx.path}.heading">${highlightHtml(props.heading, props.highlight)}</h1>${sub}</div>`;
   },
+  doc: {
+    purpose: "An opening or section heading: one large line, with an optional smaller line beside it.",
+    fields: {
+      "heading": "The large line. Required, up to 80 characters; two to five words read best.",
+      "highlight": "A part of the heading, copied exactly, to draw in the accent color.",
+      "sub": "A supporting sentence beside the heading, up to 140 characters."
+    },
+    example: {
+      "type": "title",
+      "heading": "Ship faster",
+      "highlight": "faster",
+      "sub": "A command line tool that deploys in one step."
+    },
+  },
   css: `
 .sf-title{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*10);display:grid;grid-template-columns:minmax(0,1fr) calc(var(--sf-unit)*54);column-gap:calc(var(--sf-unit)*6);align-items:end}
 .sf-title__heading{min-width:0;font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.92 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}

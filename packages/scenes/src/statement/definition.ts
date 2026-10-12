@@ -33,6 +33,18 @@ export const statementDefinition: SceneDefinition<StatementProps> = {
   compile(props, ctx) {
     return `<div class="sf-statement"><p class="sf-statement__text" data-sf-fit="6,15,0.5" data-sf-lines="5" data-sf-path="${ctx.path}.text">${wordsHtml(props.text, props.highlight)}</p></div>`;
   },
+  doc: {
+    purpose: "One sentence that fills the frame, arriving word by word.",
+    fields: {
+      "text": "The sentence. Required, up to 140 characters.",
+      "highlight": "A part of the text, copied exactly, to draw in the accent color."
+    },
+    example: {
+      "type": "statement",
+      "text": "Deploys should be boring. Now they are.",
+      "highlight": "Now they are."
+    },
+  },
   css: `
 .sf-statement{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*10);display:flex;align-items:flex-end}
 .sf-statement__text{width:100%;font:var(--sf-heading-weight) calc(var(--sf-unit)*15)/0.98 var(--sf-font-sans);letter-spacing:var(--sf-heading-tracking);color:var(--sf-text);text-wrap:balance}

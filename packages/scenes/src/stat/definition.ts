@@ -27,6 +27,20 @@ export const statDefinition: SceneDefinition<StatProps> = {
       : "";
     return `<div class="sf-stat"><div class="sf-stat__value" data-sf-enter="0" data-sf-fit="18,56,2" data-sf-lines="1" data-sf-path="${ctx.path}.value" data-sf-value="${value}">${value}</div><div class="sf-stat__foot"><p class="sf-stat__label" data-sf-enter="1" data-sf-fit="4.6,7.8,0.4" data-sf-lines="2" data-sf-path="${ctx.path}.label">${escapeHtml(props.label)}</p>${note}</div></div>`;
   },
+  doc: {
+    purpose: "One large figure that counts up, with a label.",
+    fields: {
+      "value": "The figure as text with its unit, up to 12 characters: \"94%\", \"3.5x\", \"1,200+\". Required.",
+      "label": "What the figure measures, up to 50 characters. Required.",
+      "note": "A sentence of context, up to 120 characters."
+    },
+    example: {
+      "type": "stat",
+      "value": "60x",
+      "label": "faster releases",
+      "note": "Measured on our own service over one month."
+    },
+  },
   css: `
 .sf-stat{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*17);bottom:calc(var(--sf-unit)*9);display:flex;flex-direction:column;justify-content:space-between}
 .sf-stat__value{font:var(--sf-heading-weight) calc(var(--sf-unit)*56)/0.86 var(--sf-font-sans);letter-spacing:-0.07em;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--sf-accent)}

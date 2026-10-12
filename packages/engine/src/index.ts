@@ -28,6 +28,7 @@ export {
 export { type Composition, type Manifest, type ManifestScene, compile } from "./compile";
 export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnostics, loadFont, videoTexts } from "./fonts";
 export { FORMAT_SIZES } from "./formats";
+export { TOP_LEVEL_DOCS, authoringGuide, formatDiagnostics, sceneGuide } from "./guide";
 export { type FontKey, type Theme, contrastRatio, getTheme, themeCss } from "./themes";
 export { type ResolvedScene, type ResolvedVideo, resolve } from "./resolve";
 export { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
