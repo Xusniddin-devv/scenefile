@@ -1,7 +1,13 @@
 import { readFile } from "node:fs/promises";
-import { extname, resolve as resolvePath } from "node:path";
+import { dirname, extname, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
-import { type CheckResult, type Composition, type InspectReport, applyLayout, check } from "@scenefile/engine";
+import {
+  type CheckResult,
+  type Composition,
+  type InspectReport,
+  applyLayout,
+  checkWithAssets,
+} from "@scenefile/engine";
 import {
   EnvironmentError,
   inspectComposition,
@@ -51,7 +57,7 @@ async function load(path: string, io: Io): Promise<CheckResult> {
   const parsed = parseScenefileText(text);
   if (parsed.value === undefined) return failed(parsed.diagnostics);
 
-  const checked = check(parsed.value);
+  const checked = await checkWithAssets(parsed.value, { baseDir: dirname(resolvePath(path)) });
   const result = { ...checked, diagnostics: [...parsed.diagnostics, ...checked.diagnostics] };
   if (!result.ok || !result.composition) return result;
   return applyLayout(result, await (io.inspect ?? inspectComposition)(result.composition));

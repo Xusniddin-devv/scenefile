@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import { mounts } from "../src/browser";
 import { SCENE_TYPES, type SceneType, getScene, sceneSchema } from "../src/index";
 import type { MountContext } from "../src/types";
+import { context } from "./context";
 import { FIXTURES, HOSTILE } from "./fixtures";
 
 const FPS = 30;
-const at = { index: 2, total: 8, path: "scenes[2]" };
+const at = context(2, 8);
 
 function build(type: SceneType, input: Record<string, unknown>) {
   const props = sceneSchema.parse(input);

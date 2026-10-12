@@ -67,6 +67,7 @@ export { escapeHtml, highlightHtml, readingSeconds } from "./text";
 export type {
   CompileContext,
   MountContext,
+  SceneAsset,
   SceneDefinition,
   SceneHandle,
   SceneMount,

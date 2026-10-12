@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { terminalDefinition } from "../src/terminal/definition";
 import { terminalSchema } from "../src/terminal/schema";
 import { graphemes, terminalSchedule, typedLength } from "../src/terminal/timing";
+import { context } from "./context";
 
-const ctx = { index: 1, total: 3, path: "scenes[1]" };
+const ctx = context(1, 3);
 
 describe("terminal timing", () => {
   it("types 20 characters per second, then pauses, then shows output", () => {

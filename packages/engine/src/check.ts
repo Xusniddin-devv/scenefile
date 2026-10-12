@@ -1,5 +1,6 @@
-import { type Diagnostic, type Scenefile, hasErrors, normalize } from "@scenefile/schema";
+import { type Diagnostic, type Scenefile, error, hasErrors, normalize } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
+import { type AssetSources, type LoadedAssets, assetRefs, loadAssets } from "./assets";
 import { type Composition, compile } from "./compile";
 import { glyphDiagnostics } from "./fonts";
 import { type InspectReport, verifyLayout } from "./layout";
@@ -43,8 +44,12 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
   return lines.join("\n");
 }
 
-/** Everything that can be checked without a browser: validate, resolve, compile. */
-export function check(input: unknown): CheckResult {
+/**
+ * Everything that can be checked without a browser: validate, resolve, compile.
+ * Images must be loaded first and passed in; without them, a scenefile that
+ * uses images fails with ASSET_NOT_FOUND. `checkWithAssets` does both.
+ */
+export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
   const normalized = normalize(input);
   if (!normalized.scenefile) {
     return {
@@ -57,9 +62,25 @@ export function check(input: unknown): CheckResult {
     };
   }
 
-  const resolved = resolve(normalized.scenefile);
+  const assetDiagnostics = [...(loaded?.diagnostics ?? [])];
+  for (const ref of assetRefs(normalized.scenefile)) {
+    const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === ref.path);
+    if (!reported && !loaded?.assets.has(ref.src)) {
+      assetDiagnostics.push(
+        error(
+          "ASSET_NOT_FOUND",
+          ref.path,
+          `The image "${ref.src}" has not been loaded.`,
+          "Check the scenefile with the scenefile command, which loads its images.",
+        ),
+      );
+    }
+  }
+
+  const resolved = resolve(normalized.scenefile, loaded?.assets);
   const diagnostics = [
     ...normalized.diagnostics,
+    ...assetDiagnostics,
     ...resolved.diagnostics,
     ...glyphDiagnostics(resolved.video),
   ];
@@ -82,6 +103,13 @@ export function check(input: unknown): CheckResult {
     composition: compile(resolved.video),
     storyboard: storyboard(resolved.video),
   };
+}
+
+/** `check`, after loading the images the scenefile uses. */
+export async function checkWithAssets(input: unknown, sources: AssetSources): Promise<CheckResult> {
+  const { scenefile } = normalize(input);
+  if (!scenefile) return check(input);
+  return check(input, await loadAssets(assetRefs(scenefile), sources));
 }
 
 /**

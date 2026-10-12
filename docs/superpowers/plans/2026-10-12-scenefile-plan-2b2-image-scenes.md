@@ -841,9 +841,11 @@ FILE packages/cli/src/run.ts
 FILE packages/cli/src/run.ts
 <<<<
 import { extname, resolve as resolvePath } from "node:path";
+import { parseArgs } from "node:util";
 import { type CheckResult, type Composition, type InspectReport, applyLayout, check } from "@scenefile/engine";
 ====
 import { dirname, extname, resolve as resolvePath } from "node:path";
+import { parseArgs } from "node:util";
 import {
   type CheckResult,
   type Composition,

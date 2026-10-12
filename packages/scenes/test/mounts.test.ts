@@ -6,6 +6,7 @@ import { terminalSchema } from "../src/terminal/schema";
 import { titleDefinition } from "../src/title/definition";
 import { titleSchema } from "../src/title/schema";
 import type { MountContext, SceneHandle } from "../src/types";
+import { context } from "./context";
 
 const ctx: MountContext = { fps: 30, durationFrames: 120, enterFrames: 18, exitFrames: 12 };
 
@@ -18,7 +19,7 @@ function mountScene(type: string, html: string): { el: HTMLElement; handle: Scen
   return { el, handle: mount(el, ctx) };
 }
 
-const at = { index: 0, total: 2, path: "scenes[0]" };
+const at = context(0, 2);
 const titleHtml = titleDefinition.compile(
   titleSchema.parse({ type: "title", heading: "Ship faster", sub: "A CLI" }),
   at,

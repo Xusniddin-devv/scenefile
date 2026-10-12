@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { escapeHtml, readingSeconds } from "../src/text";
 import { titleDefinition } from "../src/title/definition";
 import { titleSchema } from "../src/title/schema";
+import { context } from "./context";
 
-const ctx = { index: 0, total: 8, path: "scenes[0]" };
+const ctx = context(0, 8);
 const compile = (input: Record<string, unknown>, at = ctx): string =>
   titleDefinition.compile(titleSchema.parse({ type: "title", ...input }), at);
 
@@ -60,7 +61,7 @@ describe("title scene", () => {
   });
 
   it("shows the scene's position in the video", () => {
-    expect(compile({ heading: "x" }, { index: 2, total: 8, path: "scenes[2]" })).toContain("<b>03</b> / 08");
+    expect(compile({ heading: "x" }, context(2, 8))).toContain("<b>03</b> / 08");
   });
 
   it("omits the sub element when there is no sub", () => {

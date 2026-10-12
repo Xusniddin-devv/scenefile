@@ -1,5 +1,6 @@
 import { type Diagnostic, type Scenefile, type ThemeName, error, warning } from "@scenefile/schema";
 import { type Scene, getScene } from "@scenefile/scenes";
+import type { AssetMap } from "./assets";
 import { FORMAT_SIZES } from "./formats";
 import { contrastRatio, getTheme } from "./themes";
 
@@ -21,6 +22,8 @@ export interface ResolvedVideo {
   accent: string | undefined;
   totalFrames: number;
   scenes: ResolvedScene[];
+  /** Loaded images, by the `src` the scenefile gave. */
+  assets: AssetMap;
 }
 
 const MIN_TOTAL_SECONDS = 3;
@@ -38,7 +41,10 @@ function toFrames(seconds: number, fps: number): number {
 }
 
 /** Turns "auto" values into numbers and places every scene on the frame timeline. */
-export function resolve(scenefile: Scenefile): { video: ResolvedVideo; diagnostics: Diagnostic[] } {
+export function resolve(
+  scenefile: Scenefile,
+  assets: AssetMap = new Map(),
+): { video: ResolvedVideo; diagnostics: Diagnostic[] } {
   const { fps } = scenefile;
   const diagnostics: Diagnostic[] = [];
   let cursor = 0;
@@ -138,6 +144,7 @@ export function resolve(scenefile: Scenefile): { video: ResolvedVideo; diagnosti
       accent: scenefile.accent,
       totalFrames: cursor,
       scenes,
+      assets,
     },
     diagnostics,
   };

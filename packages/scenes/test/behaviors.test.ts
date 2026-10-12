@@ -8,6 +8,7 @@ import { codeHoldSeconds, codeRevealSeconds } from "../src/code/timing";
 import { COUNT_SECONDS, statText } from "../src/stat/timing";
 import { statementRevealSeconds } from "../src/statement/timing";
 import type { MountContext } from "../src/types";
+import { context } from "./context";
 
 const FPS = 30;
 
@@ -15,7 +16,7 @@ function stage(input: Record<string, unknown>) {
   const props = sceneSchema.parse(input);
   const definition = getScene(props.type as SceneType);
   const el = document.createElement("section");
-  el.innerHTML = definition.compile(props, { index: 0, total: 1, path: "scenes[0]" });
+  el.innerHTML = definition.compile(props, context());
   document.body.append(el);
   const enterFrames = Math.round(definition.enterSeconds * FPS);
   const exitFrames = Math.round(definition.exitSeconds * FPS);

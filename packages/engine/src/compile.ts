@@ -57,6 +57,8 @@ export function compile(video: ResolvedVideo): Composition {
         index: scene.index,
         total,
         path: `scenes[${scene.index}]`,
+        frame: { width: video.width, height: video.height, unit: Math.min(video.width, video.height) / 100 },
+        asset: (src) => video.assets.get(src),
       });
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
     })

@@ -4,6 +4,17 @@ export interface CompileContext {
   readonly total: number;
   /** The scene's path in the scenefile, e.g. `scenes[2]`. */
   readonly path: string;
+  /** The frame in pixels, and one unit (1% of its short side) in pixels. */
+  readonly frame: { readonly width: number; readonly height: number; readonly unit: number };
+  /** A loaded image, by the `src` the scenefile gave. Undefined if it was not loaded. */
+  asset(src: string): SceneAsset | undefined;
+}
+
+/** An image ready to draw: embedded data and its real size in pixels. */
+export interface SceneAsset {
+  readonly dataUri: string;
+  readonly width: number;
+  readonly height: number;
 }
 
 /** One piece of text a scene draws, declared so fonts can be checked before rendering. */
@@ -35,6 +46,8 @@ export interface SceneDefinition<P> {
   summary(props: P): string;
   /** Every string the scene draws. */
   texts(props: P): SceneText[];
+  /** Every image the scene shows: its `src`, and the path of the field that names it, relative to the scene. */
+  assets?(props: P): { path: string; src: string }[];
   /**
    * Inner HTML of the scene's <section>. All text must be escaped.
    *
