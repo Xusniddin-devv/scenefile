@@ -19,11 +19,14 @@ function file(name: string, contents: string): string {
   return path;
 }
 
-function capture(render?: Io["render"]): { io: Io; out: () => string; err: () => string } {
+function capture(
+  render?: Io["render"],
+  inspect: NonNullable<Io["inspect"]> = async () => ({ slots: [] }),
+): { io: Io; out: () => string; err: () => string } {
   const out: string[] = [];
   const err: string[] = [];
   return {
-    io: { out: (text) => out.push(text), err: (text) => err.push(text), ...(render ? { render } : {}) },
+    io: { out: (text) => out.push(text), err: (text) => err.push(text), inspect, ...(render ? { render } : {}) },
     out: () => out.join("\n"),
     err: () => err.join("\n"),
   };
@@ -81,6 +84,36 @@ describe("scenefile check", () => {
     expect(await run(["check", file(name, contents)], c.io)).toBe(1);
     expect(c.out()).toContain("SCHEMA_JSON");
     expect(c.out() + c.err()).not.toMatch(/\bat .+:\d+:\d+/);
+  });
+
+  it("reports text that does not fit, found by inspecting the layout", async () => {
+    const c = capture(undefined, async () => ({
+      slots: [
+        { path: "scenes[0].heading", sizePx: 86.4, lines: 5, maxLines: 3, chars: 70, overflow: true, outside: false },
+      ],
+    }));
+    expect(await run(["check", file("long.json", valid)], c.io)).toBe(1);
+    expect(c.out()).toContain("error  TEXT_OVERFLOW  scenes[0].heading");
+    expect(c.out()).toContain("characters");
+    expect(c.out()).toContain("heading  86px, 5 lines");
+  });
+
+  it("does not inspect a scenefile that already has errors", async () => {
+    let inspected = false;
+    const c = capture(undefined, async () => {
+      inspected = true;
+      return { slots: [] };
+    });
+    expect(await run(["check", file("broken3.json", JSON.stringify({ version: 1, scenes: [] }))], c.io)).toBe(1);
+    expect(inspected).toBe(false);
+  });
+
+  it("exits 2 when the browser needed for layout checks is missing", async () => {
+    const c = capture(undefined, async () => {
+      throw new EnvironmentError("Chromium is not installed for scenefile.", "Install the browser: ...");
+    });
+    expect(await run(["check", file("nobrowser.json", valid)], c.io)).toBe(2);
+    expect(c.err()).toContain("Chromium is not installed");
   });
 
   it("reports a missing file as a diagnostic", async () => {

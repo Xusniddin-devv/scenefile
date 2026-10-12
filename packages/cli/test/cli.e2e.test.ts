@@ -47,6 +47,24 @@ describe("built CLI", () => {
     expect(await probeVideo(output)).toMatchObject({ width: 1080, height: 1080, frames: 105 });
   });
 
+  it("finds text that cannot fit by measuring it in the browser", async () => {
+    const input = join(dir, "overflow.json");
+    writeFileSync(
+      input,
+      JSON.stringify({
+        version: 1,
+        scenes: [
+          { type: "title", heading: "Supercalifragilisticexpialidocious".repeat(2), sub: "x" },
+          { type: "title", heading: "one two three four five six seven eight nine" },
+        ],
+      }),
+    );
+    const result = await scenefile(["check", input]);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain("TEXT_OVERFLOW  scenes[0].heading");
+    expect(result.stdout).toMatch(/heading\s+\d+px, \d+ lines/);
+  });
+
   it("exits 1 and prints diagnostics for a broken scenefile", async () => {
     const input = join(dir, "broken.json");
     writeFileSync(input, "{ not json");

@@ -2,6 +2,7 @@ import { type Diagnostic, type Scenefile, hasErrors, normalize } from "@scenefil
 import { getScene } from "@scenefile/scenes";
 import { type Composition, compile } from "./compile";
 import { glyphDiagnostics } from "./fonts";
+import { type InspectReport, verifyLayout } from "./layout";
 import { type ResolvedVideo, resolve } from "./resolve";
 
 export interface CheckResult {
@@ -10,27 +11,50 @@ export interface CheckResult {
   diagnostics: Diagnostic[];
   /** The scenefile with defaults filled and repairs applied; null when it failed validation. */
   scenefile: Scenefile | null;
+  video: ResolvedVideo | null;
   composition: Composition | null;
   storyboard: string;
 }
 
-/** A plain-text description of the video, so a model without vision can review it. */
-export function storyboard(video: ResolvedVideo): string {
+/**
+ * A plain-text description of the video, so a model without vision can review
+ * it. With a layout report, each scene also lists its text sizes and line counts.
+ */
+export function storyboard(video: ResolvedVideo, report?: InspectReport): string {
   const seconds = (frames: number): string => `${(frames / video.fps).toFixed(2)}s`;
   const typeWidth = Math.max(...video.scenes.map((scene) => scene.type.length));
-  const header = `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes`;
-  const lines = video.scenes.map((scene) => {
+  const lines = [
+    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes`,
+  ];
+  for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
-    return `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}`;
-  });
-  return [header, ...lines].join("\n");
+    lines.push(
+      `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}`,
+    );
+    const prefix = `scenes[${scene.index}].`;
+    const slots = (report?.slots ?? []).filter((slot) => slot.path.startsWith(prefix));
+    const fieldWidth = Math.max(0, ...slots.map((slot) => slot.path.length - prefix.length));
+    for (const slot of slots) {
+      const field = slot.path.slice(prefix.length).padEnd(fieldWidth);
+      const count = slot.maxLines === null ? "" : `, ${slot.lines} ${slot.lines === 1 ? "line" : "lines"}`;
+      lines.push(`     ${field}  ${Math.round(slot.sizePx)}px${count}`);
+    }
+  }
+  return lines.join("\n");
 }
 
-/** The whole pre-render pipeline: validate, resolve, compile. Pure. */
+/** Everything that can be checked without a browser: validate, resolve, compile. */
 export function check(input: unknown): CheckResult {
   const normalized = normalize(input);
   if (!normalized.scenefile) {
-    return { ok: false, diagnostics: normalized.diagnostics, scenefile: null, composition: null, storyboard: "" };
+    return {
+      ok: false,
+      diagnostics: normalized.diagnostics,
+      scenefile: null,
+      video: null,
+      composition: null,
+      storyboard: "",
+    };
   }
 
   const resolved = resolve(normalized.scenefile);
@@ -40,14 +64,39 @@ export function check(input: unknown): CheckResult {
     ...glyphDiagnostics(resolved.video),
   ];
   if (hasErrors(diagnostics)) {
-    return { ok: false, diagnostics, scenefile: normalized.scenefile, composition: null, storyboard: "" };
+    return {
+      ok: false,
+      diagnostics,
+      scenefile: normalized.scenefile,
+      video: resolved.video,
+      composition: null,
+      storyboard: "",
+    };
   }
 
   return {
     ok: true,
     diagnostics,
     scenefile: normalized.scenefile,
+    video: resolved.video,
     composition: compile(resolved.video),
     storyboard: storyboard(resolved.video),
+  };
+}
+
+/**
+ * Adds what the browser measured to a passing check: layout diagnostics, and
+ * text sizes in the storyboard. A result that already failed is returned as is.
+ */
+export function applyLayout(result: CheckResult, report: InspectReport): CheckResult {
+  if (!result.ok || !result.video) return result;
+  const diagnostics = [...result.diagnostics, ...verifyLayout(report)];
+  const ok = !hasErrors(diagnostics);
+  return {
+    ...result,
+    ok,
+    diagnostics,
+    composition: ok ? result.composition : null,
+    storyboard: storyboard(result.video, report),
   };
 }

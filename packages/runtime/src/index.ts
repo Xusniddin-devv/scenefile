@@ -1,4 +1,5 @@
 import { type SceneHandle, mounts } from "@scenefile/scenes/browser";
+import { type SlotReport, fitSlots } from "./fit";
 
 interface ManifestScene {
   index: number;
@@ -11,6 +12,8 @@ interface ManifestScene {
 
 interface Manifest {
   fps: number;
+  width: number;
+  height: number;
   totalFrames: number;
   scenes: ManifestScene[];
 }
@@ -21,7 +24,13 @@ interface Mounted {
   handle: SceneHandle;
 }
 
-function init(): { seek(frame: number): void; totalFrames: number } {
+interface Api {
+  seek(frame: number): void;
+  totalFrames: number;
+  report: { slots: SlotReport[] };
+}
+
+function init(): Api {
   const manifestEl = document.getElementById("sf-manifest");
   if (!manifestEl?.textContent) throw new Error("scenefile: the composition has no manifest");
   const manifest = JSON.parse(manifestEl.textContent) as Manifest;
@@ -40,10 +49,23 @@ function init(): { seek(frame: number): void; totalFrames: number } {
     return { scene, el, handle };
   });
 
+  // Fit text once, before any frame is drawn. Each scene is measured as it
+  // looks fully revealed (its last frame before the exit), so text that is
+  // typed or staggered in over time is measured at full length.
+  const unitPx = Math.min(manifest.width, manifest.height) / 100;
+  const slots: SlotReport[] = [];
+  for (const { scene, el, handle } of mounted) {
+    el.hidden = false;
+    handle.seek(Math.max(0, scene.durationFrames - scene.exitFrames - 1));
+    slots.push(...fitSlots(el, unitPx, manifest));
+    el.hidden = true;
+  }
+
   const root = document.documentElement;
 
   return {
     totalFrames: manifest.totalFrames,
+    report: { slots },
     seek(frame) {
       // Chromium carries paint and compositing state from one frame to the next,
       // so identical DOM can differ by one level on anti-aliased edges depending
@@ -66,4 +88,10 @@ function init(): { seek(frame: number): void; totalFrames: number } {
   };
 }
 
-(window as unknown as { __scenefile: ReturnType<typeof init> }).__scenefile = init();
+async function start(): Promise<void> {
+  // Faces load lazily; text measured before they arrive would be measured in a fallback font.
+  await Promise.all(Array.from(document.fonts, (face) => face.load()));
+  (window as unknown as { __scenefile: Api }).__scenefile = init();
+}
+
+(window as unknown as { __scenefileReady: Promise<void> }).__scenefileReady = start();

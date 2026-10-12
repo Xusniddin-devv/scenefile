@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { extname, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
-import { type CheckResult, type Composition, check } from "@scenefile/engine";
+import { type CheckResult, type Composition, type InspectReport, applyLayout, check } from "@scenefile/engine";
 import {
   EnvironmentError,
+  inspectComposition,
   QUALITIES,
   type Quality,
   type RenderOptions,
@@ -17,6 +18,8 @@ export interface Io {
   err(text: string): void;
   /** Test seam. Defaults to the real renderer. */
   render?: (composition: Composition, options: RenderOptions) => Promise<RenderReport>;
+  /** Test seam. Defaults to measuring the layout in Chromium. */
+  inspect?: (composition: Composition) => Promise<InspectReport>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -33,20 +36,25 @@ function isQuality(value: string): value is Quality {
   return (QUALITIES as readonly string[]).includes(value);
 }
 
-async function load(path: string): Promise<CheckResult> {
+function failed(diagnostics: Diagnostic[]): CheckResult {
+  return { ok: false, diagnostics, scenefile: null, video: null, composition: null, storyboard: "" };
+}
+
+/** Reads, validates, and measures a scenefile: everything short of rendering it. */
+async function load(path: string, io: Io): Promise<CheckResult> {
   let text: string;
   try {
     text = await readFile(path, "utf8");
   } catch {
-    const diagnostic = error("SCHEMA_FILE", "", `Cannot read "${path}".`, "Check that the path exists and is a file.");
-    return { ok: false, diagnostics: [diagnostic], scenefile: null, composition: null, storyboard: "" };
+    return failed([error("SCHEMA_FILE", "", `Cannot read "${path}".`, "Check that the path exists and is a file.")]);
   }
   const parsed = parseScenefileText(text);
-  if (parsed.value === undefined) {
-    return { ok: false, diagnostics: parsed.diagnostics, scenefile: null, composition: null, storyboard: "" };
-  }
-  const result = check(parsed.value);
-  return { ...result, diagnostics: [...parsed.diagnostics, ...result.diagnostics] };
+  if (parsed.value === undefined) return failed(parsed.diagnostics);
+
+  const checked = check(parsed.value);
+  const result = { ...checked, diagnostics: [...parsed.diagnostics, ...checked.diagnostics] };
+  if (!result.ok || !result.composition) return result;
+  return applyLayout(result, await (io.inspect ?? inspectComposition)(result.composition));
 }
 
 function formatDiagnostics(diagnostics: readonly Diagnostic[]): string {
@@ -91,7 +99,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
     if (command === "check") {
-      const result = await load(file);
+      const result = await load(file, io);
       report(result, values.json, io);
       return result.ok ? 0 : 1;
     }
@@ -107,7 +115,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       throw new UsageError(`Unknown quality "${values.quality}". Use one of: ${QUALITIES.join(", ")}.`);
     }
 
-    const result = await load(file);
+    const result = await load(file, io);
     if (!result.ok || !result.composition) {
       report(result, values.json, io);
       return 1;
