@@ -1,0 +1,23 @@
+{
+  "name": "@scenefile/render",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@scenefile/engine": "workspace:*",
+    "@scenefile/runtime": "workspace:*",
+    "playwright-core": "^1.64.0"
+  }
+}

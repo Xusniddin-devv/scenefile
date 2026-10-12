@@ -1,0 +1,12 @@
+{
+  "name": "@scenefile/runtime",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    "./bundle": "./dist/index.global.js"
+  },
+  "files": ["dist"],
+  "scripts": { "build": "tsup" },
+  "devDependencies": { "@scenefile/scenes": "workspace:*" }
+}
