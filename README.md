@@ -1,7 +1,5 @@
 # scenefile
 
-[![CI](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml/badge.svg)](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml)
-
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
