@@ -26,7 +26,7 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
   const seconds = (frames: number): string => `${(frames / video.fps).toFixed(2)}s`;
   const typeWidth = Math.max(...video.scenes.map((scene) => scene.type.length));
   const lines = [
-    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}${video.scenes.some((scene) => scene.speech) ? ", voice" : ""}`,
+    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}${video.scenes.some((scene) => scene.speech) ? ", voice" : ""}${video.captions ? ", captions" : ""}`,
   ];
   for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
@@ -93,7 +93,7 @@ function voiceDiagnostics(scenefile: Scenefile): Diagnostic[] {
           `Set "voice": { "name": "${SPEAKER[other]}" } at the top of the scenefile, or write the line in the voice's language.`,
         ),
       );
-    } else if (/https?:\/\/|www\.|\p{Extended_Pictographic}/u.test(scene.say)) {
+    } else if (/https?:\/\/|www\.|\b[\w-]+\.[a-z]{2,}\/\S|\p{Extended_Pictographic}/u.test(scene.say)) {
       diagnostics.push(
         warning(
           "VOICE_UNSPEAKABLE",

@@ -24,6 +24,8 @@ export interface Manifest {
   height: number;
   totalFrames: number;
   scenes: ManifestScene[];
+  /** Height left for scenes when captions take a band at the foot of the frame; absent without captions. */
+  stageHeight?: number;
 }
 
 export interface Composition {
@@ -47,20 +49,27 @@ function baseCss(width: number, height: number): string {
     ".sf-wipe[hidden]{display:none}",
     ".sf-scene[hidden]{display:none}",
     // Captions take a band at the foot of the frame; scenes are laid out in what is left above it.
-    ".sf-captioned .sf-scene,.sf-captioned .sf-wipe{bottom:calc(var(--sf-unit)*17)}",
-    ".sf-captions{z-index:3;position:absolute;left:0;right:0;bottom:0;height:calc(var(--sf-unit)*17);padding:0 calc(var(--sf-unit)*9);display:flex;align-items:center;background:var(--sf-bg);border-top:1px solid var(--sf-line)}",
-    ".sf-captions p{font:600 calc(var(--sf-unit)*4.4)/1.22 var(--sf-font-sans);letter-spacing:-0.02em;color:var(--sf-text);text-wrap:balance;max-height:2.44em;overflow:hidden}",
+    `.sf-captioned .sf-scene,.sf-captioned .sf-wipe{bottom:calc(var(--sf-unit)*${CAPTION_BAND_UNITS})}`,
+    `.sf-captions{z-index:3;position:absolute;left:0;right:0;bottom:0;height:calc(var(--sf-unit)*${CAPTION_BAND_UNITS});padding:0 calc(var(--sf-unit)*9);display:flex;align-items:center;background:var(--sf-bg);border-top:1px solid var(--sf-line)}`,
+    ".sf-captions p{font:600 calc(var(--sf-unit)*4.4)/1.22 var(--sf-font-sans);letter-spacing:-0.02em;color:var(--sf-text);text-wrap:balance;overflow-wrap:anywhere;max-height:2.44em;overflow:hidden}",
     ".sf-captions p[hidden]{display:none}",
   ].join("");
 }
 
 /** Builds the single HTML document Chromium renders. Deterministic: no clock, no network. */
+/** Height of the caption band, in units. The CSS below and the layout checks must agree on it. */
+export const CAPTION_BAND_UNITS = 17;
+
 export function compile(video: ResolvedVideo): Composition {
+  const unit = Math.min(video.width, video.height) / 100;
+  // With captions, scenes are laid out and checked in the space above the band.
+  const stageHeight = video.captions ? video.height - CAPTION_BAND_UNITS * unit : video.height;
   const manifest: Manifest = {
     fps: video.fps,
     width: video.width,
     height: video.height,
     totalFrames: video.totalFrames,
+    ...(video.captions ? { stageHeight } : {}),
     scenes: video.scenes.map(
       ({ index, type, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames }) => ({
         index, type, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames,
@@ -77,7 +86,7 @@ export function compile(video: ResolvedVideo): Composition {
         index: scene.index,
         total,
         path: `scenes[${scene.index}]`,
-        frame: { width: video.width, height: video.height, unit: Math.min(video.width, video.height) / 100 },
+        frame: { width: video.width, height: stageHeight, unit },
         asset: (src) => video.assets.get(src),
       });
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;

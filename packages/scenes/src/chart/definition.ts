@@ -41,7 +41,7 @@ export const chartDefinition: SceneDefinition<ChartProps> = {
         return (
           `<li class="sf-chart__row${lit}" data-sf-bar="${share}">` +
           `<span class="sf-chart__label">${escapeHtml(bar.label)}</span>` +
-          `<span class="sf-chart__track"><i class="sf-chart__fill" style="width:${(share * 100).toFixed(3)}%"></i></span>` +
+          `<span class="sf-chart__track"><i class="sf-chart__fill${bar.value > 0 ? " sf-chart__fill--some" : ""}" style="width:${(share * 100).toFixed(3)}%"></i></span>` +
           `<span class="sf-chart__value">${escapeHtml(written(bar.value, props.unit))}</span></li>`
         );
       })
@@ -70,15 +70,16 @@ export const chartDefinition: SceneDefinition<ChartProps> = {
   css: `
 .sf-chart{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*8);display:flex;flex-direction:column;gap:calc(var(--sf-unit)*4)}
 .sf-chart__heading{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
-.sf-chart__rows{flex:1;min-height:0;overflow:hidden;list-style:none;display:flex;flex-direction:column;justify-content:center;gap:0.62em;font-size:calc(var(--sf-unit)*9);color:var(--sf-text)}
-.sf-chart__row{display:grid;grid-template-columns:minmax(0,26%) minmax(0,1fr) minmax(3.2em,auto);align-items:center;column-gap:0.5em}
+.sf-chart__rows{flex:1;min-height:0;overflow:hidden;list-style:none;display:grid;grid-template-columns:minmax(0,26%) minmax(0,1fr) auto;align-content:center;align-items:center;column-gap:0.5em;row-gap:0.62em;font-size:calc(var(--sf-unit)*9);color:var(--sf-text)}
+.sf-chart__row{display:grid;grid-template-columns:subgrid;grid-column:1/-1;align-items:center}
 .sf-chart__label{font:600 0.62em/1.15 var(--sf-font-sans);letter-spacing:-0.02em;color:var(--sf-muted);overflow-wrap:anywhere}
 .sf-chart__track{display:block;height:0.66em;border-bottom:1px solid var(--sf-line)}
 .sf-chart__fill{display:block;height:100%;background:var(--sf-text);transform-origin:left center}
+.sf-chart__fill--some{min-width:calc(var(--sf-unit)*0.5)}
 .sf-chart__value{font:800 1em/1 var(--sf-font-sans);letter-spacing:-0.045em;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sf-chart__row--lit .sf-chart__fill{background:var(--sf-accent)}
 .sf-chart__row--lit .sf-chart__label{color:var(--sf-text)}
 .sf-chart__row--lit .sf-chart__value{color:var(--sf-accent)}
-@media (max-aspect-ratio:1/1){.sf-chart__row{grid-template-columns:minmax(0,1fr) auto;row-gap:0.18em}.sf-chart__label{grid-column:1/-1}}
+@media (max-aspect-ratio:1/1){.sf-chart__rows{grid-template-columns:minmax(0,1fr) auto}.sf-chart__row{row-gap:0.18em}.sf-chart__label{grid-column:1/-1}}
 `,
 };

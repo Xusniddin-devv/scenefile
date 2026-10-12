@@ -65,3 +65,42 @@ describe("captions in the video", () => {
     expect(check(narrated(false, odd), loaded).diagnostics.filter((d) => d.code === "GLYPH_MISSING")).toEqual([]);
   });
 });
+
+describe("captions that read well", () => {
+  const texts = (line: string, most = 48) => captionCues(line, 0, line.length / 16, 30, most).map((cue) => cue.text);
+
+  it("never leaves a word or two stranded on its own", () => {
+    expect(texts("If something breaks, pgsnap restore puts everything back.")).toEqual([
+      "If something breaks,",
+      "pgsnap restore puts everything back.",
+    ]);
+    for (const line of [
+      "Restoring a two gigabyte database takes four seconds, against ninety four with a plain dump, which is much slower.",
+      "It saves your whole Postgres database with one command, and brings it back with another.",
+    ]) {
+      for (const text of texts(line)) expect(text.split(" ").length, text).toBeGreaterThan(1);
+    }
+  });
+
+  it("keeps very short sentences with their neighbours, and does not stop at an abbreviation", () => {
+    expect(texts("Yes. It works. Try it today.")).toEqual(["Yes. It works. Try it today."]);
+    expect(texts("Use e.g. a cron job to run it nightly.")).toEqual(["Use e.g. a cron job to run it nightly."]);
+    expect(texts("Version 2.0 is out. Dr. Lee tested it all.")).toEqual(["Version 2.0 is out. Dr. Lee tested it all."]);
+  });
+
+  it("allows for figures taking longer to say than to write", () => {
+    const line = "In 2024 it handled 1,250,000 requests at 99.99% uptime. Nobody noticed a thing.";
+    const cues = captionCues(line, 0, 10, 30);
+    const last = cues.at(-1);
+    expect(last?.text).toBe("Nobody noticed a thing.");
+    // By letters alone the last sentence would start 71% of the way in; the figures before it take far longer to say.
+    expect(last?.from).toBeGreaterThan(0.8 * 300);
+  });
+
+  it("works the same at 60 frames a second, ending just after the voice", () => {
+    const cues = captionCues("One two three four five six seven eight nine ten eleven twelve thirteen.", 30, 4, 60);
+    for (let i = 1; i < cues.length; i++) expect(cues[i]?.from).toBe(cues[i - 1]?.to);
+    expect(cues.at(-1)?.to).toBeGreaterThanOrEqual(30 + 240);
+    expect(cues.at(-1)?.to).toBeLessThanOrEqual(30 + 240 + 15);
+  });
+});

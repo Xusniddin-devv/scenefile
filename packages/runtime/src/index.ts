@@ -25,6 +25,8 @@ interface Manifest {
   fps: number;
   width: number;
   height: number;
+  /** Height left for scenes above the caption band; absent without captions. */
+  stageHeight?: number;
   totalFrames: number;
   scenes: ManifestScene[];
 }
@@ -80,6 +82,8 @@ function init(broken: string[]): Api {
   // looks fully revealed (its last frame before the exit), so text that is
   // typed or staggered in over time is measured at full length.
   const unitPx = Math.min(manifest.width, manifest.height) / 100;
+  // What scenes may use: the frame, less the caption band when there is one.
+  const frame = { width: manifest.width, height: manifest.stageHeight ?? manifest.height };
   const slots: SlotReport[] = [];
   const crowded: number[] = [];
   const images: ImageReport[] = [];
@@ -88,11 +92,11 @@ function init(broken: string[]): Api {
   for (const { scene, el, handle } of mounted) {
     el.hidden = false;
     handle.seek(Math.max(0, scene.durationFrames - scene.exitFrames - 1));
-    const fitted = fitSlots(el, unitPx, manifest);
-    relieveCrowding(el, unitPx, manifest, fitted);
+    const fitted = fitSlots(el, unitPx, frame);
+    relieveCrowding(el, unitPx, frame, fitted);
     slots.push(...fitted);
     if (isCrowded(el)) crowded.push(scene.index);
-    const inspected = inspectLabels(el, manifest);
+    const inspected = inspectLabels(el, frame);
     labels.push(...inspected.labels);
     conflicts.push(...inspected.conflicts);
     for (const image of el.querySelectorAll<HTMLImageElement>("img[data-sf-image]")) {
@@ -112,6 +116,7 @@ function init(broken: string[]): Api {
   const wipe = document.querySelector<HTMLElement>(".sf-wipe");
   const counter = document.querySelector<HTMLElement>(".sf-chrome__index b");
   const chrome = document.querySelector<HTMLElement>(".sf-chrome");
+  const band = document.querySelector<HTMLElement>(".sf-captions");
   const first = mounted[0];
   const last = mounted[mounted.length - 1];
 
@@ -173,6 +178,8 @@ function init(broken: string[]): Api {
         const leaving =
           last.scene.exitFrames > 0 ? Math.min(1, Math.max(0, (manifest.totalFrames - 1 - frame) / last.scene.exitFrames)) : 1;
         chrome.style.opacity = String(Math.min(arriving, leaving));
+        // The caption band comes and goes with it, so no line sits across an empty frame.
+        if (band) band.style.opacity = chrome.style.opacity;
       }
       root.style.display = "";
       void root.offsetHeight;
