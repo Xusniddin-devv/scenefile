@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -258,7 +258,8 @@ describe("renderVideo", () => {
     const frameHashes = (file: string): string =>
       execFileSync("ffmpeg", ["-loglevel", "error", "-i", file, "-f", "framemd5", "-"], { encoding: "utf8" });
     const one = join(dir, "one-worker.mp4");
-    const two = join(dir, "two-workers.mp4");
+    // A folder name with a quote, a space and a line break: the list of segments must cope.
+    const two = join(dir, "it's odd\nhere", "two-workers.mp4");
     const reportOne = await renderVideo(result.composition, { output: one, quality: "draft", workers: 1 });
     const reportTwo = await renderVideo(result.composition, { output: two, quality: "draft", workers: 2 });
 
@@ -267,6 +268,48 @@ describe("renderVideo", () => {
     expect(frameHashes(two)).toBe(frameHashes(one));
     expect(readFileSync(two).equals(readFileSync(one))).toBe(true);
     expect(partialFiles(dir)).toEqual([]);
+    expect(partialFiles(join(dir, "it's odd\nhere"))).toEqual([]);
+  });
+
+  it("does not start further segments once one has failed", async () => {
+    // Four segments, two workers. The first segment's encoder dies at once; segments three and four must never begin.
+    const result = check({
+      version: 1,
+      transition: "cut",
+      scenes: Array.from({ length: 4 }, (_, i) => ({ type: "title", heading: `Part ${i} one two three`, duration: 5 })),
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    expect(result.composition.manifest.totalFrames).toBe(600);
+    const log = join(dir, "encoders.log");
+    const ffmpegPath = fakeFfmpeg(
+      "ffmpeg-first-dies",
+      `echo "$*" >> "${log}"; case "$*" in *00000.mp4*) echo "first segment failed" >&2; exit 4;; *) exec ffmpeg "$@";; esac`,
+    );
+    const attempt = renderVideo(result.composition, { output: join(dir, "stops.mp4"), ffmpegPath, quality: "draft", workers: 2 });
+    await expect(attempt).rejects.toThrow(/first segment failed/);
+    const started = readFileSync(log, "utf8");
+    expect(started).toContain("00000.mp4");
+    expect(started).not.toContain("00002.mp4");
+    expect(started).not.toContain("00003.mp4");
+    expect(partialFiles(dir)).toEqual([]);
+  });
+
+  it("clears away what an interrupted render of the same file left behind, but not a render still running", async () => {
+    const output = join(dir, "swept.mp4");
+    const stale = join(dir, ".swept.mp4.partial-999999999");
+    const running = join(dir, `.swept.mp4.partial-${process.ppid}`);
+    mkdirSync(stale);
+    mkdirSync(running);
+    writeFileSync(join(stale, "00000.mp4"), "left over");
+    await renderVideo(fixture(), { output, quality: "draft" });
+    expect(existsSync(stale)).toBe(false);
+    expect(existsSync(running)).toBe(true);
+    rmSync(running, { recursive: true });
+  });
+
+  it("treats a worker count that is not a number as no preference", async () => {
+    const report = await renderVideo(fixture(), { output: join(dir, "nan.mp4"), quality: "draft", workers: Number.NaN });
+    expect(report.workers).toBeGreaterThanOrEqual(1);
   });
 
   it("never uses more workers than there are segments to render", async () => {

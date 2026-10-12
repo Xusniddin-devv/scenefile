@@ -1,5 +1,5 @@
-import { execFile } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFile, spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,6 +64,24 @@ describe("built CLI", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toContain("TEXT_OVERFLOW  scenes[0].heading");
     expect(result.stdout).toMatch(/heading\s+\d+px, \d+ lines/);
+  });
+
+  it("leaves nothing behind when interrupted", async () => {
+    const input = join(dir, "long.json");
+    const output = join(dir, "interrupted.mp4");
+    writeFileSync(
+      input,
+      JSON.stringify({ version: 1, scenes: Array.from({ length: 4 }, (_, i) => ({ type: "title", heading: `Part ${i} one two three`, duration: 5 })) }),
+    );
+    const child = spawn(process.execPath, [cli, "render", input, "-o", output, "--workers", "2"], { stdio: "ignore" });
+    const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
+    // Long enough for browsers to start and segments to be under way.
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    expect(readdirSync(dir).some((name) => name.startsWith(".interrupted.mp4.partial-"))).toBe(true);
+    child.kill("SIGINT");
+    await exited;
+    expect(existsSync(output)).toBe(false);
+    expect(readdirSync(dir).filter((name) => name.includes("partial"))).toEqual([]);
   });
 
   it("exits 1 and prints diagnostics for a broken scenefile", async () => {

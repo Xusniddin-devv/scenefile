@@ -31,6 +31,24 @@ function run(file: string, args: string[]): Promise<string> {
   });
 }
 
+/**
+ * True when a file has a sound track ffmpeg can read. False for a missing or
+ * unreadable file, or one that is not media at all. A missing ffprobe is still
+ * an environment problem and is thrown.
+ */
+export async function hasSound(file: string, ffprobePath = "ffprobe"): Promise<boolean> {
+  try {
+    const found = await run(ffprobePath, [
+      "-v", "error", "-protocol_whitelist", "file", "-select_streams", "a:0",
+      "-show_entries", "stream=codec_name", "-of", "csv=p=0", file,
+    ]);
+    return found.trim() !== "";
+  } catch (cause) {
+    if (cause instanceof EnvironmentError) throw cause;
+    return false;
+  }
+}
+
 /** Reads back what was actually written, so a render is verified rather than assumed. */
 export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise<ProbeResult> {
   const stdout = await run(ffprobePath, [
@@ -38,9 +56,7 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     "-show_entries", "stream=width,height,r_frame_rate,nb_frames,color_space,color_primaries,color_transfer:format=duration",
     "-of", "json", file,
   ]);
-  const sound = await run(ffprobePath, [
-    "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", file,
-  ]);
+  const audio = await hasSound(file, ffprobePath);
   const json = JSON.parse(stdout) as ProbeJson;
   const stream = json.streams?.[0];
   const [numerator, denominator] = (stream?.r_frame_rate ?? "0/1").split("/").map(Number);
@@ -53,6 +69,6 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     colorSpace: stream?.color_space ?? "",
     colorPrimaries: stream?.color_primaries ?? "",
     colorTransfer: stream?.color_transfer ?? "",
-    audio: sound.trim() !== "",
+    audio,
   };
 }

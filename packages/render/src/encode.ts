@@ -34,8 +34,8 @@ export function startEncoder(options: { output: string; fps: number; crf: number
       "-vf",
       "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p," +
         "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv",
-      // A fixed thread count: several encoders run at once, and the encoded
-      // bytes must not vary with how many cores the machine has.
+      // A fixed thread count: several encoders run at once, and for a given
+      // ffmpeg build the encoded bytes then do not vary with the number of cores.
       "-c:v", "libx264", "-threads", "2", "-crf", String(options.crf),
       "-movflags", "+faststart",
       options.output,

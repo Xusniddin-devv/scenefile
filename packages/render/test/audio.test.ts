@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkWithAssets } from "@scenefile/engine";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { probeVideo, renderVideo } from "../src/index";
+import { hasSound, probeVideo, renderVideo } from "../src/index";
 
 let dir: string;
 beforeAll(() => {
@@ -60,6 +60,23 @@ describe("rendering with music", () => {
     expect(loudness(output, 5.75, 0.25)).toBeLessThan(middle - 12);
   });
 
+  it("can tell a file with sound in it from one without", async () => {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=1", "-an", join(dir, "mute.mp4")]);
+    expect(await hasSound(join(dir, "short.mp3"))).toBe(true);
+    expect(await hasSound(join(dir, "mute.mp4"))).toBe(false);
+    expect(await hasSound(join(dir, "does-not-exist.mp3"))).toBe(false);
+  });
+
+  it("writes stereo at 48 kHz whatever the music was", async () => {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=300:duration=2", "-ac", "1", "-ar", "8000", join(dir, "phone.wav")]);
+    const result = await checkWithAssets({ version: 1, transition: "fade", format: "square-1080p", audio: { src: "phone.wav" }, scenes }, { baseDir: dir });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const output = join(dir, "stereo.mp4");
+    await renderVideo(result.composition, { output, quality: "draft" });
+    const stream = execFileSync("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels,sample_rate", "-of", "csv=p=0", output], { encoding: "utf8" });
+    expect(stream.trim()).toBe("48000,2");
+  });
+
   it("makes a quieter file for a lower volume, and a silent track for none", async () => {
     const render = async (volume: number): Promise<number> => {
       const result = await checkWithAssets({ version: 1, transition: "fade", format: "square-1080p", audio: { src: "long.wav", volume }, scenes }, { baseDir: dir });
@@ -72,6 +89,7 @@ describe("rendering with music", () => {
     const half = await render(0.5);
     expect(full - half).toBeGreaterThan(4);
     expect(full - half).toBeLessThan(8);
+    expect(await render(0)).toBeLessThan(-80);
   });
 
   it("has no sound track when the scenefile names no music", async () => {

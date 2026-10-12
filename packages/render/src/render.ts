@@ -1,11 +1,12 @@
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
+import { mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { basename, dirname, join, resolve as resolvePath } from "node:path";
 import type { Composition } from "@scenefile/engine";
 import { captureFrame } from "./capture";
 import { runFfmpeg, startEncoder } from "./encode";
 import { EnvironmentError, WRITE_REMEDY } from "./errors";
-import { type ProbeResult, probeVideo } from "./probe";
+import { type ProbeResult, hasSound, probeVideo } from "./probe";
 import { openComposition } from "./session";
 
 export const QUALITIES = ["draft", "standard", "high"] as const;
@@ -66,11 +67,39 @@ function unwritable(output: string, cause: unknown): EnvironmentError {
   return new EnvironmentError(`Cannot write the video to "${output}": ${reason}`, WRITE_REMEDY);
 }
 
+/** True while a process with this id exists. */
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (cause) {
+    // "No such process" means it is gone; anything else (not ours to signal) means it exists.
+    return (cause as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+/**
+ * Removes scratch folders that earlier renders of this same output left behind
+ * when they were killed outright. A folder is only removed if the process that
+ * made it no longer exists.
+ */
+async function sweepStale(output: string): Promise<void> {
+  const prefix = `.${basename(output)}.partial-`;
+  for (const name of await readdir(dirname(output))) {
+    if (!name.startsWith(prefix)) continue;
+    const pid = Number(name.slice(prefix.length));
+    if (Number.isInteger(pid) && pid !== process.pid && !isRunning(pid)) {
+      await rm(join(dirname(output), name), { recursive: true, force: true });
+    }
+  }
+}
+
 /** Joins encoded segments end to end without re-encoding them. */
 async function joinSegments(segments: readonly Segment[], scratch: string, target: string, ffmpegPath?: string): Promise<void> {
   const list = join(scratch, "segments.txt");
-  // The concat list quotes each path; a quote inside a path is closed, escaped, and reopened.
-  await writeFile(list, segments.map((segment) => `file '${segment.file.replace(/'/g, "'\\''")}'\n`).join(""));
+  // Bare file names, read relative to the list itself: whatever characters the
+  // output's folder has in its name never reach the list.
+  await writeFile(list, segments.map((segment) => `file '${basename(segment.file)}'\n`).join(""));
   await runFfmpeg(["-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", target], ffmpegPath);
 }
 
@@ -94,15 +123,30 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     to: Math.min(totalFrames, (index + 1) * perSegment),
     file: join(scratch, `${String(index).padStart(5, "0")}.mp4`),
   }));
-  const workers = Math.max(1, Math.min(Math.floor(options.workers ?? defaultWorkers()), MAX_WORKERS, segments.length));
+  const asked = options.workers !== undefined && Number.isFinite(options.workers) ? options.workers : defaultWorkers();
+  const workers = Math.max(1, Math.min(Math.floor(asked), MAX_WORKERS, segments.length));
+
+  // Music is checked before a single frame is drawn: finding out afterwards
+  // that it cannot be used would waste the whole render.
+  if (composition.audio && !(await hasSound(composition.audio.file, options.ffprobePath))) {
+    throw new EnvironmentError(
+      `The music file "${composition.audio.file}" has no sound that ffmpeg can read.`,
+      "Use a different music file, or convert this one to MP3 or WAV.",
+    );
+  }
 
   try {
     await mkdir(dirname(output), { recursive: true });
+    await sweepStale(output);
     await rm(scratch, { recursive: true, force: true });
     await mkdir(scratch);
   } catch (cause) {
     throw unwritable(output, cause);
   }
+  // If the process is ended from outside, `finally` does not run, but "exit"
+  // does. Removing a folder then has to be synchronous.
+  const removeOnExit = (): void => rmSync(scratch, { recursive: true, force: true });
+  process.once("exit", removeOnExit);
 
   let probed: ProbeResult;
   try {
@@ -115,6 +159,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       const session = await openComposition(composition);
       try {
         for (let segment = queue.shift(); segment && !stopped; segment = queue.shift()) {
+          const range = `frames ${segment.from} to ${segment.to - 1}`;
           const encoder = startEncoder({
             output: segment.file,
             fps,
@@ -123,7 +168,15 @@ export async function renderVideo(composition: Composition, options: RenderOptio
           });
           try {
             for (let frame = segment.from; frame < segment.to && !stopped; frame++) {
-              await encoder.write(await captureFrame(session.page, frame));
+              const picture = await captureFrame(session.page, frame).catch((cause: unknown) => {
+                // The browser closing or crashing is the machine's doing, not the scenefile's.
+                const reason = cause instanceof Error ? cause.message.split("\n")[0] : String(cause);
+                throw new EnvironmentError(
+                  `The browser stopped while drawing ${range} (at frame ${frame}): ${reason}`,
+                  "Render again. If it happens again, use fewer workers (--workers 1) or close other programs to free memory.",
+                );
+              });
+              await encoder.write(picture);
               done += 1;
               options.onProgress?.(done, totalFrames);
             }
@@ -177,10 +230,12 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         [
           "-i", picture,
           // The music is repeated without end and then cut to the picture's length.
-          "-stream_loop", "-1", "-i", composition.audio.file,
+          // It may only be read as a file: nothing inside it can point ffmpeg elsewhere.
+          "-protocol_whitelist", "file", "-stream_loop", "-1", "-i", composition.audio.file,
           "-filter_complex", filter,
           "-map", "0:v:0", "-map", "[music]",
-          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          // Stereo at 48 kHz, whatever the source was: what players and upload sites expect.
+          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-ar", "48000",
           "-t", seconds.toFixed(3),
           "-movflags", "+faststart",
           finished,
@@ -201,6 +256,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       throw unwritable(output, cause);
     }
   } finally {
+    process.removeListener("exit", removeOnExit);
     await rm(scratch, { recursive: true, force: true });
   }
 

@@ -2,7 +2,7 @@ export { captureFrame } from "./capture";
 export { type Encoder, runFfmpeg, startEncoder } from "./encode";
 export { EnvironmentError } from "./errors";
 export { inspectComposition } from "./inspect";
-export { type ProbeResult, probeVideo } from "./probe";
+export { type ProbeResult, hasSound, probeVideo } from "./probe";
 export {
   MAX_WORKERS,
   QUALITIES,

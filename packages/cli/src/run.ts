@@ -10,6 +10,7 @@ import {
 } from "@scenefile/engine";
 import {
   EnvironmentError,
+  hasSound,
   inspectComposition,
   MAX_WORKERS,
   QUALITIES,
@@ -27,6 +28,8 @@ export interface Io {
   render?: (composition: Composition, options: RenderOptions) => Promise<RenderReport>;
   /** Test seam. Defaults to measuring the layout in Chromium. */
   inspect?: (composition: Composition) => Promise<InspectReport>;
+  /** Test seam. Defaults to asking ffprobe whether a file has a sound track. */
+  hasSound?: (file: string) => Promise<boolean>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -61,6 +64,17 @@ async function load(path: string, io: Io): Promise<CheckResult> {
   const checked = await checkWithAssets(parsed.value, { baseDir: dirname(resolvePath(path)) });
   const result = { ...checked, diagnostics: [...parsed.diagnostics, ...checked.diagnostics] };
   if (!result.ok || !result.composition) return result;
+  // The first bytes said it was audio; make sure there is sound ffmpeg can actually read.
+  const music = result.composition.audio;
+  if (music && !(await (io.hasSound ?? hasSound)(music.file))) {
+    const diagnostic = error(
+      "ASSET_UNSUPPORTED",
+      "audio.src",
+      "This file has no sound that can be read: it is damaged, or it is not really an audio file.",
+      "Use a different music file, or convert this one to MP3 or WAV.",
+    );
+    return { ...result, ok: false, composition: null, diagnostics: [...result.diagnostics, diagnostic] };
+  }
   return applyLayout(result, await (io.inspect ?? inspectComposition)(result.composition));
 }
 
@@ -124,7 +138,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
 
     let workers: number | undefined;
     if (values.workers !== undefined) {
-      workers = Number(values.workers);
+      workers = /^\d+$/.test(values.workers) ? Number(values.workers) : Number.NaN;
       if (!Number.isInteger(workers) || workers < 1 || workers > MAX_WORKERS) {
         throw new UsageError(`--workers must be a whole number from 1 to ${MAX_WORKERS}; got "${values.workers}".`);
       }

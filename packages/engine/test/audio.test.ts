@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { normalize } from "@scenefile/schema";
@@ -69,6 +69,15 @@ describe("the music bed", () => {
     expect(audio).toBeNull();
     expect(diagnostics).toEqual([expect.objectContaining({ code, severity: "error", path: "audio.src" })]);
     expect(diagnostics[0]?.message).toMatch(message);
+  });
+
+  it.skipIf(process.getuid?.() === 0)("reports a music file it is not allowed to read", async () => {
+    writeFileSync(join(baseDir, "locked.mp3"), Buffer.concat([Buffer.from("ID3"), Buffer.alloc(64)]));
+    chmodSync(join(baseDir, "locked.mp3"), 0o000);
+    const { audio, diagnostics } = await load({ src: "locked.mp3" });
+    expect(audio).toBeNull();
+    expect(diagnostics).toEqual([expect.objectContaining({ code: "ASSET_NOT_FOUND", path: "audio.src" })]);
+    expect(diagnostics[0]?.message).toMatch(/could not be read/);
   });
 
   it("carries the music into the composition and mentions it in the storyboard", async () => {

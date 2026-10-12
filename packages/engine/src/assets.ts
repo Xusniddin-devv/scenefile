@@ -538,11 +538,15 @@ export async function loadAudio(
   if (typeof located !== "string") return fail(located);
 
   const head = Buffer.alloc(12);
-  const handle = await open(located, "r");
   try {
-    await handle.read(head, 0, 12, 0);
-  } finally {
-    await handle.close();
+    const handle = await open(located, "r");
+    try {
+      await handle.read(head, 0, 12, 0);
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return fail(notFound(`"${wanted.src}" could not be read.`, "Check the file's permissions."));
   }
   if (!looksLikeAudio(head)) {
     return fail({

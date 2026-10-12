@@ -185,12 +185,38 @@ describe("scenefile render", () => {
     expect(await run(["render", input, "-o", "x.mp4", "--workers", "3"], capture(render).io)).toBe(0);
     expect(await run(["render", input, "-o", "x.mp4"], capture(render).io)).toBe(0);
     expect(seen).toEqual([3, undefined]);
-    for (const bad of ["0", "-2", "many", "1.5", "99"]) {
+    for (const bad of ["0", "-2", "many", "1.5", "99", "2e0", "0x2", " 2", "1.0"]) {
       const c = capture(render);
       expect(await run(["render", input, "-o", "x.mp4", "--workers", bad], c.io), bad).toBe(2);
       expect(c.err()).toContain("--workers");
     }
     expect(seen).toHaveLength(2);
+  });
+
+  it("reports music that has no sound in it before rendering anything", async () => {
+    const folder = mkdtempSync(join(tmpdir(), "scenefile-cli-music-"));
+    try {
+      writeFileSync(join(folder, "bed.mp3"), Buffer.concat([Buffer.from("ID3"), Buffer.alloc(64)]));
+      const input = join(folder, "music.json");
+      writeFileSync(input, JSON.stringify({ ...JSON.parse(valid), audio: { src: "bed.mp3" } }));
+      let rendered = false;
+      const render: Io["render"] = async () => {
+        rendered = true;
+        return report;
+      };
+      const silent = capture(render);
+      silent.io.hasSound = async () => false;
+      expect(await run(["render", input, "-o", "x.mp4"], silent.io)).toBe(1);
+      expect(silent.out()).toContain("error  ASSET_UNSUPPORTED  audio.src");
+      expect(rendered).toBe(false);
+
+      const sounding = capture(render);
+      sounding.io.hasSound = async () => true;
+      expect(await run(["check", input], sounding.io)).toBe(0);
+      expect(sounding.out()).toContain(", music");
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
   });
 
   it("requires an output path and a known quality", async () => {
