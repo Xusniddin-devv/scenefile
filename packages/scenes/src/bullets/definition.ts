@@ -35,7 +35,6 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
 .sf-bullets__list{flex:1;min-height:0;overflow:hidden;list-style:none;display:flex;flex-direction:column;font-size:calc(var(--sf-unit)*9.6);color:var(--sf-text)}
 .sf-bullets__item{display:flex;align-items:baseline;padding:0.42em 0;border-top:1px solid var(--sf-line)}
 .sf-bullets__item i{flex:none;width:6em;font:500 0.3em/1 var(--sf-font-mono);font-variant-ligatures:none;color:var(--sf-accent)}
-.sf-bullets__item span{min-width:0;font:800 1em/1.05 var(--sf-font-sans);letter-spacing:-0.045em}
-.sf-fitting .sf-bullets__item span{white-space:nowrap}
+.sf-bullets__item span{min-width:0;font:800 1em/1.05 var(--sf-font-sans);letter-spacing:-0.045em;text-wrap:balance}
 `,
 };

@@ -210,6 +210,30 @@ describe("code", () => {
   });
 });
 
+describe("outro", () => {
+  it("types the command after the heading has arrived, and shows the address", () => {
+    const { el, ctx, handle, revealed } = stage({ type: "outro", heading: "Try it.", command: "npx scenefile init", url: "scenefile.dev" });
+    const typed = el.querySelector<HTMLElement>("[data-sf-type]");
+    if (!typed) throw new Error("no typed element");
+    handle.seek(ctx.enterFrames);
+    expect(typed.textContent).toBe("");
+    handle.seek(ctx.enterFrames + Math.round(0.7 * FPS));
+    const partway = typed.textContent ?? "";
+    expect(partway.length).toBeGreaterThan(0);
+    expect("npx scenefile init".startsWith(partway)).toBe(true);
+    handle.seek(revealed);
+    expect(typed.textContent).toBe("npx scenefile init");
+    expect(el.querySelector(".sf-outro__url")?.textContent).toBe("scenefile.dev");
+  });
+
+  it("works with a heading alone", () => {
+    const { el, handle, revealed } = stage({ type: "outro", heading: "Thanks." });
+    handle.seek(revealed);
+    expect(el.querySelector(".sf-outro__side")).toBeNull();
+    expect(el.querySelector(".sf-outro__heading")?.textContent).toBe("Thanks.");
+  });
+});
+
 describe("quote", () => {
   it("shows the author and role, and refuses a role without an author", () => {
     const { el } = stage({ type: "quote", text: "It works.", author: "Dilnoza K.", role: "Staff engineer" });

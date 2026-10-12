@@ -1,5 +1,6 @@
 import { mountBullets } from "./bullets/mount";
 import { mountCode } from "./code/mount";
+import { mountOutro } from "./outro/mount";
 import { mountQuote } from "./quote/mount";
 import { mountStat } from "./stat/mount";
 import { mountStatement } from "./statement/mount";
@@ -15,6 +16,7 @@ export const mounts: Record<string, SceneMount> = {
   bullets: mountBullets,
   stat: mountStat,
   code: mountCode,
+  outro: mountOutro,
   terminal: mountTerminal,
 };
 

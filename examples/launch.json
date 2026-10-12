@@ -8,17 +8,34 @@
       "sub": "Any model can write a scenefile. The engine does the rest."
     },
     {
+      "type": "statement",
+      "text": "Models are good at saying what a video should show. Not at drawing it.",
+      "highlight": "Not at drawing it."
+    },
+    {
+      "type": "code",
+      "lang": "json",
+      "source": "{\n  \"version\": 1,\n  \"scenes\": [\n    { \"type\": \"title\", \"heading\": \"Ship faster\" },\n    { \"type\": \"stat\", \"value\": \"3x\", \"label\": \"fewer steps\" }\n  ]\n}",
+      "highlight": [4, 5],
+      "caption": "Say what each scene shows. No keyframes, no pixels."
+    },
+    {
       "type": "terminal",
       "steps": [
-        { "run": "scenefile check launch.json", "output": "No problems found." },
+        { "run": "scenefile check launch.json", "output": "error  TEXT_OVERFLOW  scenes[0].heading\n  fix: Shorten it to about 51 characters (it has 77)." },
         { "run": "scenefile render launch.json -o launch.mp4", "output": "Rendered launch.mp4" }
       ]
     },
     {
-      "type": "title",
-      "heading": "No keyframes. No pixels.",
-      "highlight": "No pixels.",
-      "sub": "Describe the scenes."
+      "type": "bullets",
+      "heading": "Built for models that cannot see",
+      "items": ["Errors come with the fix", "Text sizes itself to fit", "Same file, same frames"]
+    },
+    {
+      "type": "outro",
+      "heading": "Write a scenefile.",
+      "highlight": "scenefile.",
+      "command": "scenefile render launch.json -o launch.mp4"
     }
   ]
 }

@@ -3,7 +3,8 @@
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
-**Status: early development.** Two scene types (`title`, `terminal`) and two themes
+**Status: early development.** Eight scene types (`title`, `statement`, `quote`,
+`bullets`, `stat`, `code`, `outro`, `terminal`) and two themes
 (`signal`, the default, and `midnight`) work today. Fonts are bundled, so Latin and
 Cyrillic text is drawn the same on every machine; emoji use the machine's own emoji
 font. Not yet published to npm.

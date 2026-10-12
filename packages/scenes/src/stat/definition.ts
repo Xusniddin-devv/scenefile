@@ -34,6 +34,6 @@ export const statDefinition: SceneDefinition<StatProps> = {
 .sf-stat__label{min-width:0;font:800 calc(var(--sf-unit)*7.8)/1.02 var(--sf-font-sans);letter-spacing:-0.035em;color:var(--sf-text);text-wrap:balance}
 .sf-stat__label:only-child{grid-column:1/-1}
 .sf-stat__note{min-width:0;font:400 calc(var(--sf-unit)*4.2)/1.3 var(--sf-font-sans);color:var(--sf-muted);text-wrap:pretty}
-@media (max-aspect-ratio:1/1){.sf-stat__foot{grid-template-columns:minmax(0,1fr);row-gap:calc(var(--sf-unit)*4)}}
+@media (max-aspect-ratio:1/1){.sf-stat{justify-content:flex-end;gap:calc(var(--sf-unit)*7)}.sf-stat__foot{grid-template-columns:minmax(0,1fr);row-gap:calc(var(--sf-unit)*4)}}
 `,
 };

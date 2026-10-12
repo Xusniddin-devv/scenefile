@@ -43,7 +43,7 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
 .sf-fitting .sf-terminal__cmd,.sf-fitting .sf-terminal__out{white-space:pre}
 .sf-terminal__cmd{white-space:pre-wrap;overflow-wrap:anywhere}
 .sf-terminal__prompt{color:var(--sf-accent);margin-right:1ch}
-.sf-terminal__caret{display:inline-block;width:0.6em;height:1.1em;margin-left:0.1em;vertical-align:text-bottom;background:var(--sf-accent)}
+.sf-terminal__caret{display:inline-block;width:0.6em;height:1.1em;margin:0 -0.7em 0 0.1em;vertical-align:text-bottom;background:var(--sf-accent)}
 .sf-terminal__out{font:inherit;color:var(--sf-muted);white-space:pre-wrap;overflow-wrap:anywhere}
 `,
 };

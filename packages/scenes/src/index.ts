@@ -3,6 +3,8 @@ import { bulletsDefinition } from "./bullets/definition";
 import { bulletsSchema } from "./bullets/schema";
 import { codeDefinition } from "./code/definition";
 import { codeSchema } from "./code/schema";
+import { outroDefinition } from "./outro/definition";
+import { outroSchema } from "./outro/schema";
 import { quoteDefinition } from "./quote/definition";
 import { quoteSchema } from "./quote/schema";
 import { statDefinition } from "./stat/definition";
@@ -22,6 +24,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   bulletsSchema,
   statSchema,
   codeSchema,
+  outroSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -43,6 +46,7 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   bullets: widen(bulletsDefinition),
   stat: widen(statDefinition),
   code: widen(codeDefinition),
+  outro: widen(outroDefinition),
   terminal: widen(terminalDefinition),
 };
 

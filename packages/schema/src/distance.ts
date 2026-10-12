@@ -13,7 +13,8 @@ function levenshtein(a: string, b: string): number {
 
 /** The candidate closest to `word`, or undefined when none is plausibly a typo of it. */
 export function nearest(word: string, candidates: readonly string[]): string | undefined {
-  const limit = Math.max(2, Math.floor(word.length / 3));
+  // In a short word two wrong letters is most of the word: "nope" is not "code".
+  const limit = word.length <= 4 ? 1 : Math.max(2, Math.floor(word.length / 3));
   let best: string | undefined;
   let bestDistance = limit + 1;
   for (const candidate of candidates) {

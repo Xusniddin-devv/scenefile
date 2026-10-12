@@ -14,6 +14,7 @@ export const FIXTURES: Record<SceneType, Record<string, unknown>> = {
     highlight: [5],
     caption: "One call. One file. One video.",
   },
+  outro: { type: "outro", heading: "Make your first video.", highlight: "first video.", command: "npx scenefile init", url: "scenefile.dev" },
   terminal: { type: "terminal", steps: [{ run: "scenefile check a.json", output: "No problems found." }] },
 };
 
@@ -27,6 +28,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, caption: NASTY },
+  outro: { type: "outro", heading: NASTY, highlight: "<u>x</u>", command: NASTY, url: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };
 

@@ -163,6 +163,28 @@ describe("normalize", () => {
     expect(diagnostics[0]?.message).toMatch(/color codes/);
   });
 
+  it("accepts the field names models reach for first", () => {
+    const { scenefile, diagnostics } = normalize({
+      version: 1,
+      scenes: [
+        { type: "bullets", title: "Why", points: ["a", "b"] },
+        { type: "code", language: "ts", code: "x", time: 4 },
+        { type: "stat", number: "94%", label: "valid" },
+        { type: "quote", quote: "It works.", name: "Dilnoza" },
+        { type: "outro", heading: "Try it", cmd: "npx x", link: "x.dev" },
+      ],
+    });
+    expect(diagnostics.every((d) => d.code === "AUTOFIXED" && d.severity === "warning")).toBe(true);
+    expect(diagnostics).toHaveLength(10);
+    expect(scenefile?.scenes).toMatchObject([
+      { type: "bullets", heading: "Why", items: ["a", "b"] },
+      { type: "code", lang: "typescript", source: "x", duration: 4 },
+      { type: "stat", value: "94%" },
+      { type: "quote", text: "It works.", author: "Dilnoza" },
+      { type: "outro", command: "npx x", url: "x.dev" },
+    ]);
+  });
+
   it("keeps reporting other scenes when one is broken", () => {
     const { diagnostics } = normalize({
       version: 1,
