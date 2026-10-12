@@ -33,6 +33,9 @@ export function applyTransition(
       if (stage.wipe) {
         stage.wipe.hidden = false;
         stage.wipe.style.left = `${css(stage.width * p)}px`;
+        // The edge starts and ends at the frame's own edge, where it would read
+        // as a lime border if it simply sat there; it fades in and out instead.
+        stage.wipe.style.opacity = css(Math.min(1, Math.min(progress, 1 - progress) * 6));
       }
       break;
     case "zoom":

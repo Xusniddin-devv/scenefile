@@ -111,6 +111,9 @@ function init(broken: string[]): Api {
   const root = document.documentElement;
   const wipe = document.querySelector<HTMLElement>(".sf-wipe");
   const counter = document.querySelector<HTMLElement>(".sf-chrome__index b");
+  const chrome = document.querySelector<HTMLElement>(".sf-chrome");
+  const first = mounted[0];
+  const last = mounted[mounted.length - 1];
 
   return {
     totalFrames: manifest.totalFrames,
@@ -134,8 +137,11 @@ function init(broken: string[]): Api {
         el.style.transform = "";
         el.style.clipPath = "";
         el.style.zIndex = "";
+        el.style.opacity = "";
         if (active) handle.seek(local);
-        if (local >= 0) current = scene.index;
+        // The counter turns over halfway through a transition, once the new scene has taken the frame.
+        const arrived = scene.overlapFrames === 0 || (local + 1) * 2 >= scene.overlapFrames + 1;
+        if (local >= 0 && arrived) current = scene.index;
       }
       if (wipe) wipe.hidden = true;
       for (let i = 1; i < mounted.length; i++) {
@@ -153,8 +159,15 @@ function init(broken: string[]): Api {
           });
         }
       }
-      // The counter names the newest scene to have started, so it changes as a transition begins.
       if (counter) counter.textContent = String(current + 1).padStart(2, "0");
+      if (chrome && first && last) {
+        // The counter arrives with the first scene and leaves with the last, so
+        // the video does not open or close on a counter over an empty frame.
+        const arriving = Math.min(1, (frame + 1) / Math.max(1, first.scene.enterFrames));
+        const leaving =
+          last.scene.exitFrames > 0 ? Math.min(1, Math.max(0, (manifest.totalFrames - 1 - frame) / last.scene.exitFrames)) : 1;
+        chrome.style.opacity = String(Math.min(arriving, leaving));
+      }
       root.style.display = "";
       void root.offsetHeight;
     },

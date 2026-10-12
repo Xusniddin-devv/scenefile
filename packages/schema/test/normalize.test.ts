@@ -198,6 +198,35 @@ describe("normalize", () => {
     ]);
   });
 
+  it("reads the names people use for transitions", () => {
+    const scene = (transition: string) => ({ type: "title", heading: "x", transition });
+    const { scenefile, diagnostics } = normalize({
+      version: 1,
+      transition: "Dissolve",
+      scenes: [scene("none"), scene("slide"), scene("zoom-through"), scene("fade-in"), scene(" Push "), scene("cross-fade"), scene("wipe")],
+    });
+    expect(scenefile?.transition).toBe("crossfade");
+    expect(scenefile?.scenes.map((s) => s.transition)).toEqual(["cut", "push", "zoom", "fade", "push", "crossfade", "wipe"]);
+    expect(diagnostics.every((d) => d.code === "AUTOFIXED" && d.severity === "warning")).toBe(true);
+    expect(diagnostics).toHaveLength(7);
+    expect(diagnostics[0]).toMatchObject({ path: "transition" });
+    expect(diagnostics[1]?.message).toContain('"none"');
+    expect(diagnostics[1]?.message).toContain('"cut"');
+  });
+
+  it("suggests the nearest transition for a typo, once, and lists the rest", () => {
+    const { scenefile, diagnostics } = normalize({ version: 1, scenes: [{ type: "title", heading: "x", transition: "crosfade" }, { type: "title", heading: "y", transition: "spin" }] });
+    expect(scenefile).toBeNull();
+    expect(diagnostics.map((d) => [d.code, d.path])).toEqual([
+      ["SCHEMA_INVALID", "scenes[0].transition"],
+      ["SCHEMA_INVALID", "scenes[1].transition"],
+    ]);
+    expect(diagnostics[0]?.message).toContain('"crosfade"');
+    expect(diagnostics[0]?.message).toContain('Did you mean "crossfade"?');
+    expect(diagnostics[1]?.message).not.toContain("Did you mean");
+    expect(diagnostics[1]?.fix).toContain('"push"');
+  });
+
   it("keeps reporting other scenes when one is broken", () => {
     const { diagnostics } = normalize({
       version: 1,

@@ -145,13 +145,16 @@ export function resolve(
   }
 
   const totalSeconds = cursor / fps;
+  const shared = scenes.reduce((sum, scene) => sum + scene.overlapFrames, 0);
   if (totalSeconds < MIN_TOTAL_SECONDS || totalSeconds > MAX_TOTAL_SECONDS) {
     diagnostics.push(
       error(
         "TOTAL_DURATION",
         "scenes",
         `The video is ${totalSeconds.toFixed(1)}s long; it must be between ${MIN_TOTAL_SECONDS}s and ${MAX_TOTAL_SECONDS}s.`,
-        totalSeconds < MIN_TOTAL_SECONDS ? "Add scenes or lengthen them." : "Remove scenes or shorten them.",
+        totalSeconds < MIN_TOTAL_SECONDS
+          ? `Add scenes or lengthen them.${shared > 0 ? ` Scenes overlap during transitions, by ${(shared / fps).toFixed(1)}s in total here, so the video is shorter than its durations added up.` : ""}`
+          : "Remove scenes or shorten them.",
       ),
     );
   }

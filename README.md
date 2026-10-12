@@ -55,9 +55,18 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
 ## Transitions
 
 Scenes give way to one another by `cut`, `fade`, `crossfade`, `push`, `wipe` or `zoom`.
-Left alone, the engine picks one that suits the scene being arrived at and never uses
-the same one twice running. Set `"transition"` on the scenefile to use one kind
-throughout, or on a scene to choose how that scene arrives.
+Left alone, the engine picks one that suits the scene being arrived at, and its own
+picks never use the same one twice running. Set `"transition"` on the scenefile to use
+one kind throughout, or on a scene to choose how that scene arrives (it is ignored on
+the first scene).
+
+`crossfade`, `push`, `wipe` and `zoom` take half a second, during which both scenes are
+on screen. That half second belongs to both scenes' durations, so a video is shorter
+than its durations added up. The storyboard says so for each scene:
+
+```
+2. statement  5.17s-11.70s  Models are good at saying...  (enters by push over 0.50s)
+```
 
 ## Images, files and the network
 

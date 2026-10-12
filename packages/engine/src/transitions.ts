@@ -20,7 +20,8 @@ const PREFERRED: Record<SceneType, readonly TransitionKind[]> = {
   title: ["fade", "zoom"],
   outro: ["fade", "crossfade"],
   statement: ["push", "crossfade"],
-  quote: ["crossfade", "push"],
+  // A dissolve would lay the quotation over the text before it; a push keeps them apart.
+  quote: ["push", "crossfade"],
   bullets: ["push", "wipe"],
   stat: ["zoom", "crossfade"],
   code: ["wipe", "push"],

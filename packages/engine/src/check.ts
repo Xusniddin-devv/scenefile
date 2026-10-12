@@ -31,7 +31,9 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
     lines.push(
       `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}${
-        scene.transition === "none" ? "" : `  (enters by ${scene.transition})`
+        scene.transition === "none"
+          ? ""
+          : `  (enters by ${scene.transition}${scene.overlapFrames > 0 ? ` over ${seconds(scene.overlapFrames)}` : ""})`
       }`,
     );
     const prefix = `scenes[${scene.index}].`;

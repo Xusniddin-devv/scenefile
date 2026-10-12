@@ -1,4 +1,4 @@
-import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
+import { SCENE_TYPES, TRANSITIONS, getScene, isSceneType } from "@scenefile/scenes";
 import { type Diagnostic, error, hasErrors, warning } from "./diagnostics";
 import { nearest } from "./distance";
 import { type Scenefile, TOP_LEVEL_FIELDS, scenefileSchema } from "./scenefile";
@@ -31,6 +31,54 @@ const FIELD_ALIASES: Readonly<Record<string, string>> = {
   length: "duration",
   seconds: "duration",
 };
+
+/** Names people and models use for the transitions, mapped to the real ones. */
+const TRANSITION_ALIASES: Readonly<Record<string, string>> = {
+  none: "cut",
+  jump: "cut",
+  "hard cut": "cut",
+  slide: "push",
+  swipe: "push",
+  dissolve: "crossfade",
+  "cross-fade": "crossfade",
+  "cross fade": "crossfade",
+  "cross-dissolve": "crossfade",
+  "fade-in": "fade",
+  "fade in": "fade",
+  "fade-out": "fade",
+  "fade to black": "fade",
+  "zoom-through": "zoom",
+  "zoom-in": "zoom",
+  "zoom in": "zoom",
+  reveal: "wipe",
+};
+
+const TRANSITION_VALUES: readonly string[] = ["auto", ...TRANSITIONS];
+
+/** Repairs a `transition` written in other words or other case; reports one it cannot place, with the nearest real one. */
+function fixTransition(holder: Json, path: string, diagnostics: Diagnostic[]): void {
+  const raw = holder.transition;
+  if (typeof raw !== "string" || TRANSITION_VALUES.includes(raw)) return;
+  const at = path ? `${path}.transition` : "transition";
+  const cleaned = raw.trim().toLowerCase();
+  const known = TRANSITION_VALUES.includes(cleaned) ? cleaned : TRANSITION_ALIASES[cleaned];
+  if (known !== undefined) {
+    holder.transition = known;
+    diagnostics.push(warning("AUTOFIXED", at, `Read "${raw}" as "${known}".`, `Write "${known}".`));
+    return;
+  }
+  const guess = nearest(cleaned, TRANSITION_VALUES);
+  // Removed so the schema does not report it a second time, less helpfully.
+  delete holder.transition;
+  diagnostics.push(
+    error(
+      "SCHEMA_INVALID",
+      at,
+      guess ? `Unknown transition "${raw}". Did you mean "${guess}"?` : `Unknown transition "${raw}".`,
+      `Use one of: ${TRANSITION_VALUES.map((value) => `"${value}"`).join(", ")}.`,
+    ),
+  );
+}
 
 const DURATION_PATTERN = /^\s*(\d+(?:\.\d+)?)\s*(?:s|sec|secs|seconds?)?\s*$/i;
 
@@ -190,6 +238,7 @@ function normalizeScene(scene: unknown, path: string, diagnostics: Diagnostic[])
   }
   fixKeys(scene, getScene(type).fields, path, diagnostics);
   coerceDuration(scene, path, diagnostics);
+  fixTransition(scene, path, diagnostics);
   // A stat's value is text ("94%", "3.5x"), but a bare number is an obvious thing to write.
   if (type === "stat" && typeof scene.value === "number" && Number.isFinite(scene.value)) {
     scene.value = String(scene.value);
@@ -224,6 +273,7 @@ export function normalize(input: unknown): { scenefile: Scenefile | null; diagno
   const draft = structuredClone(input);
   cleanStrings(draft, "", diagnostics);
   fixKeys(draft, TOP_LEVEL_FIELDS, "", diagnostics);
+  fixTransition(draft, "", diagnostics);
 
   // Scenes whose type is unusable are already reported; hide the schema's echo of them.
   const blocked: string[] = [];

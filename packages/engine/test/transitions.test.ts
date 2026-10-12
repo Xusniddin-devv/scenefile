@@ -116,11 +116,23 @@ describe("the timeline with transitions", () => {
     expect(second.startFrame).toBeGreaterThanOrEqual(countedBy);
   });
 
+  it("explains a video that came out too short because its scenes overlap", () => {
+    const result = check({ version: 1, transition: "push", scenes: [title("Hi", { duration: 1.6 }), title("Yo", { duration: 1.6 })] });
+    const short = result.diagnostics.find((d) => d.code === "TOTAL_DURATION");
+    expect(short?.message).toMatch(/2\.7s/);
+    expect(short?.fix).toMatch(/overlap|transition/i);
+  });
+
+  it("prefers a push to a dissolve for a quote, where two texts would sit on top of each other", () => {
+    expect(pickTransitions(scenefile({ scenes: [stat, { type: "quote", text: "It works." }] }))[1]).toBe("push");
+  });
+
   it("puts each scene's transition in the manifest and the storyboard", () => {
     const result = check({ version: 1, scenes: [title("one two three four five six"), statement("seven eight nine ten")] });
     expect(result.composition?.manifest.scenes.map((s) => [s.transition, s.overlapFrames])).toEqual([["none", 0], ["push", overlap]]);
     const lines = result.storyboard.split("\n");
     expect(lines[1]).not.toContain("enters by");
-    expect(lines[2]).toMatch(/^2\. statement .*\(enters by push\)$/);
+    // The model is told the two scenes share half a second, so overlapping time ranges are not a surprise.
+    expect(lines[2]).toMatch(/^2\. statement .*\(enters by push over 0\.50s\)$/);
   });
 });

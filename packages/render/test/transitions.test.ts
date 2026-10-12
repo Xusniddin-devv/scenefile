@@ -1,6 +1,10 @@
-import { check } from "@scenefile/engine";
+import { fileURLToPath } from "node:url";
+import { check, checkWithAssets } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
+import { ALL_SCENES } from "../../scenes/test/fixtures";
 import { captureFrame, openComposition } from "../src/index";
+
+const baseDir = fileURLToPath(new URL("../../scenes/test", import.meta.url));
 
 const title = (heading: string) => ({ type: "title", heading: `${heading} one two three four five` });
 
@@ -10,13 +14,6 @@ function compose(input: Record<string, unknown>) {
   return result.composition;
 }
 
-interface SceneState {
-  index: number;
-  opacity: string;
-  transform: string;
-  clipPath: string;
-  left: number;
-}
 
 async function stateAt(page: Awaited<ReturnType<typeof openComposition>>["page"], frame: number) {
   await captureFrame(page, frame);
@@ -26,14 +23,18 @@ async function stateAt(page: Awaited<ReturnType<typeof openComposition>>["page"]
       opacity: el.style.opacity,
       transform: el.style.transform,
       clipPath: el.style.clipPath,
+      zIndex: el.style.zIndex,
       left: el.getBoundingClientRect().left,
     }));
+    const chrome = document.querySelector<HTMLElement>(".sf-chrome");
     const wipe = document.querySelector<HTMLElement>(".sf-wipe");
     return {
       scenes,
       counter: document.querySelector(".sf-chrome__index")?.textContent ?? "",
       counterTop: document.querySelector(".sf-chrome")?.getBoundingClientRect().top ?? -1,
       counters: document.querySelectorAll(".sf-chrome").length,
+      chromeOpacity: Number(chrome ? getComputedStyle(chrome).opacity : -1),
+      wipeOpacity: Number(wipe && !wipe.hidden ? getComputedStyle(wipe).opacity : 0),
       wipeShown: wipe ? !wipe.hidden : false,
       wipeLeft: wipe?.getBoundingClientRect().left ?? -1,
     };
@@ -70,13 +71,17 @@ describe.each([30, 60] as const)("transitions at %i fps", (fps) => {
       expect(middle?.scenes[0]?.left).toBeLessThan(-300);
       expect(middle?.scenes[1]?.left).toBeGreaterThan(300);
       expect(end?.scenes[1]?.left).toBeLessThan(middle?.scenes[1]?.left ?? 0);
-      expect(after?.scenes.map((s) => [s.index, s.transform, s.left])).toEqual([[1, "", 0]]);
+      expect(after?.scenes.map((s) => [s.index, s.transform, s.zIndex, s.left])).toEqual([[1, "", "", 0]]);
     });
   });
 
   it("wipe uncovers the new scene behind a moving edge", async () => {
-    await run("wipe", ([before, , middle, , after]) => {
+    await run("wipe", ([before, start, middle, end, after]) => {
       expect(before?.wipeShown).toBe(false);
+      // At the ends of its travel the edge sits at the frame's edge; it fades in and out rather than parking there.
+      expect(start?.wipeOpacity).toBeLessThan(0.5);
+      expect(end?.wipeOpacity).toBeLessThan(0.5);
+      expect(middle?.wipeOpacity).toBe(1);
       expect(middle?.scenes.map((s) => s.index)).toEqual([0, 1]);
       expect(middle?.scenes[1]?.clipPath).toMatch(/^inset\(/);
       expect(middle?.wipeShown).toBe(true);
@@ -112,8 +117,67 @@ describe.each([30, 60] as const)("transitions at %i fps", (fps) => {
     await run("push", (states) => {
       expect(states.map((state) => state.counters)).toEqual([1, 1, 1, 1, 1]);
       expect(new Set(states.map((state) => state.counterTop)).size).toBe(1);
-      expect(states.map((state) => state.counter)).toEqual(["01 / 02", "02 / 02", "02 / 02", "02 / 02", "02 / 02"]);
+      // The number changes halfway through, when the new scene has taken over the frame.
+      expect(states.map((state) => state.counter)).toEqual(["01 / 02", "01 / 02", "02 / 02", "02 / 02", "02 / 02"]);
+      for (const state of states) expect(state.chromeOpacity).toBe(1);
     });
+  });
+});
+
+describe("the scene counter at the ends of the video", () => {
+  it("arrives with the first scene and leaves with the last, instead of sitting lit on a black frame", async () => {
+    const composition = compose({ transition: "push", scenes: [title("First"), title("Second")] });
+    const last = composition.manifest.totalFrames - 1;
+    const session = await openComposition(composition);
+    try {
+      const opacity = async (frame: number): Promise<number> => (await stateAt(session.page, frame)).chromeOpacity;
+      expect(await opacity(0)).toBeLessThan(0.2);
+      expect(await opacity(40)).toBe(1);
+      expect(await opacity(last)).toBeLessThan(0.2);
+      expect(await opacity(last - 30)).toBe(1);
+    } finally {
+      await session.close();
+    }
+  });
+});
+
+describe("the automatic choice, with every scene type, in a tall frame at 60 fps", () => {
+  it("leaves nothing behind after each transition, and draws the same pixels in any order", async () => {
+    const result = await checkWithAssets({ version: 1, fps: 60, format: "portrait-1080p", scenes: ALL_SCENES }, { baseDir });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const composition = result.composition;
+    const kinds = new Set(composition.manifest.scenes.map((scene) => scene.transition));
+    for (const kind of ["push", "wipe", "zoom"]) expect(kinds, kind).toContain(kind);
+
+    const session = await openComposition(composition);
+    try {
+      // Just after every transition: exactly one scene, with nothing a transition set still on it.
+      for (const scene of composition.manifest.scenes.slice(1)) {
+        const state = await stateAt(session.page, scene.startFrame + scene.overlapFrames);
+        expect(state.scenes.map((s) => [s.index, s.transform, s.clipPath, s.zIndex]), `after scene ${scene.index} arrives`).toEqual([
+          [scene.index, "", "", ""],
+        ]);
+        expect(state.wipeShown).toBe(false);
+      }
+      // Inside every transition: pixels do not depend on what was drawn before.
+      const frames = composition.manifest.scenes.slice(1).flatMap((scene) => {
+        const span = Math.max(scene.overlapFrames, 8);
+        return [2, Math.floor(span / 2), span - 2].map((offset) => scene.startFrame + offset);
+      });
+      const first: Buffer[] = [];
+      for (const frame of frames) first.push(await captureFrame(session.page, frame));
+      const mismatched: number[] = [];
+      for (let i = frames.length - 1; i >= 0; i -= 1) {
+        const frame = frames[i];
+        const expected = first[i];
+        if (frame === undefined || !expected) throw new Error("bad index");
+        await captureFrame(session.page, (frame * 7 + 13) % composition.manifest.totalFrames);
+        if (!(await captureFrame(session.page, frame)).equals(expected)) mismatched.push(frame);
+      }
+      expect(mismatched).toEqual([]);
+    } finally {
+      await session.close();
+    }
   });
 });
 
