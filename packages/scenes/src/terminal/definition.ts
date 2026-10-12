@@ -35,11 +35,12 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
         return `<div class="sf-terminal__step"><div class="sf-terminal__cmd"><span class="sf-terminal__prompt">$</span><span data-sf-type="${escapeHtml(step.run)}"></span><span class="sf-terminal__caret"></span></div>${output}</div>`;
       })
       .join("");
-    return `${sceneChrome(ctx)}<div class="sf-terminal"><div class="sf-terminal__body" data-sf-enter="0" data-sf-fit="2.6,4.4,0.2" data-sf-box data-sf-path="${ctx.path}.steps">${steps}</div></div>`;
+    return `${sceneChrome(ctx)}<div class="sf-terminal"><div class="sf-terminal__body" data-sf-enter="0" data-sf-fit="2.6,6,0.2" data-sf-box data-sf-path="${ctx.path}.steps">${steps}</div></div>`;
   },
   css: `
 .sf-terminal{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*9)}
-.sf-terminal__body{display:flex;flex-direction:column;gap:0.7em;height:100%;overflow:hidden;font:400 calc(var(--sf-unit)*4.4)/1.5 var(--sf-font-mono);color:var(--sf-text)}
+.sf-terminal__body{display:flex;flex-direction:column;gap:0.7em;height:100%;overflow:hidden;font:400 calc(var(--sf-unit)*6)/1.5 var(--sf-font-mono);color:var(--sf-text)}
+.sf-fitting .sf-terminal__cmd,.sf-fitting .sf-terminal__out{white-space:pre}
 .sf-terminal__cmd{white-space:pre-wrap;overflow-wrap:anywhere}
 .sf-terminal__prompt{color:var(--sf-accent);margin-right:1ch}
 .sf-terminal__caret{display:inline-block;width:0.6em;height:1.1em;margin-left:0.1em;vertical-align:text-bottom;background:var(--sf-accent)}

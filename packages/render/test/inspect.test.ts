@@ -1,6 +1,6 @@
 import { check, verifyLayout } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
-import { inspectComposition } from "../src/index";
+import { captureFrame, inspectComposition, openComposition } from "../src/index";
 
 async function inspect(input: Record<string, unknown>) {
   const result = check({ version: 1, ...input });
@@ -49,13 +49,38 @@ describe("text fitting", () => {
 
   it("shrinks terminal text to fit its area, and reports when it cannot", async () => {
     const few = await inspect({ scenes: [{ type: "terminal", steps: [{ run: "ls" }, { run: "pwd" }] }, filler] });
-    expect(few.slot("scenes[0].steps").sizePx).toBeCloseTo(4.4 * UNIT, 1);
+    expect(few.slot("scenes[0].steps").sizePx).toBeCloseTo(6 * UNIT, 1);
     expect(few.diagnostics).toEqual([]);
 
     const step = { run: "x".repeat(120), output: "y ".repeat(200).trim() };
     const many = await inspect({ scenes: [{ type: "terminal", steps: Array.from({ length: 6 }, () => step) }] });
     expect(many.slot("scenes[0].steps").overflow).toBe(true);
     expect(many.diagnostics).toEqual([expect.objectContaining({ code: "TEXT_OVERFLOW", path: "scenes[0].steps" })]);
+  });
+
+  it("sizes a terminal session so its longest command stays on one line", async () => {
+    const run = "scenefile render launch.json -o launch.mp4";
+    const result = check({ version: 1, scenes: [{ type: "terminal", steps: [{ run, output: "Rendered launch.mp4" }] }, filler] });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const report = await inspectComposition(result.composition);
+    const size = report.slots.find((entry) => entry.path === "scenes[0].steps")?.sizePx ?? 0;
+    expect(size).toBeGreaterThan(4 * UNIT);
+    expect(size).toBeLessThanOrEqual(6 * UNIT + 0.01);
+
+    const session = await openComposition(result.composition);
+    try {
+      const scene = result.composition.manifest.scenes[0];
+      if (!scene) throw new Error("no scene");
+      await captureFrame(session.page, scene.durationFrames - scene.exitFrames - 1);
+      const linesTall = await session.page.evaluate(() => {
+        const cmd = document.querySelector<HTMLElement>(".sf-terminal__cmd");
+        if (!cmd) return 0;
+        return cmd.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(cmd).lineHeight);
+      });
+      expect(linesTall).toBeCloseTo(1, 1);
+    } finally {
+      await session.close();
+    }
   });
 
   it("keeps the heading wide in portrait and square formats", async () => {

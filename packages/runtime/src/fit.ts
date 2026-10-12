@@ -35,7 +35,10 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
     const maxLines = el.dataset.sfLines ? Number(el.dataset.sfLines) : null;
     const boxed = "sfBox" in el.dataset;
 
-    // Block-level text must not break words while a smaller size might still fit them.
+    // While a smaller size might still fit, text must not be broken to make it
+    // fit: a heading may not break inside a word, and scenes use the
+    // `sf-fitting` class to forbid wrapping they would otherwise allow.
+    el.classList.add("sf-fitting");
     if (!boxed) el.style.overflowWrap = "normal";
     let size = max;
     let result = { lines: 1, fits: false };
@@ -46,12 +49,15 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       if (result.fits || next < min) break;
       size = next;
     }
-    // Whether it fits is decided before any word is broken. Breaking is damage
-    // control for the picture; the text is still reported as not fitting.
-    const fits = result.fits;
-    if (!boxed) {
-      el.style.overflowWrap = fits ? "" : "anywhere";
-      if (!fits) result = measure(el, maxLines, boxed);
+    // At the smallest size the restrictions are lifted. A heading that only
+    // fits by breaking a word is still reported as not fitting; a fixed-height
+    // area is judged by whether its content fits once it may wrap.
+    let fits = result.fits;
+    el.classList.remove("sf-fitting");
+    if (!boxed) el.style.overflowWrap = fits ? "" : "anywhere";
+    if (!fits) {
+      result = measure(el, maxLines, boxed);
+      if (boxed) fits = result.fits;
     }
 
     const rect = el.getBoundingClientRect();

@@ -1,7 +1,12 @@
 {
   "version": 1,
   "scenes": [
-    { "type": "title", "heading": "Video from JSON", "sub": "Any model can write a scenefile." },
+    {
+      "type": "title",
+      "heading": "Video from JSON.",
+      "highlight": "JSON.",
+      "sub": "Any model can write a scenefile. The engine does the rest."
+    },
     {
       "type": "terminal",
       "steps": [
@@ -9,6 +14,11 @@
         { "run": "scenefile render launch.json -o launch.mp4", "output": "Rendered launch.mp4" }
       ]
     },
-    { "type": "title", "heading": "No keyframes. No pixels.", "sub": "Describe the scenes. The engine does the rest." }
+    {
+      "type": "title",
+      "heading": "No keyframes. No pixels.",
+      "highlight": "No pixels.",
+      "sub": "Describe the scenes."
+    }
   ]
 }
