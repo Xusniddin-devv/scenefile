@@ -40,28 +40,28 @@ function init(): { seek(frame: number): void; totalFrames: number } {
     return { scene, el, handle };
   });
 
-  const stage = document.getElementById("sf-stage");
-  if (!stage) throw new Error("scenefile: the composition has no stage");
+  const root = document.documentElement;
 
   return {
     totalFrames: manifest.totalFrames,
     seek(frame) {
-      // Chromium keeps compositing state from earlier frames (an element that was
-      // once translucent or transformed is rasterized along a different path), so
-      // identical DOM can differ by one level on text edges. Detaching the stage
-      // and forcing layout discards that state, making pixels depend on the frame
-      // alone. Both forced layouts are required; without them the browser
-      // coalesces the two style changes and nothing is rebuilt.
-      stage.style.display = "none";
-      void stage.offsetHeight;
+      // Chromium carries paint and compositing state from one frame to the next,
+      // so identical DOM can differ by one level on anti-aliased edges depending
+      // on which frames came before. Taking the whole document out of layout and
+      // putting it back discards that state, so pixels depend on the frame alone.
+      // Detaching less than the document is not enough: it was tried with only
+      // the stage and frames still differed. Both forced layouts are required;
+      // without them the browser coalesces the two style changes.
+      root.style.display = "none";
+      void root.offsetHeight;
       for (const { scene, el, handle } of mounted) {
         const local = frame - scene.startFrame;
         const active = local >= 0 && local < scene.durationFrames;
         el.hidden = !active;
         if (active) handle.seek(local);
       }
-      stage.style.display = "";
-      void stage.offsetHeight;
+      root.style.display = "";
+      void root.offsetHeight;
     },
   };
 }

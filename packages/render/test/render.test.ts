@@ -57,18 +57,57 @@ describe("openComposition", () => {
   });
 
   it("produces identical pixels for a frame regardless of the frames visited before it", async () => {
-    const session = await openComposition(fixture());
+    // Chromium carries paint state between frames, so a weak version of this test
+    // (few frames, one revisit order) passes by luck. Thirty frames across three
+    // scenes, each revisited three times in different shuffled orders, does not.
+    const result = check({
+      version: 1,
+      scenes: [
+        { type: "title", heading: "Video from JSON", sub: "Any model can write a scenefile.", duration: 1.6 },
+        {
+          type: "terminal",
+          steps: [{ run: "scenefile check a.json", output: "No problems found." }, { run: "🚀 go" }],
+          duration: 3,
+        },
+        { type: "title", heading: "No keyframes. No pixels.", duration: 1.5 },
+      ],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const total = result.composition.manifest.totalFrames;
+    const frames = Array.from({ length: 30 }, (_, i) => Math.round((i * (total - 1)) / 29));
+
+    let seed = 12345;
+    const random = (): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const shuffled = (): number[] => {
+      const order = frames.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        const a = order[i];
+        const b = order[j];
+        if (a === undefined || b === undefined) throw new Error("bad index");
+        order[i] = b;
+        order[j] = a;
+      }
+      return order;
+    };
+
+    const session = await openComposition(result.composition);
     try {
-      const frames = [0, 10, 30, 50, 80, 104];
       const sequential: Buffer[] = [];
       for (const frame of frames) sequential.push(await captureFrame(session.page, frame));
-      for (const i of [4, 1, 5, 0, 3, 2]) {
-        const frame = frames[i];
-        const expected = sequential[i];
-        if (frame === undefined || !expected) throw new Error("bad index");
-        const again = await captureFrame(session.page, frame);
-        expect(again.equals(expected), `frame ${frame}`).toBe(true);
+      const mismatched = new Set<number>();
+      for (let pass = 0; pass < 3; pass++) {
+        for (const i of shuffled()) {
+          const frame = frames[i];
+          const expected = sequential[i];
+          if (frame === undefined || !expected) throw new Error("bad index");
+          if (!(await captureFrame(session.page, frame)).equals(expected)) mismatched.add(frame);
+        }
       }
+      expect([...mismatched].sort((a, b) => a - b)).toEqual([]);
     } finally {
       await session.close();
     }
