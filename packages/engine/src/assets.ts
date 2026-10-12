@@ -58,6 +58,8 @@ export interface HttpResponse {
 export interface AssetSources {
   /** The scenefile's folder. Local images must be inside it. */
   baseDir: string;
+  /** Whether images may be downloaded from https addresses. Defaults to true. */
+  allowRemote?: boolean;
   /** Resolves a host name to its addresses. */
   lookup?: (hostname: string) => Promise<ResolvedAddress[]>;
   /** Makes one https GET to `url`, connecting to exactly `address`. Must not follow redirects. */
@@ -372,7 +374,7 @@ async function download(src: string, sources: AssetSources, deadline: number): P
 }
 
 /** True when `file` is strictly inside `folder`. Both must be absolute. */
-function isInside(folder: string, file: string): boolean {
+export function isInside(folder: string, file: string): boolean {
   const fromFolder = relative(folder, file);
   return fromFolder !== "" && fromFolder !== ".." && !fromFolder.startsWith(`..${sep}`) && !isAbsolute(fromFolder);
 }
@@ -432,6 +434,9 @@ function isAddress(src: string): boolean {
 }
 
 async function loadOne(src: string, sources: AssetSources, deadline: number): Promise<{ data: Buffer; info: NonNullable<ReturnType<typeof imageInfo>> } | Failure> {
+  if (isAddress(src) && sources.allowRemote === false) {
+    return notFound(`Downloading images is turned off here, so "${src}" was not loaded.`);
+  }
   const data = await (isAddress(src) ? download(src, sources, deadline) : readLocal(src, sources));
   if (!Buffer.isBuffer(data)) return data;
   if (data.length > MAX_ASSET_BYTES) return tooLarge(src);

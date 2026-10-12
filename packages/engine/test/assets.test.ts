@@ -323,6 +323,20 @@ describe("downloading images", () => {
     },
   );
 
+  it("can be told not to download at all, and then refuses before looking anything up", async () => {
+    const net = network({ "https://example.com/a.png": { chunks: [png(640, 360)] } });
+    const { assets, diagnostics } = await loadAssets([{ path: "scenes[0].src", src: "https://example.com/a.png" }], {
+      ...net.sources,
+      allowRemote: false,
+    });
+    expect(assets.size).toBe(0);
+    expect(net.looked).toEqual([]);
+    expect(net.requested).toEqual([]);
+    expect(diagnostics[0]).toMatchObject({ code: "ASSET_NOT_FOUND", path: "scenes[0].src" });
+    expect(diagnostics[0]?.message).toMatch(/turned off/);
+    expect(diagnostics[0]?.fix).toMatch(/folder/);
+  });
+
   it("follows a redirect to another public https address, checking it first", async () => {
     const net = network({
       "https://example.com/a.png": { status: 302, headers: { location: "https://cdn.example.com/real.png" } },

@@ -18,6 +18,7 @@
   "dependencies": {
     "@scenefile/engine": "workspace:*",
     "@scenefile/runtime": "workspace:*",
+    "@scenefile/schema": "workspace:*",
     "playwright-core": "^1.64.0"
   }
 }

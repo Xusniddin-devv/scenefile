@@ -1,18 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { dirname, extname, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
-import {
-  type CheckResult,
-  type Composition,
-  type InspectReport,
-  applyLayout,
-  checkWithAssets,
-} from "@scenefile/engine";
+import { type CheckResult, type Composition, type InspectReport, formatDiagnostics } from "@scenefile/engine";
 import {
   EnvironmentError,
-  hasSound,
-  inspectComposition,
   MAX_WORKERS,
+  prepareScenefile,
   QUALITIES,
   type Quality,
   type RenderOptions,
@@ -61,33 +54,12 @@ async function load(path: string, io: Io): Promise<CheckResult> {
   const parsed = parseScenefileText(text);
   if (parsed.value === undefined) return failed(parsed.diagnostics);
 
-  const checked = await checkWithAssets(parsed.value, { baseDir: dirname(resolvePath(path)) });
-  const result = { ...checked, diagnostics: [...parsed.diagnostics, ...checked.diagnostics] };
-  if (!result.ok || !result.composition) return result;
-  // The first bytes said it was audio; make sure there is sound ffmpeg can actually read.
-  const music = result.composition.audio;
-  if (music && !(await (io.hasSound ?? hasSound)(music.file))) {
-    const diagnostic = error(
-      "ASSET_UNSUPPORTED",
-      "audio.src",
-      "This file has no sound that can be read: it is damaged, or it is not really an audio file.",
-      "Use a different music file, or convert this one to MP3 or WAV.",
-    );
-    return { ...result, ok: false, composition: null, diagnostics: [...result.diagnostics, diagnostic] };
-  }
-  return applyLayout(result, await (io.inspect ?? inspectComposition)(result.composition));
-}
-
-function formatDiagnostics(diagnostics: readonly Diagnostic[]): string {
-  const lines = diagnostics.flatMap((d) => [
-    `${d.severity}  ${d.code}${d.path ? `  ${d.path}` : ""}`,
-    `  ${d.message}`,
-    `  fix: ${d.fix}`,
-  ]);
-  const errors = diagnostics.filter((d) => d.severity === "error").length;
-  const warnings = diagnostics.length - errors;
-  lines.push(`${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${warnings === 1 ? "warning" : "warnings"}`);
-  return lines.join("\n");
+  const prepared = await prepareScenefile(parsed.value, {
+    baseDir: dirname(resolvePath(path)),
+    ...(io.inspect ? { inspect: io.inspect } : {}),
+    ...(io.hasSound ? { hasSound: io.hasSound } : {}),
+  });
+  return { ...prepared, diagnostics: [...parsed.diagnostics, ...prepared.diagnostics] };
 }
 
 function report(result: CheckResult, json: boolean, io: Io, extra: Record<string, unknown> = {}): void {
@@ -97,7 +69,7 @@ function report(result: CheckResult, json: boolean, io: Io, extra: Record<string
     return;
   }
   if (result.storyboard) io.out(result.storyboard);
-  io.out(result.diagnostics.length > 0 ? formatDiagnostics(result.diagnostics) : "No problems found.");
+  io.out(formatDiagnostics(result.diagnostics));
 }
 
 export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {

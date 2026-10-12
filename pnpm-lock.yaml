@@ -59,6 +59,9 @@ importers:
       '@scenefile/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@scenefile/schema':
+        specifier: workspace:*
+        version: link:../schema
       playwright-core:
         specifier: ^1.64.0
         version: 1.64.0

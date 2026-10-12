@@ -12,6 +12,7 @@ export {
   type ResolvedAddress,
   assetRefs,
   imageInfo,
+  isInside,
   isPrivateAddress,
   loadAssets,
   loadAudio,
