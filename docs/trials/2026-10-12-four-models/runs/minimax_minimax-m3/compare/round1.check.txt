@@ -1,0 +1,18 @@
+1920x1080, 30 fps, 25.70s, 5 scenes
+1. title      0.00s-5.00s  Create users in one request
+     heading  205px, 3 lines
+     sub      50px, 2 lines
+2. compare    4.50s-12.60s  Three requests: create account, set profile, send invite. / One request creates the user, profile and invite.  (enters by push over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 830x76 at 97,205
+     after.label   label 830x76 at 992,205
+3. code       12.10s-19.00s  bash, 4 lines: curl -X POST https://api.example.com/v2/users \  (enters by wipe over 0.50s)
+     source   43px
+     caption  50px, 1 line
+4. statement  18.50s-22.60s  The old endpoints stay live for six months.  (enters by push over 0.50s)
+     text  162px, 2 lines
+5. outro      22.60s-25.70s  Read the migration guide.  (enters by fade)
+     heading  238px, 3 lines
+     url      50px, 1 line
+No problems found.

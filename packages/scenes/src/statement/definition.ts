@@ -41,8 +41,8 @@ export const statementDefinition: SceneDefinition<StatementProps> = {
     },
     example: {
       "type": "statement",
-      "text": "Deploys should be boring. Now they are.",
-      "highlight": "Now they are."
+      "text": "Describe what the video shows. The engine does the drawing.",
+      "highlight": "The engine does the drawing."
     },
   },
   css: `

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "pgsnap, instantly.",
+      "highlight": "instantly.",
+      "sub": "Snapshot and restore Postgres from the command line."
+    },
+    {
+      "type": "statement",
+      "text": "Your database deserves a safety net.",
+      "highlight": "safety net"
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "pgsnap save",
+          "output": "Snapshot saved: pg_snap_2025-01-01.sql.gz"
+        },
+        {
+          "run": "pgsnap restore",
+          "output": "Database restored from snapshot."
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "npm install -g pgsnap\npgsnap save\npgsnap restore",
+      "highlight": [2, 3],
+      "caption": "Install once. Save and restore forever."
+    },
+    {
+      "type": "outro",
+      "heading": "Backup and restore, painless.",
+      "highlight": "painless.",
+      "command": "npm install -g pgsnap"
+    }
+  ]
+}

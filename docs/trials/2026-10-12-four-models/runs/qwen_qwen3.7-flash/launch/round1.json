@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Postgres snapshots",
+      "highlight": "snapshots",
+      "sub": "Instant backups and restores from your terminal."
+    },
+    {
+      "type": "statement",
+      "text": "Database accidents happen when you least expect them.",
+      "highlight": "Database accidents"
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "npm install -g pgsnap",
+          "output": "Added pgsnap v1.0.0"
+        },
+        {
+          "run": "pgsnap save production-db",
+          "output": "Snapshot saved in 4.2 seconds."
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "pgsnap save <db-name>\npgsnap restore <snapshot-id>",
+      "highlight": [1, 2],
+      "caption": "Two commands for full lifecycle control."
+    },
+    {
+      "type": "stat",
+      "value": "<10s",
+      "label": "average backup time",
+      "note": "Works on databases up to 50 gigabytes."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "pgsnap restore snap-8f3a",
+          "output": "Restored production-db successfully."
+        }
+      ]
+    },
+    {
+      "type": "outro",
+      "heading": "Never lose data again.",
+      "highlight": "Never lose data",
+      "command": "npm install -g pgsnap"
+    }
+  ]
+}

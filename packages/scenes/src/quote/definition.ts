@@ -33,9 +33,9 @@ export const quoteDefinition: SceneDefinition<QuoteProps> = {
     },
     example: {
       "type": "quote",
-      "text": "We cut our release time from an hour to a minute.",
-      "author": "Aziz Karimov",
-      "role": "Lead engineer"
+      "text": "Premature optimization is the root of all evil.",
+      "author": "Donald Knuth",
+      "role": "Computer scientist"
     },
   },
   css: `

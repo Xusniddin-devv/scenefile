@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
-import { CHROMIUM_REMEDY, FFMPEG_REMEDY } from "./errors";
+import { CHROMIUM_REMEDY, FFMPEG_REMEDY, browserProblem } from "./errors";
 import { VOICE_CATALOG, isVoice, voiceHome, voiceInstalled } from "./voice";
 
 const run = promisify(execFile);
@@ -32,8 +32,15 @@ async function browser(): Promise<Finding> {
     const version = launched.version();
     await launched.close();
     return { name: "Chromium", ok: true, required: true, detail: version };
-  } catch {
-    return { name: "Chromium", ok: false, required: true, detail: "not installed", fix: CHROMIUM_REMEDY };
+  } catch (cause) {
+    const problem = browserProblem(cause instanceof Error ? cause.message : String(cause));
+    return {
+      name: "Chromium",
+      ok: false,
+      required: true,
+      detail: problem?.message ?? "could not be started",
+      fix: problem?.remedy ?? CHROMIUM_REMEDY,
+    };
   }
 }
 
@@ -45,10 +52,10 @@ export async function diagnose(): Promise<Finding[]> {
   return [
     {
       name: "Node",
-      ok: major >= 20,
+      ok: major >= 22,
       required: true,
       detail: process.versions.node,
-      ...(major >= 20 ? {} : { fix: "Install Node 20 or newer." }),
+      ...(major >= 22 ? {} : { fix: "Install Node 22 or newer." }),
     },
     await tool("ffmpeg"),
     await tool("ffprobe"),

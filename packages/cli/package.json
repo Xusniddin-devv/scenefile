@@ -1,7 +1,7 @@
 {
   "name": "scenefile",
   "version": "0.1.0",
-  "description": "Turn a JSON scenefile into a professional video. Built for language models.",
+  "description": "Turn a JSON scenefile into a video. Built for language models.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -24,7 +24,7 @@
     "@scenefile/schema": "workspace:*"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "keywords": [
     "video",

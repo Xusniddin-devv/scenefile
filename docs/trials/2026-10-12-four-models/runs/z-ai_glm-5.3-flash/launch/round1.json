@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Postgres snapshots in one command",
+      "highlight": "one command",
+      "sub": "pgsnap saves your database with a single command and brings it back just as fast."
+    },
+    {
+      "type": "statement",
+      "text": "Database backups should be one command, not a runbook.",
+      "highlight": "one command"
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "pgsnap save",
+          "output": "Snapshot saved: shop-db-2025-06-01.pgdump\n412 MB in 9 seconds."
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "pgsnap save                       # snapshot now\npgsnap list                       # see every snapshot\npgsnap restore shop-db-2025-06-01 # back in seconds",
+      "highlight": [3],
+      "caption": "The whole tool is three verbs."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "pgsnap restore shop-db-2025-06-01",
+          "output": "Restoring shop-db-2025-06-01...\n412 MB, 128 tables, 1.2M rows back in 14 seconds."
+        }
+      ]
+    },
+    {
+      "type": "statement",
+      "text": "Reset your dev database between tests. Roll back after a bad migration.",
+      "highlight": "Roll back"
+    },
+    {
+      "type": "outro",
+      "heading": "Save now. Restore anytime.",
+      "highlight": "Restore anytime.",
+      "command": "npm install -g pgsnap",
+      "url": "npmjs.com/package/pgsnap"
+    }
+  ]
+}

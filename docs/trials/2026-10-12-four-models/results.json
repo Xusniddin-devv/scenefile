@@ -1,0 +1,208 @@
+{
+  "calls": 13,
+  "spentUsd": 0.0219336216,
+  "results": [
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "brief": "launch",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1001
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4441,
+      "final": "runs/deepseek_deepseek-v4-flash-0731/launch/round1.json"
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "brief": "bilingual",
+      "rounds": [
+        {
+          "exit": 1,
+          "codes": [
+            "E:SCHEMA_JSON@"
+          ],
+          "finish": "length",
+          "chars": 0
+        },
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 832
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 10455,
+      "final": "runs/deepseek_deepseek-v4-flash-0731/bilingual/round2.json"
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "brief": "compare",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1166
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4100,
+      "final": "runs/deepseek_deepseek-v4-flash-0731/compare/round1.json"
+    },
+    {
+      "model": "minimax/minimax-m3",
+      "brief": "launch",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 947
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 3538,
+      "final": "runs/minimax_minimax-m3/launch/round1.json"
+    },
+    {
+      "model": "minimax/minimax-m3",
+      "brief": "bilingual",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 834
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4671,
+      "final": "runs/minimax_minimax-m3/bilingual/round1.json"
+    },
+    {
+      "model": "minimax/minimax-m3",
+      "brief": "compare",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 909
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 3543,
+      "final": "runs/minimax_minimax-m3/compare/round1.json"
+    },
+    {
+      "model": "qwen/qwen3.7-flash",
+      "brief": "launch",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1358
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 5693,
+      "final": "runs/qwen_qwen3.7-flash/launch/round1.json"
+    },
+    {
+      "model": "qwen/qwen3.7-flash",
+      "brief": "bilingual",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 979
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 5442,
+      "final": "runs/qwen_qwen3.7-flash/bilingual/round1.json"
+    },
+    {
+      "model": "qwen/qwen3.7-flash",
+      "brief": "compare",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [
+            "w:AUTOFIXED@"
+          ],
+          "finish": "stop",
+          "chars": 955
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 3661,
+      "final": "runs/qwen_qwen3.7-flash/compare/round1.json"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "brief": "launch",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1519
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4834,
+      "final": "runs/z-ai_glm-5.3-flash/launch/round1.json"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "brief": "bilingual",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1552
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4330,
+      "final": "runs/z-ai_glm-5.3-flash/bilingual/round1.json"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "brief": "compare",
+      "rounds": [
+        {
+          "exit": 0,
+          "codes": [],
+          "finish": "stop",
+          "chars": 1942
+        }
+      ],
+      "passed": true,
+      "error": null,
+      "tokens": 4376,
+      "final": "runs/z-ai_glm-5.3-flash/compare/round1.json"
+    }
+  ]
+}

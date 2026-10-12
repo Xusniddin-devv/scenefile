@@ -85,12 +85,12 @@ export const compareDefinition: SceneDefinition<CompareProps> = {
     example: {
       "type": "compare",
       "before": {
-        "label": "Before",
-        "text": "An hour of manual steps."
+        "label": "By hand",
+        "text": "Draw and time every frame."
       },
       "after": {
-        "label": "With shipit",
-        "text": "One command."
+        "label": "With a scenefile",
+        "text": "List the scenes."
       }
     },
   },

@@ -17,10 +17,10 @@ export const TOP_LEVEL_DOCS: Readonly<Record<string, string>> = {
 const EXAMPLE = {
   version: 1,
   scenes: [
-    { type: "title", heading: "Ship faster", highlight: "faster", sub: "A command line tool that deploys in one step." },
-    { type: "terminal", steps: [{ run: "shipit deploy", output: "Deployed in 58 seconds." }] },
-    { type: "stat", value: "60x", label: "faster releases" },
-    { type: "outro", heading: "Deploy in one command.", highlight: "one command.", command: "npm install -g shipit" },
+    { type: "title", heading: "Video from JSON", highlight: "JSON", sub: "Describe the scenes. The engine draws and times them." },
+    { type: "terminal", steps: [{ run: "scenefile check video.json", output: "No problems found." }] },
+    { type: "stat", value: "11", label: "scene types" },
+    { type: "outro", heading: "Write JSON. Get a video.", highlight: "Get a video.", command: "scenefile init" },
   ],
 };
 

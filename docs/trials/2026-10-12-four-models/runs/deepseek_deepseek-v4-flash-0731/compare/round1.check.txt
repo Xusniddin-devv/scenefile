@@ -1,0 +1,21 @@
+1920x1080, 30 fps, 28.10s, 5 scenes
+1. title      0.00s-5.33s  One request instead of three
+     heading  194px, 3 lines
+     sub      50px, 3 lines
+2. statement  4.83s-10.57s  Creating a user used to take three requests. Now it takes one.  (enters by push over 0.50s)
+     text  162px, 3 lines
+3. compare    10.07s-16.50s  1. Create account
+2. Set profile
+3. Send invite / POST /v2/users  (enters by crossfade over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 830x76 at 97,205
+     after.label   label 830x76 at 992,205
+4. code       16.00s-22.73s  bash, 3 lines: curl -X POST https://api.example.com/v2/users \  (enters by wipe over 0.50s)
+     source   43px
+     caption  50px, 1 line
+5. outro      22.73s-28.10s  Make it one request. ($ curl -X POST /v2/users)  (enters by fade)
+     heading  238px, 3 lines
+     command  54px, 2 lines
+     url      50px, 1 line
+No problems found.

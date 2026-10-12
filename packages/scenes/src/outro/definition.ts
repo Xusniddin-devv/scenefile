@@ -48,10 +48,9 @@ export const outroDefinition: SceneDefinition<OutroProps> = {
     },
     example: {
       "type": "outro",
-      "heading": "Deploy in one command.",
-      "highlight": "one command.",
-      "command": "npm install -g shipit",
-      "url": "shipit.example"
+      "heading": "Write JSON. Get a video.",
+      "highlight": "Get a video.",
+      "command": "scenefile init"
     },
   },
   css: `

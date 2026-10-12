@@ -2,7 +2,7 @@
 // empty folder with npm, and makes a video with the installed command. This is
 // what proves the published files are complete: fonts, the browser bundle, the lot.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -18,7 +18,7 @@ try {
   console.log(files.map((file) => `${(statSync(file).size / 1024).toFixed(0).padStart(6)} kB  ${file.split("/").pop()}`).join("\n"));
 
   const app = join(work, "app");
-  run("npm", ["init", "-y"], { cwd: work }) && run("mkdir", ["-p", app]);
+  mkdirSync(app);
   writeFileSync(join(app, "package.json"), JSON.stringify({ name: "pack-test", private: true }));
   run("npm", ["install", "--no-audit", "--no-fund", ...files], { cwd: app });
   const bin = join(app, "node_modules", ".bin", "scenefile");
@@ -27,7 +27,7 @@ try {
   console.log(run(bin, ["check", "scenefile.json"], { cwd: app }).trim().split("\n").slice(-1)[0]);
   console.log(run(bin, ["render", "scenefile.json", "-o", "video.mp4", "--quality", "draft"], { cwd: app }).trim().split("\n").slice(-1)[0]);
   if (statSync(join(app, "video.mp4")).size < 10_000) throw new Error("the rendered video is suspiciously small");
-  console.log(run(bin, ["guide"], { cwd: app }).length > 5000 ? "guide ok" : "guide too short");
+  if (run(bin, ["guide"], { cwd: app }).length < 5000) throw new Error("the guide is too short to be the guide");
   console.log("pack test passed");
 } finally {
   rmSync(work, { recursive: true, force: true });

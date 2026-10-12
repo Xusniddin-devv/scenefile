@@ -1,0 +1,26 @@
+1080x1920, 30 fps, 43.30s, 8 scenes
+1. title      0.00s-4.33s  Готовься к TOPIK
+     heading  216px, 2 lines
+     sub      50px, 2 lines
+2. statement  3.83s-7.93s  Экзамен уже скоро, а времени мало. Выход есть.  (enters by push over 0.50s)
+     text  157px, 5 lines
+3. bullets    7.43s-17.27s  Что даёт Bilim (4 items)  (enters by wipe over 0.50s)
+     heading  50px, 1 line
+     items    95px
+4. stat       16.77s-22.57s  10 мин в день до уверенного TOPIK  (enters by zoom over 0.50s)
+     value  259px, 1 line
+     label  84px, 2 lines
+     note   45px, 2 lines
+5. compare    22.07s-29.50s  Курсы, учебники и часы зубрёжки без системы. / Десять минут в день по понятному плану.  (enters by push over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 886x76 at 97,205
+     after.label   label 886x76 at 97,1046
+6. quote      29.00s-36.00s  "Готовился по дороге на учёбу. Через три месяца сдал TOPIK II на пятый уровень." (Тимур)  (enters by crossfade over 0.50s)
+     text  108px
+7. statement  35.50s-39.20s  Первый урок займёт десять минут. Начни сегодня.  (enters by push over 0.50s)
+     text  140px, 5 lines
+8. outro      39.20s-43.30s  Har kuni 10 daqiqa — bilim sizga yaqin!  (enters by fade)
+     heading  130px, 3 lines
+     url      50px, 1 line
+No problems found.

@@ -37,11 +37,11 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
     },
     example: {
       "type": "bullets",
-      "heading": "What you get",
+      "heading": "What check does",
       "items": [
-        "One command to deploy",
-        "Rollbacks in seconds",
-        "Works with any host"
+        "Reads the layout in a real browser",
+        "Reports problems as plain text",
+        "Gives a fix for each one"
       ]
     },
   },

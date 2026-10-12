@@ -1,0 +1,22 @@
+1920x1080, 30 fps, 19.37s, 5 scenes
+1. title    0.00s-4.67s  User creation simplified
+     heading  238px, 3 lines
+     sub      50px, 2 lines
+2. compare  4.17s-10.27s  Create account, set profile, send invite. / Single request: POST /v2/users.  (enters by push over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 830x76 at 97,205
+     after.label   label 830x76 at 992,205
+3. code     9.77s-13.87s  bash, 3 lines: curl -X POST https://api.example.com/v2/users \  (enters by wipe over 0.50s)
+     source   54px
+     caption  50px, 1 line
+4. stat     13.37s-16.27s  3 -> 1 requests per user  (enters by zoom over 0.50s)
+     value  605px, 1 line
+     label  84px, 1 line
+5. outro    16.27s-19.37s  Start using v2 now.  (enters by fade)
+     heading  238px, 3 lines
+     url      50px, 1 line
+warning  AUTOFIXED
+  Removed a Markdown code fence and the text around the JSON.
+  fix: Output one JSON object only: double-quoted keys and strings, no comments, no trailing commas, no text around it.
+0 errors, 1 warning

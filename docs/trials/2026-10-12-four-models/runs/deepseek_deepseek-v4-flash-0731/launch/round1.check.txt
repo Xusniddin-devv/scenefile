@@ -1,0 +1,15 @@
+1920x1080, 30 fps, 24.53s, 5 scenes
+1. title      0.00s-4.33s  pgsnap, instantly.
+     heading  238px, 2 lines
+     sub      50px, 3 lines
+2. statement  3.83s-7.13s  Your database deserves a safety net.  (enters by push over 0.50s)
+     text  162px, 2 lines
+3. terminal   6.63s-13.33s  $ pgsnap save (+1 more)  (enters by wipe over 0.50s)
+     steps  65px
+4. code       12.83s-19.57s  bash, 3 lines: npm install -g pgsnap  (enters by push over 0.50s)
+     source   54px
+     caption  50px, 1 line
+5. outro      19.57s-24.53s  Backup and restore, painless. ($ npm install -g pgsnap)  (enters by fade)
+     heading  194px, 3 lines
+     command  54px, 2 lines
+No problems found.

@@ -1,0 +1,41 @@
+```json
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "User creation simplified",
+      "highlight": "simplified",
+      "sub": "We reduced three steps into one API call."
+    },
+    {
+      "type": "compare",
+      "before": {
+        "label": "Old API",
+        "text": "Create account, set profile, send invite."
+      },
+      "after": {
+        "label": "New API",
+        "text": "Single request: POST /v2/users."
+      }
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "curl -X POST https://api.example.com/v2/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\": \"Alice\"}'",
+      "caption": "One call handles everything."
+    },
+    {
+      "type": "stat",
+      "value": "3 -> 1",
+      "label": "requests per user"
+    },
+    {
+      "type": "outro",
+      "heading": "Start using v2 now.",
+      "highlight": "v2",
+      "url": "docs.example.com/api/v2"
+    }
+  ]
+}
+```

@@ -1,0 +1,21 @@
+1920x1080, 30 fps, 34.73s, 7 scenes
+1. title      0.00s-4.00s  Postgres snapshots
+     heading  238px, 2 lines
+     sub      50px, 3 lines
+2. statement  3.50s-7.60s  Database accidents happen when you least expect them.  (enters by push over 0.50s)
+     text  162px, 3 lines
+3. terminal   7.10s-15.17s  $ npm install -g pgsnap (+1 more)  (enters by wipe over 0.50s)
+     steps  65px
+4. code       14.67s-21.23s  bash, 2 lines: pgsnap save <db-name>  (enters by push over 0.50s)
+     source   54px
+     caption  50px, 1 line
+5. stat       20.73s-25.87s  <10s average backup time  (enters by zoom over 0.50s)
+     value  605px, 1 line
+     label  84px, 1 line
+     note   45px, 2 lines
+6. terminal   25.37s-29.77s  $ pgsnap restore snap-8f3a  (enters by wipe over 0.50s)
+     steps  65px
+7. outro      29.77s-34.73s  Never lose data again. ($ npm install -g pgsnap)  (enters by fade)
+     heading  238px, 3 lines
+     command  54px, 2 lines
+No problems found.

@@ -5,7 +5,7 @@ needs before it can be merged.
 
 ## Set up
 
-You need Node 20 or newer, pnpm, and `ffmpeg` on your `PATH`.
+You need Node 22 or newer, pnpm, and `ffmpeg` on your `PATH`.
 
 ```bash
 pnpm install

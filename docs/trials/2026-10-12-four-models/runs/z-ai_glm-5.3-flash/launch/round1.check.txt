@@ -1,0 +1,20 @@
+1920x1080, 30 fps, 40.10s, 7 scenes
+1. title      0.00s-7.67s  Postgres snapshots in one command
+     heading  173px, 3 lines
+     sub      50px, 4 lines
+2. statement  7.17s-11.67s  Database backups should be one command, not a runbook.  (enters by push over 0.50s)
+     text  162px, 4 lines
+3. terminal   11.17s-16.60s  $ pgsnap save  (enters by wipe over 0.50s)
+     steps  65px
+4. code       16.10s-22.17s  bash, 3 lines: pgsnap save                       # snapshot now  (enters by push over 0.50s)
+     source   48px
+     caption  50px, 1 line
+5. terminal   21.67s-29.53s  $ pgsnap restore shop-db-2025-06-01  (enters by wipe over 0.50s)
+     steps  58px
+6. statement  29.03s-34.77s  Reset your dev database between tests. Roll back after a bad migration.  (enters by push over 0.50s)
+     text  162px, 4 lines
+7. outro      34.77s-40.10s  Save now. Restore anytime. ($ npm install -g pgsnap)  (enters by fade)
+     heading  216px, 3 lines
+     command  54px, 2 lines
+     url      48px, 1 line
+No problems found.

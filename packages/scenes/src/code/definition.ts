@@ -58,11 +58,11 @@ export const codeDefinition: SceneDefinition<CodeProps> = {
     example: {
       "type": "code",
       "lang": "bash",
-      "source": "npm install -g shipit\nshipit deploy",
+      "source": "scenefile check video.json\nscenefile render video.json -o video.mp4",
       "highlight": [
         2
       ],
-      "caption": "Two lines from install to live."
+      "caption": "Two commands from JSON to video."
     },
   },
   css: `

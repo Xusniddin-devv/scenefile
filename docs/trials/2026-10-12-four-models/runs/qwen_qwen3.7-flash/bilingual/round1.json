@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "format": "portrait-1080p",
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Bilim",
+      "highlight": "Bilim",
+      "sub": "Подготовка к TOPIK каждый день по 10 минут."
+    },
+    {
+      "type": "statement",
+      "text": "Сдавать TOPIK стало проще с приложением Bilim.",
+      "highlight": "проще"
+    },
+    {
+      "type": "stat",
+      "value": "10 мин",
+      "label": "ежедневная практика",
+      "note": "Короткие уроки встраиваются в любой график."
+    },
+    {
+      "type": "bullets",
+      "heading": "Что внутри Bilim",
+      "items": [
+        "Тесты по всем уровням TOPIK",
+        "Разбор грамматики и лексики",
+        "Отслеживание прогресса"
+      ]
+    },
+    {
+      "type": "statement",
+      "text": "Начните учить корейский уже сегодня.",
+      "highlight": "уже сегодня"
+    },
+    {
+      "type": "outro",
+      "heading": "TOPIK imtihonini Bilim bilan yengil topshiring.",
+      "highlight": "Bilim bilan"
+    }
+  ]
+}

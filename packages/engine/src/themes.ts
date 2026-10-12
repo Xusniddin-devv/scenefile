@@ -33,7 +33,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     fontSans: "onest",
     fontMono: "cascadiaCode",
     headingWeight: 900,
-    headingTracking: "-0.055em",
+    headingTracking: "-0.035em",
   },
   midnight: {
     background: "#0A0A0A",
@@ -58,7 +58,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     fontSans: "onest",
     fontMono: "cascadiaCode",
     headingWeight: 900,
-    headingTracking: "-0.055em",
+    headingTracking: "-0.035em",
   },
   // A flat field of blue with white type and a yellow accent.
   cobalt: {
@@ -71,7 +71,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     fontSans: "onest",
     fontMono: "cascadiaCode",
     headingWeight: 900,
-    headingTracking: "-0.055em",
+    headingTracking: "-0.035em",
   },
   // A flat field of yellow with black type and a blue accent.
   solar: {
@@ -84,7 +84,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     fontSans: "onest",
     fontMono: "cascadiaCode",
     headingWeight: 900,
-    headingTracking: "-0.055em",
+    headingTracking: "-0.035em",
   },
 };
 

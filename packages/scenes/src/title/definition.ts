@@ -30,9 +30,9 @@ export const titleDefinition: SceneDefinition<TitleProps> = {
     },
     example: {
       "type": "title",
-      "heading": "Ship faster",
-      "highlight": "faster",
-      "sub": "A command line tool that deploys in one step."
+      "heading": "Video from JSON",
+      "highlight": "JSON",
+      "sub": "Describe the scenes. The engine draws and times them."
     },
   },
   css: `

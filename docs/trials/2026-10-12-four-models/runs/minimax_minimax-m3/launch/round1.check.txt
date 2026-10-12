@@ -1,0 +1,21 @@
+1920x1080, 30 fps, 36.63s, 7 scenes
+1. title      0.00s-5.33s  Snapshot Postgres with one command
+     heading  173px, 3 lines
+     sub      50px, 3 lines
+2. statement  4.83s-10.57s  Database snapshots used to be a chore. Now they are one command.  (enters by push over 0.50s)
+     text  162px, 3 lines
+3. terminal   10.07s-15.00s  $ npm install -g pgsnap  (enters by wipe over 0.50s)
+     steps  65px
+4. code       14.50s-19.90s  bash, 3 lines: pgsnap save devdb  (enters by push over 0.50s)
+     source   54px
+     caption  50px, 1 line
+5. terminal   19.40s-27.03s  $ pgsnap save devdb (+1 more)  (enters by wipe over 0.50s)
+     steps  65px
+6. stat       26.53s-31.67s  2s to snapshot any database  (enters by zoom over 0.50s)
+     value  605px, 1 line
+     label  84px, 1 line
+     note   45px, 2 lines
+7. outro      31.67s-36.63s  Snapshots should be boring. ($ npm install -g pgsnap)  (enters by fade)
+     heading  216px, 3 lines
+     command  54px, 2 lines
+No problems found.

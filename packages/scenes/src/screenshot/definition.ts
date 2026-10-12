@@ -92,7 +92,7 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
     example: {
       "type": "screenshot",
       "src": "dashboard.png",
-      "caption": "Every deploy, in one place."
+      "caption": "Your own screenshot, framed and captioned."
     },
   },
   css: `

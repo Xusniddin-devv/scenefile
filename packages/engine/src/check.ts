@@ -26,7 +26,7 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
   const seconds = (frames: number): string => `${(frames / video.fps).toFixed(2)}s`;
   const typeWidth = Math.max(...video.scenes.map((scene) => scene.type.length));
   const lines = [
-    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}${video.scenes.some((scene) => scene.speech) ? ", voice" : ""}${video.captions ? ", captions" : ""}`,
+    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} ${video.scenes.length === 1 ? "scene" : "scenes"}${music ? ", music" : ""}${video.scenes.some((scene) => scene.speech) ? ", voice" : ""}${video.captions ? ", captions" : ""}`,
   ];
   for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;

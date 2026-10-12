@@ -7,8 +7,8 @@ ones that cannot see images, can produce a correct video and fix its own mistake
 `bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `outro`, `terminal`), five
 themes, narration in English and Russian made on your own machine, captions and a music
 bed work today. Fonts are bundled, so Latin and
-Cyrillic text is drawn the same on every machine; emoji use the machine's own emoji
-font. Not yet published to npm.
+Cyrillic text is set in the same typefaces and layout on every machine (edges differ
+slightly between operating systems); emoji use the machine's own emoji font. Not yet published to npm.
 
 ![The opening of a video made from examples/tour.json](docs/media/tour.gif)
 
@@ -17,8 +17,9 @@ no drawing, narrated and captioned on the machine that rendered it.
 
 ## Requirements
 
-- Node 20 or newer, pnpm
+- Node 22 or newer, pnpm
 - `ffmpeg` on your `PATH`
+- macOS or Linux. Tested on macOS (Apple silicon) and Linux (arm64); Windows is untested.
 
 ## Try it
 
@@ -30,7 +31,10 @@ node packages/cli/dist/main.js doctor
 node packages/cli/dist/main.js render examples/tour.json -o out/tour.mp4
 ```
 
-`doctor` says what, if anything, is still missing. The first narrated render downloads
+Until scenefile is on npm, `scenefile` in the rest of this page means
+`node packages/cli/dist/main.js`. On Linux, Chromium also needs system libraries: add
+`--with-deps` to the browser install command. `doctor` says what, if anything, is still
+missing. The first narrated render downloads
 a voice (67 MB, once). `examples/launch.json` is a silent example.
 
 ## A scenefile
@@ -58,7 +62,7 @@ error  TEXT_OVERFLOW  scenes[0].heading
 ```
 error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
   Unknown scene type "titel". Did you mean "title"?
-  fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, screenshot, compare, terminal.
+  fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, screenshot, compare, chart, terminal.
 ```
 
 ## Use from an AI agent
@@ -99,10 +103,11 @@ What the server can touch:
 The guide and the skill file are generated from the scene types themselves
 (`pnpm generate`), and a test fails if they fall out of step.
 
-Tried on 12 October 2026 with four inexpensive models through OpenRouter (DeepSeek v4
-flash, MiniMax M3, Qwen 3.7 flash, GLM 5.3 flash), each given only the guide and a
-one-paragraph brief, three briefs each: 11 of 12 scenefiles passed the full check on the
-first reply and all 12 by the second. That is one run of a small test, not a benchmark.
+In one informal trial on 12 October 2026, four inexpensive models were each given only
+the guide and a one-paragraph brief, three briefs each: 11 of 12 scenefiles passed the
+full check on the first reply and all 12 by the second. It is one run with no control
+group, not a benchmark; the script, replies and results are in
+[docs/trials](docs/trials/2026-10-12-four-models).
 
 ## Narration
 
@@ -127,10 +132,12 @@ server never downloads: it uses voices that are already installed.
 | `en-joe` | English | Its own recordings are CC0, but it was fine-tuned from a voice trained on recordings licensed for research only. |
 | `ru-denis`, `ru-dmitri` | Russian | The same as `en-joe`. No Russian voice here is free of that. |
 
-**Licences, plainly.** scenefile's own code is MIT. Narration uses parts scenefile does
-not ship: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0, with
-espeak-ng, GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voices,
-each with the history in the table. For commercial work, use `en-kristin` or check the
+**Licences, plainly.** scenefile's own code is MIT. Narration uses parts that are
+not scenefile's own code: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+(installed with scenefile as an optional dependency; Apache-2.0, with espeak-ng,
+GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voices (downloaded on
+first use), each with the history in the table. The bundled fonts, Onest and Cascadia
+Code, are OFL-1.1. For commercial work, use `en-kristin` or check the
 voice's model card first.
 
 **Captions.** Add `"captions": true` to `voice` and the words appear in a band at the
@@ -140,8 +147,8 @@ space above it. The voice gives no word timings, so a phrase is timed by its len
 What it is not:
 
 - The voices are clear but plainly synthetic.
-- English and Russian only. There is no Uzbek voice: none with a usable licence exists
-  in this family. A line in a language the voice does not speak is refused by `check`.
+- English and Russian only. There is no Uzbek voice: the Piper collection has
+  none. A line in a language the voice does not speak is refused by `check`.
 - Narration is made fresh on each machine and differs slightly each time. A rerun on the
   same machine reuses the saved lines and gives the same video; saved lines live in
   `~/.cache/scenefile` (or `$SCENEFILE_HOME`), capped at 500 MB.
@@ -189,11 +196,11 @@ joined afterwards, and the finished file is the same whatever the number of work
 Measured with `pnpm bench` on `examples/launch.json` (1920x1080, 30 fps, 52 s) on an
 8-core Apple M1, 12 October 2026:
 
-| Workers | Render time | Compared with the video's length |
+| Workers | Render time | Seconds of video per second of rendering |
 |---|---|---|
-| 1 | 62 s | 0.84x |
-| 2 | 36 s | 1.5x |
-| 4 | 30 s | 1.7x |
+| 1 | 62 s | 0.84 |
+| 2 | 36 s | 1.4 |
+| 4 | 30 s | 1.7 |
 
 ## Images, files and the network
 

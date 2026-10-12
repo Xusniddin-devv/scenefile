@@ -36,9 +36,9 @@ export const statDefinition: SceneDefinition<StatProps> = {
     },
     example: {
       "type": "stat",
-      "value": "60x",
-      "label": "faster releases",
-      "note": "Measured on our own service over one month."
+      "value": "11",
+      "label": "scene types",
+      "note": "Each one is sized and timed for you."
     },
   },
   css: `

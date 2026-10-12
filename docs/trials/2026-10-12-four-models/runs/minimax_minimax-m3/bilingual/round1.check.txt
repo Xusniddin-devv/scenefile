@@ -1,0 +1,19 @@
+1080x1920, 30 fps, 31.47s, 6 scenes
+1. title      0.00s-6.67s  Bilim — ваш репетитор по TOPIK
+     heading  162px, 3 lines
+     sub      50px, 3 lines
+2. bullets    6.17s-14.17s  Что даёт Bilim (3 items)  (enters by push over 0.50s)
+     heading  50px, 1 line
+     items    104px
+3. stat       13.67s-17.80s  10 мин ежедневной практики  (enters by zoom over 0.50s)
+     value  259px, 1 line
+     label  84px, 1 line
+     note   45px, 1 line
+4. statement  17.30s-22.20s  Каждый день маленький шаг — к большому результату на экзамене.  (enters by push over 0.50s)
+     text  124px, 5 lines
+5. quote      21.70s-27.03s  "За два месяца я подготовился ко второму уровню TOPIK." (Азиз Каримов)  (enters by crossfade over 0.50s)
+     text  108px
+6. outro      27.03s-31.47s  Bilim bilan har kuni 10 daqiqa — natija katta.  (enters by fade)
+     heading  140px, 3 lines
+     url      50px, 1 line
+No problems found.

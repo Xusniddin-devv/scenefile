@@ -84,7 +84,7 @@ describe("the music bed", () => {
     const result = await checkWithAssets({ version: 1, audio: { src: "bed.mp3" }, scenes }, { baseDir });
     expect(result.ok).toBe(true);
     expect(result.composition?.audio).toEqual({ file: join(baseDir, "bed.mp3"), volume: 0.4 });
-    expect(result.storyboard.split("\n")[0]).toMatch(/, 1 scenes, music$/);
+    expect(result.storyboard.split("\n")[0]).toMatch(/, 1 scene, music$/);
     const silent = await checkWithAssets({ version: 1, scenes }, { baseDir });
     expect(silent.composition?.audio).toBeUndefined();
     expect(silent.storyboard.split("\n")[0]).not.toContain("music");

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "One request instead of three",
+      "highlight": "One request",
+      "sub": "POST /v2/users creates the user, profile, and invite."
+    },
+    {
+      "type": "statement",
+      "text": "Creating a user used to take three requests. Now it takes one.",
+      "highlight": "one"
+    },
+    {
+      "type": "compare",
+      "before": {
+        "label": "Before (3 requests)",
+        "text": "1. Create account\n2. Set profile\n3. Send invite"
+      },
+      "after": {
+        "label": "After (1 request)",
+        "text": "POST /v2/users"
+      }
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "curl -X POST https://api.example.com/v2/users \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"email\":\"dev@example.com\",\"profile\":{},\"invite\":true}'",
+      "highlight": [1],
+      "caption": "One request creates the user, profile, and invite."
+    },
+    {
+      "type": "outro",
+      "heading": "Make it one request.",
+      "highlight": "one request",
+      "command": "curl -X POST /v2/users",
+      "url": "api.example.com/v2/users"
+    }
+  ]
+}

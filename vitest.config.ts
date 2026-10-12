@@ -18,6 +18,7 @@ export default defineConfig({
   test: {
     include: ["packages/*/test/**/*.test.ts"],
     globalSetup: ["./test/global-setup.ts"],
-    testTimeout: 60_000,
+    // Rendering tests start browsers and ffmpeg; on a small CI machine they need room.
+    testTimeout: 180_000,
   },
 });

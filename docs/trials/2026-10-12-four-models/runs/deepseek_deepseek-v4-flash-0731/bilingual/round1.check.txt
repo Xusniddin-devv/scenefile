@@ -1,0 +1,4 @@
+error  SCHEMA_JSON
+  The scenefile is empty.
+  fix: Output one JSON object only: double-quoted keys and strings, no comments, no trailing commas, no text around it.
+1 error, 0 warnings

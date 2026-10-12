@@ -1,0 +1,18 @@
+1080x1920, 30 fps, 23.50s, 6 scenes
+1. title      0.00s-4.00s  Bilim
+     heading  238px, 1 line
+     sub      50px, 2 lines
+2. statement  3.50s-7.20s  Сдавать TOPIK стало проще с приложением Bilim.  (enters by push over 0.50s)
+     text  135px, 5 lines
+3. stat       6.70s-11.17s  10 мин ежедневная практика  (enters by zoom over 0.50s)
+     value  259px, 1 line
+     label  84px, 1 line
+     note   45px, 2 lines
+4. bullets    10.67s-18.00s  Что внутри Bilim (3 items)  (enters by push over 0.50s)
+     heading  50px, 1 line
+     items    99px
+5. statement  17.50s-20.40s  Начните учить корейский уже сегодня.  (enters by crossfade over 0.50s)
+     text  162px, 5 lines
+6. outro      20.40s-23.50s  TOPIK imtihonini Bilim bilan yengil topshiring.  (enters by fade)
+     heading  119px, 3 lines
+No problems found.

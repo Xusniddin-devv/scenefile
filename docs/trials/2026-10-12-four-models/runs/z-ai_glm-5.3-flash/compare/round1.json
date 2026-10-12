@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Users, in one request",
+      "highlight": "one request",
+      "sub": "The v2 API replaces three calls with a single POST."
+    },
+    {
+      "type": "statement",
+      "text": "Creating a user used to take three separate requests.",
+      "highlight": "three separate requests"
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "curl -X POST /v1/accounts -d 'email=ada@example.com'",
+          "output": "201 Created  {\"id\": \"acc_8f2\"}"
+        },
+        {
+          "run": "curl -X PATCH /v1/accounts/acc_8f2/profile -d 'name=Ada Lovelace'",
+          "output": "200 OK"
+        },
+        {
+          "run": "curl -X POST /v1/accounts/acc_8f2/invite",
+          "output": "202 Invite sent"
+        }
+      ]
+    },
+    {
+      "type": "compare",
+      "before": {
+        "label": "v1: three calls",
+        "text": "Create the account, set the profile, send the invite: three round trips."
+      },
+      "after": {
+        "label": "v2: one call",
+        "text": "POST /v2/users does all three in a single request."
+      }
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "curl -X POST https://api.example.com/v2/users \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -d '{\n    \"email\": \"ada@example.com\",\n    \"profile\": { \"name\": \"Ada Lovelace\" },\n    \"invite\": true\n  }'",
+      "highlight": [1],
+      "caption": "One call creates the account, profile and invite."
+    },
+    {
+      "type": "stat",
+      "value": "1 request",
+      "label": "to create a user, down from three",
+      "note": "POST /v2/users replaces the account, profile and invite calls."
+    },
+    {
+      "type": "outro",
+      "heading": "Create users in one request.",
+      "highlight": "one request.",
+      "command": "curl -X POST /v2/users",
+      "url": "docs.example.com/v2/users"
+    }
+  ]
+}

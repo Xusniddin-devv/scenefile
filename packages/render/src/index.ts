@@ -1,7 +1,7 @@
 export { captureFrame } from "./capture";
 export { type Finding, diagnose } from "./doctor";
 export { type Encoder, runFfmpeg, startEncoder } from "./encode";
-export { EnvironmentError } from "./errors";
+export { EnvironmentError, browserProblem } from "./errors";
 export { inspectComposition } from "./inspect";
 export { type PrepareOptions, prepareScenefile } from "./prepare";
 export { type ProbeResult, hasSound, probeVideo } from "./probe";

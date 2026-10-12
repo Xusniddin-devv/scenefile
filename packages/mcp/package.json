@@ -27,7 +27,7 @@
     "zod": "^4.6.6"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "keywords": [
     "video",

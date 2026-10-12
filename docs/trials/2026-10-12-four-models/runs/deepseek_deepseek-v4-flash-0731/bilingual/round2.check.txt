@@ -1,0 +1,22 @@
+1080x1920, 30 fps, 31.93s, 6 scenes
+1. title      0.00s-5.67s  Bilim - TOPIK за 10 минут
+     heading  216px, 3 lines
+     sub      50px, 3 lines
+2. statement  5.17s-9.67s  Готовиться к TOPIK можно всего 10 минут в день.  (enters by push over 0.50s)
+     text  151px, 5 lines
+3. bullets    9.17s-16.50s  Что внутри (3 items)  (enters by wipe over 0.50s)
+     heading  50px, 1 line
+     items    104px
+4. stat       16.00s-19.80s  10 мин в день достаточно  (enters by zoom over 0.50s)
+     value  259px, 1 line
+     label  84px, 1 line
+     note   45px, 1 line
+5. compare    19.30s-26.07s  Готовиться хаотично и откладывать. / 10 минут каждый день - и прогресс виден.  (enters by push over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 886x76 at 97,205
+     after.label   label 886x76 at 97,1046
+6. outro      26.07s-31.93s  Har kuni 10 daqiqa - TOPIK ga tayyor bo'ling. ($ Bilim)  (enters by fade)
+     heading  108px, 3 lines
+     command  54px, 1 line
+No problems found.

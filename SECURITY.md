@@ -12,7 +12,8 @@ A scenefile is often written by a language model, which may be following instruc
 from text it was asked to read. So the scenefile, and every call to the MCP server, is
 treated as hostile:
 
-- Text from a scenefile never becomes markup, CSS or a shell argument.
+- Text from a scenefile never becomes markup or a shell argument, and only a validated
+  six-digit colour reaches CSS.
 - The page that draws the video runs with all network requests blocked.
 - Images are read only from the scenefile's own folder, or over https from public
   addresses with redirects, size and private-network ranges checked. Music is local only.

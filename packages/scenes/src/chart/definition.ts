@@ -58,13 +58,19 @@ export const chartDefinition: SceneDefinition<ChartProps> = {
     },
     example: {
       "type": "chart",
-      "heading": "Build time",
+      "heading": "Seconds to render a 52 second video",
       "unit": "s",
       "bars": [
-        { "label": "Before", "value": 48 },
-        { "label": "After", "value": 3 }
+        {
+          "label": "1 worker",
+          "value": 62
+        },
+        {
+          "label": "4 workers",
+          "value": 30
+        }
       ],
-      "highlight": "After"
+      "highlight": "4 workers"
     },
   },
   css: `

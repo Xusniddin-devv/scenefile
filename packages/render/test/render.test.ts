@@ -126,16 +126,22 @@ describe("openComposition", () => {
     }
   });
 
+  const SAMPLE = "қишлоқ ҳаёти ғоя Oʻzbekiston Привет ўзбек";
+
   it("draws text in the bundled fonts, including Cyrillic", async () => {
     const result = check({
       version: 1,
-      scenes: [{ type: "title", heading: "Привет", sub: "one two three four five six" }],
+      // Both fonts are cut down to the characters a video uses, so the sample has to be in the video.
+      scenes: [
+        { type: "title", heading: "Привет", sub: SAMPLE },
+        { type: "terminal", steps: [{ run: SAMPLE }] },
+      ],
     });
     if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
     const session = await openComposition(result.composition);
     try {
       await captureFrame(session.page, 40);
-      const fonts = await session.page.evaluate(() => {
+      const fonts = await session.page.evaluate((sample) => {
         const heading = document.querySelector(".sf-title__heading");
         return {
           loaded: Array.from(document.fonts, (face) => `${face.family}:${face.status}`),
@@ -147,7 +153,7 @@ describe("openComposition", () => {
             const width = (fallback: string): number => {
               const span = document.createElement("span");
               span.style.cssText = `position:absolute;white-space:pre;font:400 80px "${family}",${fallback}`;
-              span.textContent = "қишлоқ ҳаёти ғоя Oʻzbekiston Привет ўзбек";
+              span.textContent = sample;
               document.body.append(span);
               const measured = span.getBoundingClientRect().width;
               span.remove();
@@ -156,7 +162,7 @@ describe("openComposition", () => {
             return Math.abs(width("serif") - width("monospace"));
           }),
         };
-      });
+      }, SAMPLE);
       expect(fonts.drifts).toEqual([0, 0]);
       expect(fonts.family).toContain("Onest");
       expect(fonts.cyrillicOk).toBe(true);
@@ -383,5 +389,16 @@ describe("renderVideo", () => {
     await expect(attempt).rejects.toMatchObject({ remedy: expect.stringContaining("ffmpeg") });
     expect(readFileSync(output, "utf8")).toBe("KEEP");
     expect(partialFiles(dir)).toEqual([]);
+  });
+});
+
+describe("when the browser will not start", () => {
+  it("tells a missing browser from missing system libraries, and leaves other failures alone", async () => {
+    const { browserProblem } = await import("../src/index");
+    expect(browserProblem("browserType.launch: Executable doesn't exist at /x/chrome")?.remedy).toContain("install chromium");
+    const libraries = browserProblem("chrome-headless-shell: error while loading shared libraries: libnspr4.so: cannot open shared object file");
+    expect(libraries?.message).toMatch(/system libraries/);
+    expect(libraries?.remedy).toContain("install-deps chromium");
+    expect(browserProblem("Target closed")).toBeNull();
   });
 });

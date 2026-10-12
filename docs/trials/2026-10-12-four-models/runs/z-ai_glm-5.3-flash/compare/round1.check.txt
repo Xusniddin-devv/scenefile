@@ -1,0 +1,25 @@
+1920x1080, 30 fps, 52.57s, 7 scenes
+1. title      0.00s-5.67s  Users, in one request
+     heading  238px, 3 lines
+     sub      50px, 3 lines
+2. statement  5.17s-9.67s  Creating a user used to take three separate requests.  (enters by push over 0.50s)
+     text  162px, 3 lines
+3. terminal   9.17s-24.03s  $ curl -X POST /v1/accounts -d 'email=ada@example.com' (+2 more)  (enters by wipe over 0.50s)
+     steps  43px
+4. compare    23.53s-33.30s  Create the account, set the profile, send the invite: three round trips. / POST /v2/users does all three in a single request.  (enters by push over 0.50s)
+     before.text   97px
+     after.text    97px
+     before.label  label 830x76 at 97,205
+     after.label   label 830x76 at 992,205
+5. code       32.80s-40.23s  bash, 7 lines: curl -X POST https://api.example.com/v2/users \  (enters by wipe over 0.50s)
+     source   54px
+     caption  50px, 1 line
+6. stat       39.73s-46.87s  1 request to create a user, down from three  (enters by zoom over 0.50s)
+     value  432px, 1 line
+     label  84px, 2 lines
+     note   45px, 3 lines
+7. outro      46.87s-52.57s  Create users in one request. ($ curl -X POST /v2/users)  (enters by fade)
+     heading  194px, 3 lines
+     command  54px, 2 lines
+     url      48px, 1 line
+No problems found.

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import type { Composition } from "@scenefile/engine";
 import { type Browser, type Page, chromium } from "playwright-core";
-import { CHROMIUM_REMEDY, EnvironmentError } from "./errors";
+import { browserProblem } from "./errors";
 
 export interface Session {
   page: Page;
@@ -17,10 +17,7 @@ async function launch(): Promise<Browser> {
     });
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : String(cause);
-    if (/executable doesn't exist/i.test(reason)) {
-      throw new EnvironmentError("Chromium is not installed for scenefile.", CHROMIUM_REMEDY);
-    }
-    throw cause;
+    throw browserProblem(reason) ?? cause;
   }
 }
 

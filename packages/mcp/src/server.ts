@@ -92,7 +92,7 @@ const SOURCE = {
  */
 export function createServer(options: ServerOptions): McpServer {
   const root = resolveRoot(options.root);
-  const server = new McpServer({ name: "scenefile", version: "0.0.0" });
+  const server = new McpServer({ name: "scenefile", version: "0.1.0" });
   const jobs = new Map<string, Job>();
   let nextJob = 1;
   /** Renders run one after another; each waits on this. */
@@ -347,7 +347,7 @@ export function createServer(options: ServerOptions): McpServer {
       return say(
         `${job.id}: finished. ${job.output}` +
           (made
-            ? `: ${made.width}x${made.height}, ${made.fps} fps, ${made.durationSeconds.toFixed(2)}s${made.audio ? ", with music" : ""}, rendered in ${(made.elapsedMs / 1000).toFixed(1)}s.`
+            ? `: ${made.width}x${made.height}, ${made.fps} fps, ${made.durationSeconds.toFixed(2)}s${made.audio ? ", with sound" : ""}, rendered in ${(made.elapsedMs / 1000).toFixed(1)}s.`
             : "."),
       );
     },

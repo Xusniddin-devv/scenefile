@@ -46,8 +46,8 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
       "type": "terminal",
       "steps": [
         {
-          "run": "shipit deploy",
-          "output": "Deployed in 58 seconds."
+          "run": "scenefile check video.json",
+          "output": "No problems found."
         }
       ]
     },
