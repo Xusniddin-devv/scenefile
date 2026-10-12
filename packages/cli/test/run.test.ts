@@ -384,3 +384,72 @@ describe("capture", () => {
     expect(err()).toContain("Only http and https");
   });
 });
+
+describe("github", () => {
+  const facts = {
+    owner: "acme",
+    name: "pgsnap",
+    description: "Snapshots for Postgres.",
+    stars: 12,
+    licence: "MIT",
+    homepage: "https://pgsnap.example.com/",
+    url: "https://github.com/acme/pgsnap",
+    latestRelease: "v1.0.0",
+    languages: { TypeScript: 90, Shell: 10 },
+    readme: "```bash\nnpm install -g pgsnap\npgsnap save\n```",
+    asOf: "2026-10-13",
+  };
+
+  it("writes a scenefile from the repository, pictures its home page, and renders when asked", async () => {
+    const out = join(dir, "gh");
+    const shots: string[] = [];
+    const rendered: string[] = [];
+    const { io, out: said } = capture(async (_composition, options) => {
+      rendered.push(options.output);
+      return { ...report, output: options.output };
+    });
+    const code = await run(["github", "https://github.com/acme/pgsnap", "-o", join(out, "pgsnap.mp4"), "--theme", "ink"], {
+      ...io,
+      repoFacts: async (ref) => {
+        expect(ref).toEqual({ owner: "acme", repo: "pgsnap" });
+        return facts;
+      },
+      capture: async (options) => {
+        shots.push(`${options.url} -> ${options.output}`);
+        writeFileSync(options.output, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64"));
+        return { output: options.output, width: 2560, height: 1600, device: "desktop" as const };
+      },
+    });
+    expect(said()).toContain(join(out, "pgsnap.json"));
+    const written = JSON.parse(readFileSync(join(out, "pgsnap.json"), "utf8"));
+    expect(written.theme).toBe("ink");
+    expect(written.scenes.map((scene: { type: string }) => scene.type)).toContain("screenshot");
+    expect(shots).toEqual([`https://pgsnap.example.com/ -> ${join(out, "pgsnap-home.png")}`]);
+    expect([code, rendered]).toEqual([0, [join(out, "pgsnap.mp4")]]);
+  });
+
+  it("goes on without a picture when the home page cannot be captured, and never overwrites a scenefile", async () => {
+    const out = join(dir, "gh2");
+    const { io, out: said, err } = capture();
+    const options = {
+      ...io,
+      repoFacts: async () => facts,
+      capture: async () => {
+        throw new EnvironmentError("The page did not load.", "Check the address.");
+      },
+    };
+    expect(await run(["github", "acme/pgsnap", "--dir", out], options)).toBe(0);
+    const written = JSON.parse(readFileSync(join(out, "pgsnap.json"), "utf8"));
+    expect(written.scenes.map((scene: { type: string }) => scene.type)).not.toContain("screenshot");
+    expect(err()).toContain("home page");
+    expect(said()).toContain("scenefile render");
+    expect(await run(["github", "acme/pgsnap", "--dir", out], options)).toBe(1);
+    expect(err()).toContain("already exists");
+  });
+
+  it("explains an address that is not a repository", async () => {
+    const { io, err } = capture();
+    expect(await run(["github", "https://gitlab.com/a/b"], io)).toBe(2);
+    expect(err()).toContain("github.com/owner/name");
+  });
+});

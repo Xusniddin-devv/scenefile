@@ -187,6 +187,26 @@ same way; the phone frame fits any tall screenshot. Capturing is the one command
 loads an address you give it, so it is separate from `render`, which never uses the
 network.
 
+## A video from a GitHub repository
+
+```bash
+scenefile github vitejs/vite -o vite.mp4
+```
+
+This reads the repository's public facts from GitHub and builds a scenefile from them,
+then renders it: the name and description, the install command and the commands after
+it in the README, the languages as a chart, the star count with the day it was read,
+the licence and latest release, and a picture of the project's home page. `--narrate`
+adds an English voice and captions, `--theme` picks the look, `--no-screenshot` skips
+the picture, and without `-o` it only writes the scenefile for you to edit.
+
+No model writes any of it, so it cannot invent anything: what the repository does not
+say is left out. That also means the result is accurate rather than persuasive; for a
+video that explains why a project matters, give the written scenefile to a model, or
+edit it yourself. Finding commands in a README is a matter of rules, so an unusual
+README may yield none. GitHub allows 60 requests an hour without an account; set
+`GITHUB_TOKEN` for more.
+
 ## Themes
 
 ![The same scene in each of the ten themes](docs/media/themes.png)

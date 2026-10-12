@@ -5,6 +5,8 @@
 - `scenefile capture <url>` saves a picture of a web page, at desktop or phone size,
   for use in a `screenshot` scene. The MCP server offers it as a tool when started
   with `--allow-capture`.
+- `scenefile github <owner/name>` builds a scenefile, and a video, from a repository's
+  public facts and the commands in its README. No model is involved.
 - `screenshot` scenes take `"device": "phone"` to draw a tall screenshot inside a phone.
 - Five more themes (`terminal`, `ink`, `mint`, `studio`, `forest`) and two more bundled
   typefaces (Unbounded, Geologica). Headings and other heavy text are set in each

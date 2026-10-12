@@ -1,5 +1,6 @@
+import { type RepoFacts, type RepoRef, buildScenefile, fetchRepoFacts, parseRepo } from "./github";
 import { createRequire } from "node:module";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import {
@@ -36,7 +37,7 @@ import {
   type CaptureReport,
   capturePage,
 } from "@scenefile/render";
-import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
+import { THEMES, type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
 
 export interface Io {
@@ -56,6 +57,8 @@ export interface Io {
   installBrowser?: (withDeps: boolean) => Promise<number>;
   /** Test seam. Defaults to opening the page in the bundled browser. */
   capture?: (options: CaptureOptions) => Promise<CaptureReport>;
+  /** Test seam. Defaults to asking GitHub. */
+  repoFacts?: (ref: RepoRef) => Promise<RepoFacts>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -65,6 +68,8 @@ const USAGE = `Usage:
   scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--workers <n>] [--json]
   scenefile capture <url> -o <shot.png> [--device desktop|phone] [--full] [--dark] [--wait <seconds>]
                                    save a picture of a web page, to use in a screenshot scene
+  scenefile github <owner/name or address> [-o <out.mp4>] [--dir <folder>] [--theme <name>] [--narrate] [--no-screenshot]
+                                   a scenefile, and a video, from a GitHub repository's own facts
   scenefile guide                  how to write a scenefile
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
@@ -217,6 +222,57 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Use it in a scene: { "type": "screenshot", "src": "${basename(shot.output)}"${shot.device === "phone" ? ', "device": "phone"' : ""} }`);
       return 0;
     }
+    if (command === "github") {
+      if (!file) throw new UsageError('"github" needs a repository, such as github.com/owner/name.');
+      let ref: RepoRef;
+      try {
+        ref = parseRepo(file);
+      } catch (cause) {
+        throw new UsageError(cause instanceof Error ? cause.message : String(cause));
+      }
+      if (values.theme !== undefined && !(THEMES as readonly string[]).includes(values.theme)) {
+        throw new UsageError(`Unknown theme "${values.theme}". Use one of: ${THEMES.join(", ")}.`);
+      }
+      const folder = resolvePath(values.dir ?? (values.output ? dirname(values.output) : "."));
+      let facts: RepoFacts;
+      try {
+        facts = await (io.repoFacts ?? ((wanted) => fetchRepoFacts(wanted, process.env.GITHUB_TOKEN ? { token: process.env.GITHUB_TOKEN } : {})))(ref);
+      } catch (cause) {
+        io.err(cause instanceof Error ? cause.message : String(cause));
+        return 2;
+      }
+      const slug = facts.name.replace(/[^A-Za-z0-9._-]/g, "-");
+      const target = join(folder, `${slug}.json`);
+      await mkdir(folder, { recursive: true });
+      const taken = await access(target).then(
+        () => true,
+        () => false,
+      );
+      if (taken) {
+        io.err(`${target} already exists; it was left as it is. Remove it, or choose another folder with --dir.`);
+        return 1;
+      }
+      let screenshot: string | undefined;
+      if (facts.homepage && !values["no-screenshot"]) {
+        const picture = `${slug}-home.png`;
+        try {
+          await (io.capture ?? capturePage)({ url: facts.homepage, output: join(folder, picture) });
+          screenshot = picture;
+        } catch {
+          io.err(`The home page ${facts.homepage} could not be captured, so the video has no picture of it.`);
+        }
+      }
+      const scenefile = buildScenefile(facts, {
+        ...(values.theme ? { theme: values.theme } : {}),
+        ...(values.narrate ? { narrate: true } : {}),
+        ...(screenshot ? { screenshot } : {}),
+      });
+      await writeFile(target, `${JSON.stringify(scenefile, null, 2)}\n`, { flag: "wx" });
+      io.out(`Wrote ${target}, from github.com/${facts.owner}/${facts.name} as it was on ${facts.asOf}.`);
+      if (values.output) return run(["render", target, "-o", values.output, "--quality", values.quality], io);
+      io.out(`Next: scenefile check ${target}\nThen: scenefile render ${target} -o ${slug}.mp4`);
+      return 0;
+    }
     if (command === "setup") {
       const code = await (io.installBrowser ?? installBrowser)(values["with-deps"]);
       if (code !== 0) {
@@ -262,7 +318,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, capture, guide, scenes, schema, init, setup, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, capture, github, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -336,6 +392,10 @@ function parse(argv: readonly string[]) {
       version: { type: "boolean", short: "v", default: false },
       "with-deps": { type: "boolean", default: false },
       device: { type: "string" },
+      dir: { type: "string" },
+      theme: { type: "string" },
+      narrate: { type: "boolean", default: false },
+      "no-screenshot": { type: "boolean", default: false },
       full: { type: "boolean", default: false },
       dark: { type: "boolean", default: false },
       wait: { type: "string" },
