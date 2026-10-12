@@ -1,0 +1,27 @@
+{
+  "name": "@scenefile/mcp",
+  "version": "0.0.0",
+  "description": "Model Context Protocol server for scenefile: check and render videos from any MCP client.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@scenefile/engine": "workspace:*",
+    "@scenefile/render": "workspace:*",
+    "@scenefile/scenes": "workspace:*",
+    "@scenefile/schema": "workspace:*",
+    "zod": "^4.6.6"
+  }
+}

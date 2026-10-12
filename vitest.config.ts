@@ -12,6 +12,7 @@ export default defineConfig({
       { find: "@scenefile/schema", replacement: src("schema") },
       { find: "@scenefile/engine", replacement: src("engine") },
       { find: "@scenefile/render", replacement: src("render") },
+      { find: "@scenefile/mcp", replacement: src("mcp") },
     ],
   },
   test: {
