@@ -11,6 +11,7 @@ import {
 import {
   EnvironmentError,
   inspectComposition,
+  MAX_WORKERS,
   QUALITIES,
   type Quality,
   type RenderOptions,
@@ -32,7 +33,7 @@ type ExitCode = 0 | 1 | 2;
 
 const USAGE = `Usage:
   scenefile check <file> [--json]
-  scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--json]
+  scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--workers <n>] [--json]
 
 Exit codes: 0 success, 1 the scenefile has errors, 2 usage or environment problem.`;
 
@@ -121,6 +122,14 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       throw new UsageError(`Unknown quality "${values.quality}". Use one of: ${QUALITIES.join(", ")}.`);
     }
 
+    let workers: number | undefined;
+    if (values.workers !== undefined) {
+      workers = Number(values.workers);
+      if (!Number.isInteger(workers) || workers < 1 || workers > MAX_WORKERS) {
+        throw new UsageError(`--workers must be a whole number from 1 to ${MAX_WORKERS}; got "${values.workers}".`);
+      }
+    }
+
     const result = await load(file, io);
     if (!result.ok || !result.composition) {
       report(result, values.json, io);
@@ -129,12 +138,14 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     const rendered = await (io.render ?? renderVideo)(result.composition, {
       output: values.output,
       quality: values.quality,
+      ...(workers === undefined ? {} : { workers }),
     });
     report(result, values.json, io, { render: rendered });
     if (!values.json) {
       io.out(
         `Rendered ${rendered.output}: ${rendered.width}x${rendered.height}, ${rendered.fps} fps, ` +
-          `${rendered.durationSeconds.toFixed(2)}s, in ${(rendered.elapsedMs / 1000).toFixed(1)}s.`,
+          `${rendered.durationSeconds.toFixed(2)}s${rendered.audio ? ", with music" : ""}, in ${(rendered.elapsedMs / 1000).toFixed(1)}s ` +
+          `with ${rendered.workers} ${rendered.workers === 1 ? "worker" : "workers"}.`,
       );
     }
     return 0;
@@ -159,6 +170,7 @@ function parse(argv: readonly string[]) {
       json: { type: "boolean", default: false },
       output: { type: "string", short: "o" },
       quality: { type: "string", default: "standard" },
+      workers: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
     },
   });

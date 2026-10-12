@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Composition, check } from "@scenefile/engine";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { EnvironmentError, captureFrame, openComposition, probeVideo, renderVideo } from "../src/index";
+import { execFileSync } from "node:child_process";
+import { EnvironmentError, captureFrame, defaultWorkers, openComposition, probeVideo, renderVideo } from "../src/index";
 
 function fixture(): Composition {
   const result = check({
@@ -236,6 +237,63 @@ describe("renderVideo", () => {
     expect(probed.frames).toBe(composition.manifest.totalFrames);
     expect(probed).toMatchObject({ colorSpace: "bt709", colorPrimaries: "bt709", colorTransfer: "bt709" });
     expect(partialFiles(join(dir, "nested", "deeper"))).toEqual([]);
+  });
+
+  it("makes the same video whatever the number of workers", async () => {
+    // Seven seconds: two segments, so two workers each take one.
+    const result = check({
+      version: 1,
+      transition: "push",
+      format: "square-1080p",
+      scenes: [
+        { type: "title", heading: "Segments one two three", sub: "four five six", duration: 3.5 },
+        { type: "terminal", steps: [{ run: "echo parallel", output: "ok" }], duration: 4 },
+      ],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const total = result.composition.manifest.totalFrames;
+    expect(total).toBeGreaterThan(150);
+    expect(total).toBeLessThanOrEqual(300);
+
+    const frameHashes = (file: string): string =>
+      execFileSync("ffmpeg", ["-loglevel", "error", "-i", file, "-f", "framemd5", "-"], { encoding: "utf8" });
+    const one = join(dir, "one-worker.mp4");
+    const two = join(dir, "two-workers.mp4");
+    const reportOne = await renderVideo(result.composition, { output: one, quality: "draft", workers: 1 });
+    const reportTwo = await renderVideo(result.composition, { output: two, quality: "draft", workers: 2 });
+
+    expect(reportOne).toMatchObject({ workers: 1, frames: total, audio: false });
+    expect(reportTwo).toMatchObject({ workers: 2, frames: total, audio: false });
+    expect(frameHashes(two)).toBe(frameHashes(one));
+    expect(readFileSync(two).equals(readFileSync(one))).toBe(true);
+    expect(partialFiles(dir)).toEqual([]);
+  });
+
+  it("never uses more workers than there are segments to render", async () => {
+    const report = await renderVideo(fixture(), { output: join(dir, "capped.mp4"), quality: "draft", workers: 6 });
+    expect(report.workers).toBe(1);
+    expect(defaultWorkers()).toBeGreaterThanOrEqual(1);
+    expect(defaultWorkers()).toBeLessThanOrEqual(4);
+  });
+
+  it("stops every worker and leaves nothing behind when one encoder dies", async () => {
+    const result = check({
+      version: 1,
+      scenes: [{ type: "title", heading: "one two three", duration: 6 }, { type: "title", heading: "four five six", duration: 6 }],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const output = join(dir, "dies.mp4");
+    writeFileSync(output, "KEEP");
+    // Fails only for the second segment, so one worker succeeds while another fails.
+    const ffmpegPath = fakeFfmpeg(
+      "ffmpeg-second-dies",
+      'case "$*" in *00001.mp4*) head -c 2000 >/dev/null; echo "segment two failed" >&2; exit 4;; *) exec ffmpeg "$@";; esac',
+    );
+    const attempt = renderVideo(result.composition, { output, ffmpegPath, quality: "draft", workers: 2 });
+    await expect(attempt).rejects.toBeInstanceOf(EnvironmentError);
+    await expect(attempt).rejects.toThrow(/segment two failed/);
+    expect(readFileSync(output, "utf8")).toBe("KEEP");
+    expect(partialFiles(dir)).toEqual([]);
   });
 
   it("keeps an existing file at the output path when encoding fails, and reports why", async () => {

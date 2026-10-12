@@ -38,7 +38,7 @@ const valid = JSON.stringify({
 });
 
 const report: RenderReport = {
-  output: "/tmp/out.mp4", width: 1920, height: 1080, fps: 30, frames: 150, durationSeconds: 5, elapsedMs: 1234,
+  output: "/tmp/out.mp4", width: 1920, height: 1080, fps: 30, frames: 150, durationSeconds: 5, elapsedMs: 1234, workers: 2, audio: false,
 };
 
 describe("scenefile check", () => {
@@ -173,6 +173,24 @@ describe("scenefile render", () => {
     expect(await run(["render", same, "-o", same], c.io)).toBe(2);
     expect(c.err()).toContain("same file");
     expect(called).toBe(false);
+  });
+
+  it("passes the number of workers through, and refuses one that makes no sense", async () => {
+    const seen: (number | undefined)[] = [];
+    const render: Io["render"] = async (_composition, options) => {
+      seen.push(options.workers);
+      return report;
+    };
+    const input = file("workers.json", valid);
+    expect(await run(["render", input, "-o", "x.mp4", "--workers", "3"], capture(render).io)).toBe(0);
+    expect(await run(["render", input, "-o", "x.mp4"], capture(render).io)).toBe(0);
+    expect(seen).toEqual([3, undefined]);
+    for (const bad of ["0", "-2", "many", "1.5", "99"]) {
+      const c = capture(render);
+      expect(await run(["render", input, "-o", "x.mp4", "--workers", bad], c.io), bad).toBe(2);
+      expect(c.err()).toContain("--workers");
+    }
+    expect(seen).toHaveLength(2);
   });
 
   it("requires an output path and a known quality", async () => {

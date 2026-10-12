@@ -1,6 +1,20 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { once } from "node:events";
 import { ENCODE_REMEDY, EnvironmentError, FFMPEG_REMEDY } from "./errors";
+
+/** Runs ffmpeg to completion. A missing binary or a non-zero exit is an environment problem, with ffmpeg's own words. */
+export function runFfmpeg(args: string[], ffmpegPath = "ffmpeg"): Promise<void> {
+  return new Promise((resolve, reject) => {
+    execFile(ffmpegPath, ["-y", "-loglevel", "error", ...args], (cause, _stdout, stderr) => {
+      if (!cause) resolve();
+      else if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
+        reject(new EnvironmentError("ffmpeg was not found.", FFMPEG_REMEDY));
+      } else {
+        reject(new EnvironmentError(`ffmpeg failed: ${stderr.trim().slice(-2000) || cause.message}`, ENCODE_REMEDY));
+      }
+    });
+  });
+}
 
 export interface Encoder {
   write(frame: Buffer): Promise<void>;
@@ -20,7 +34,9 @@ export function startEncoder(options: { output: string; fps: number; crf: number
       "-vf",
       "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p," +
         "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv",
-      "-c:v", "libx264", "-crf", String(options.crf),
+      // A fixed thread count: several encoders run at once, and the encoded
+      // bytes must not vary with how many cores the machine has.
+      "-c:v", "libx264", "-threads", "2", "-crf", String(options.crf),
       "-movflags", "+faststart",
       options.output,
     ],

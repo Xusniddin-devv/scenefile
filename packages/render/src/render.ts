@@ -1,8 +1,9 @@
-import { mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { availableParallelism } from "node:os";
 import { basename, dirname, join, resolve as resolvePath } from "node:path";
 import type { Composition } from "@scenefile/engine";
 import { captureFrame } from "./capture";
-import { startEncoder } from "./encode";
+import { runFfmpeg, startEncoder } from "./encode";
 import { EnvironmentError, WRITE_REMEDY } from "./errors";
 import { type ProbeResult, probeVideo } from "./probe";
 import { openComposition } from "./session";
@@ -12,9 +13,27 @@ export type Quality = (typeof QUALITIES)[number];
 
 const CRF: Record<Quality, number> = { draft: 28, standard: 20, high: 16 };
 
+/**
+ * The video is rendered in segments of this length, each encoded on its own
+ * and then joined. The length is fixed rather than derived from the number of
+ * workers, so the finished file is the same however many workers made it.
+ */
+export const SEGMENT_SECONDS = 5;
+export const MAX_WORKERS = 8;
+
+/**
+ * Each worker runs its own browser. Measured: capture speeds up until about
+ * half the cores are busy and gets slower beyond that.
+ */
+export function defaultWorkers(): number {
+  return Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2)));
+}
+
 export interface RenderOptions {
   output: string;
   quality?: Quality;
+  /** Browsers to render with at once. Defaults to half the cores, at most four. */
+  workers?: number;
   ffmpegPath?: string;
   ffprobePath?: string;
   onProgress?: (done: number, total: number) => void;
@@ -28,6 +47,15 @@ export interface RenderReport {
   frames: number;
   durationSeconds: number;
   elapsedMs: number;
+  workers: number;
+  /** Whether the file has a sound track. */
+  audio: boolean;
+}
+
+interface Segment {
+  from: number;
+  to: number;
+  file: string;
 }
 
 function unwritable(output: string, cause: unknown): EnvironmentError {
@@ -35,10 +63,18 @@ function unwritable(output: string, cause: unknown): EnvironmentError {
   return new EnvironmentError(`Cannot write the video to "${output}": ${reason}`, WRITE_REMEDY);
 }
 
+/** Joins encoded segments end to end without re-encoding them. */
+async function joinSegments(segments: readonly Segment[], scratch: string, target: string, ffmpegPath?: string): Promise<void> {
+  const list = join(scratch, "segments.txt");
+  // The concat list quotes each path; a quote inside a path is closed, escaped, and reopened.
+  await writeFile(list, segments.map((segment) => `file '${segment.file.replace(/'/g, "'\\''")}'\n`).join(""));
+  await runFfmpeg(["-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", target], ffmpegPath);
+}
+
 /**
  * Renders every frame of a composition to an MP4 and verifies the result with ffprobe.
  *
- * The video is encoded to a temporary file beside the output and moved into
+ * Everything is built in a scratch folder beside the output and moved into
  * place only once it is complete and verified. Whatever was at the output path
  * before is untouched by a failed or interrupted render, and a file at the
  * output path always means a finished video.
@@ -46,39 +82,79 @@ function unwritable(output: string, cause: unknown): EnvironmentError {
 export async function renderVideo(composition: Composition, options: RenderOptions): Promise<RenderReport> {
   const started = Date.now();
   const output = resolvePath(options.output);
-  const temp = join(dirname(output), `.${basename(output)}.partial-${process.pid}.mp4`);
+  const scratch = join(dirname(output), `.${basename(output)}.partial-${process.pid}`);
   const { fps, totalFrames, width, height } = composition.manifest;
+
+  const perSegment = SEGMENT_SECONDS * fps;
+  const segments: Segment[] = Array.from({ length: Math.ceil(totalFrames / perSegment) }, (_, index) => ({
+    from: index * perSegment,
+    to: Math.min(totalFrames, (index + 1) * perSegment),
+    file: join(scratch, `${String(index).padStart(5, "0")}.mp4`),
+  }));
+  const workers = Math.max(1, Math.min(Math.floor(options.workers ?? defaultWorkers()), MAX_WORKERS, segments.length));
+
   try {
     await mkdir(dirname(output), { recursive: true });
+    await rm(scratch, { recursive: true, force: true });
+    await mkdir(scratch);
   } catch (cause) {
     throw unwritable(output, cause);
   }
 
   let probed: ProbeResult;
   try {
-    const session = await openComposition(composition);
-    try {
-      const encoder = startEncoder({
-        output: temp,
-        fps,
-        crf: CRF[options.quality ?? "standard"],
-        ...(options.ffmpegPath ? { ffmpegPath: options.ffmpegPath } : {}),
-      });
+    const queue = [...segments];
+    let done = 0;
+    let stopped = false;
+
+    /** One worker: its own browser, taking segments until none are left or another worker has failed. */
+    const work = async (): Promise<void> => {
+      const session = await openComposition(composition);
       try {
-        for (let frame = 0; frame < totalFrames; frame++) {
-          await encoder.write(await captureFrame(session.page, frame));
-          options.onProgress?.(frame + 1, totalFrames);
+        for (let segment = queue.shift(); segment && !stopped; segment = queue.shift()) {
+          const encoder = startEncoder({
+            output: segment.file,
+            fps,
+            crf: CRF[options.quality ?? "standard"],
+            ...(options.ffmpegPath ? { ffmpegPath: options.ffmpegPath } : {}),
+          });
+          try {
+            for (let frame = segment.from; frame < segment.to && !stopped; frame++) {
+              await encoder.write(await captureFrame(session.page, frame));
+              done += 1;
+              options.onProgress?.(done, totalFrames);
+            }
+            await encoder.finish();
+          } catch (cause) {
+            await encoder.finish().catch(() => undefined);
+            throw cause;
+          }
         }
-        await encoder.finish();
-      } catch (cause) {
-        await encoder.finish().catch(() => undefined);
-        throw cause;
+      } finally {
+        await session.close();
       }
-    } finally {
-      await session.close();
+    };
+
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: workers }, () =>
+        work().catch((cause: unknown) => {
+          stopped = true;
+          throw cause;
+        }),
+      ),
+    );
+    const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason as unknown] : []));
+    if (failures.length > 0) {
+      // A problem with the machine is the more useful thing to report than whatever it caused elsewhere.
+      throw failures.find((failure) => failure instanceof EnvironmentError) ?? failures[0];
     }
 
-    probed = await probeVideo(temp, options.ffprobePath);
+    const picture = join(scratch, "picture.mp4");
+    const [only] = segments;
+    if (segments.length === 1 && only) await rename(only.file, picture);
+    else await joinSegments(segments, scratch, picture, options.ffmpegPath);
+
+    probed = await probeVideo(picture, options.ffprobePath);
     if (probed.width !== width || probed.height !== height || probed.frames !== totalFrames) {
       throw new Error(
         `Rendered file does not match the composition: expected ${width}x${height} with ${totalFrames} frames, ` +
@@ -86,13 +162,12 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       );
     }
     try {
-      await rename(temp, output);
+      await rename(picture, output);
     } catch (cause) {
       throw unwritable(output, cause);
     }
-  } catch (cause) {
-    await rm(temp, { force: true });
-    throw cause;
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
   }
 
   return {
@@ -103,5 +178,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     frames: probed.frames,
     durationSeconds: probed.durationSeconds,
     elapsedMs: Date.now() - started,
+    workers,
+    audio: false,
   };
 }
