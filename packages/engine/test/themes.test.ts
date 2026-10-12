@@ -28,7 +28,7 @@ describe("themes", () => {
     expect(css).toContain("--sf-accent:#C8FF00");
     expect(css).toContain("--sf-heading-weight:900");
     expect(css).toContain('--sf-font-sans:"Onest"');
-    expect(css).toContain('--sf-font-mono:"JetBrains Mono"');
+    expect(css).toContain('--sf-font-mono:"Cascadia Code"');
   });
 
   it("keeps every theme's own colors readable", () => {

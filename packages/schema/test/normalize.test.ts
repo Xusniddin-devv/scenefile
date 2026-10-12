@@ -144,6 +144,24 @@ describe("normalize", () => {
     }
   });
 
+  it("strips terminal color codes and other control characters, and says so", () => {
+    const { scenefile, diagnostics } = normalize({
+      version: 1,
+      scenes: [
+        { type: "terminal", steps: [{ run: "npm test", output: "\u001b[32mok\u001b[0m done\n\ttwo\u0007" }] },
+        { type: "title", heading: "Plain\u0000 text" },
+      ],
+    });
+    const scene = scenefile?.scenes[0];
+    expect(scene?.type === "terminal" && scene.steps[0]?.output).toBe("ok done\n\ttwo");
+    expect(scenefile?.scenes[1]).toMatchObject({ heading: "Plain text" });
+    expect(diagnostics.map((d) => [d.code, d.severity, d.path])).toEqual([
+      ["AUTOFIXED", "warning", "scenes[0].steps[0].output"],
+      ["AUTOFIXED", "warning", "scenes[1].heading"],
+    ]);
+    expect(diagnostics[0]?.message).toMatch(/color codes/);
+  });
+
   it("keeps reporting other scenes when one is broken", () => {
     const { diagnostics } = normalize({
       version: 1,

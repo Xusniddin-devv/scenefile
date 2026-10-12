@@ -29,6 +29,38 @@ function formatPath(path: readonly PropertyKey[]): string {
   return out;
 }
 
+/** Escape sequences terminals use for color and cursor movement. */
+const ANSI_SEQUENCE = /\u001B\[[0-?]*[ -/]*[@-~]/g;
+/** Characters with no visible form. Tab, newline and carriage return are kept. */
+const CONTROL_CHARACTER = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+
+/**
+ * Removes color codes and control characters from every string, in place.
+ * Models paste colored command output as it came; drawn literally it shows as
+ * stray brackets and digits.
+ */
+function cleanStrings(holder: Record<string, unknown> | unknown[], path: string, diagnostics: Diagnostic[]): void {
+  const entries: [string | number, unknown][] = Array.isArray(holder)
+    ? holder.map((value, index): [number, unknown] => [index, value])
+    : Object.entries(holder);
+  for (const [key, value] of entries) {
+    const at = typeof key === "number" ? `${path}[${key}]` : path ? `${path}.${key}` : key;
+    if (typeof value === "string") {
+      const withoutColor = value.replace(ANSI_SEQUENCE, "");
+      const cleaned = withoutColor.replace(CONTROL_CHARACTER, "");
+      if (cleaned === value) continue;
+      (holder as Record<string | number, unknown>)[key] = cleaned;
+      diagnostics.push(
+        withoutColor !== value
+          ? warning("AUTOFIXED", at, "Removed terminal color codes from this text.", "Paste plain text, without color codes.")
+          : warning("AUTOFIXED", at, "Removed control characters that cannot be shown.", "Remove them from the text."),
+      );
+    } else if (Array.isArray(value) || isObject(value)) {
+      cleanStrings(value, at, diagnostics);
+    }
+  }
+}
+
 function quoteList(values: unknown): string {
   return Array.isArray(values) ? values.map((value) => JSON.stringify(value)).join(", ") : "";
 }
@@ -165,6 +197,7 @@ export function normalize(input: unknown): { scenefile: Scenefile | null; diagno
 
   const diagnostics: Diagnostic[] = [];
   const draft = structuredClone(input);
+  cleanStrings(draft, "", diagnostics);
   fixKeys(draft, TOP_LEVEL_FIELDS, "", diagnostics);
 
   // Scenes whose type is unusable are already reported; hide the schema's echo of them.

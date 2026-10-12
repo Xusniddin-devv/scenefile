@@ -139,8 +139,23 @@ describe("openComposition", () => {
           loaded: Array.from(document.fonts, (face) => `${face.family}:${face.status}`),
           family: heading ? getComputedStyle(heading).fontFamily : "",
           cyrillicOk: document.fonts.check('900 40px "Onest"', "Привет"),
+          // Text drawn from the bundled font is equally wide whatever the fallback is.
+          // If a glyph is missing, the fallback draws it and the two widths differ.
+          drifts: ["Onest", "Cascadia Code"].map((family) => {
+            const width = (fallback: string): number => {
+              const span = document.createElement("span");
+              span.style.cssText = `position:absolute;white-space:pre;font:400 80px "${family}",${fallback}`;
+              span.textContent = "қишлоқ ҳаёти ғоя Oʻzbekiston Привет ўзбек";
+              document.body.append(span);
+              const measured = span.getBoundingClientRect().width;
+              span.remove();
+              return measured;
+            };
+            return Math.abs(width("serif") - width("monospace"));
+          }),
         };
       });
+      expect(fonts.drifts).toEqual([0, 0]);
       expect(fonts.family).toContain("Onest");
       expect(fonts.cyrillicOk).toBe(true);
       expect(fonts.loaded.length).toBeGreaterThanOrEqual(3);

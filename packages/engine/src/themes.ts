@@ -1,11 +1,11 @@
 import type { ThemeName } from "@scenefile/schema";
 
-export type FontKey = "onest" | "jetbrainsMono";
+export type FontKey = "onest" | "cascadiaCode";
 
 /** CSS family name for each bundled font. */
 export const FONT_FAMILIES: Record<FontKey, string> = {
   onest: "Onest",
-  jetbrainsMono: "JetBrains Mono",
+  cascadiaCode: "Cascadia Code",
 };
 
 export interface Theme {
@@ -31,7 +31,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     muted: "#9A9A9A",
     accent: "#C8FF00",
     fontSans: "onest",
-    fontMono: "jetbrainsMono",
+    fontMono: "cascadiaCode",
     headingWeight: 900,
     headingTracking: "-0.055em",
   },
@@ -43,7 +43,7 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     muted: "#8C8C8C",
     accent: "#FF5A1F",
     fontSans: "onest",
-    fontMono: "jetbrainsMono",
+    fontMono: "cascadiaCode",
     headingWeight: 800,
     headingTracking: "-0.04em",
   },

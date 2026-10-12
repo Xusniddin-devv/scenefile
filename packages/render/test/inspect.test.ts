@@ -83,6 +83,21 @@ describe("text fitting", () => {
     }
   });
 
+  it("lets one long command wrap rather than shrinking the whole session to fit it on a line", async () => {
+    const long = `docker run --rm -it -v "$PWD":/work -w /work -e NODE_ENV=production ghcr.io/example/scenefile:latest render a.json`;
+    const { slot, diagnostics } = await inspect({ scenes: [{ type: "terminal", steps: [{ run: "npx x init" }, { run: long }] }] });
+    expect(long.length).toBeGreaterThan(100);
+    expect(slot("scenes[0].steps").overflow).toBe(false);
+    expect(slot("scenes[0].steps").sizePx).toBeGreaterThanOrEqual(5 * UNIT);
+    expect(diagnostics).toEqual([]);
+  });
+
+  it("never sets terminal text below the minimum readable size", async () => {
+    const step = { run: "x".repeat(120), output: "y ".repeat(200).trim() };
+    const { slot } = await inspect({ scenes: [{ type: "terminal", steps: Array.from({ length: 6 }, () => step) }] });
+    expect(slot("scenes[0].steps").sizePx).toBeGreaterThanOrEqual(3.4 * UNIT - 0.01);
+  });
+
   it("keeps the heading wide in portrait and square formats", async () => {
     for (const [format, width] of [["portrait-1080p", 1080], ["square-1080p", 1080]] as const) {
       const { report, diagnostics } = await inspect({

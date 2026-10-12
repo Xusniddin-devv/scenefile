@@ -4,8 +4,9 @@ Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
 **Status: early development.** Two scene types (`title`, `terminal`) and two themes
-(`signal`, the default, and `midnight`) work today. Fonts are bundled, so text looks
-the same on every machine. Not yet published to npm.
+(`signal`, the default, and `midnight`) work today. Fonts are bundled, so Latin and
+Cyrillic text is drawn the same on every machine; emoji use the machine's own emoji
+font. Not yet published to npm.
 
 ## Requirements
 
@@ -40,8 +41,8 @@ with the path of the field and how to fix it:
 
 ```
 error  TEXT_OVERFLOW  scenes[0].heading
-  This text needs 5 lines at its smallest size; only 3 fit.
-  fix: Shorten it to about 54 characters (it has 96).
+  This text needs 4 lines at its smallest size; only 3 fit.
+  fix: Shorten it to about 51 characters (it has 77).
 ```
 
 ```

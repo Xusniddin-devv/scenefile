@@ -49,15 +49,26 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       if (result.fits || next < min) break;
       size = next;
     }
-    // At the smallest size the restrictions are lifted. A heading that only
-    // fits by breaking a word is still reported as not fitting; a fixed-height
-    // area is judged by whether its content fits once it may wrap.
     let fits = result.fits;
     el.classList.remove("sf-fitting");
-    if (!boxed) el.style.overflowWrap = fits ? "" : "anywhere";
-    if (!fits) {
-      result = measure(el, maxLines, boxed);
-      if (boxed) fits = result.fits;
+    if (!boxed) {
+      // A heading that only fits by breaking a word is drawn broken, as damage
+      // control, but is still reported as not fitting.
+      el.style.overflowWrap = fits ? "" : "anywhere";
+      if (!fits) result = measure(el, maxLines, boxed);
+    } else if (!fits) {
+      // No size keeps every line unwrapped (one very long command, say). Start
+      // again with wrapping allowed and take the largest size whose content
+      // fits the area, rather than shrinking everything to the minimum.
+      size = max;
+      for (;;) {
+        el.style.fontSize = `${size * unitPx}px`;
+        result = measure(el, maxLines, boxed);
+        const next = Math.round((size - step) * 100) / 100;
+        if (result.fits || next < min) break;
+        size = next;
+      }
+      fits = result.fits;
     }
 
     const rect = el.getBoundingClientRect();

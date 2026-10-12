@@ -38,11 +38,11 @@ importers:
 
   packages/engine:
     dependencies:
-      '@fontsource-variable/jetbrains-mono':
-        specifier: ^5.3.0
+      '@fontsource-variable/cascadia-code':
+        specifier: 5.3.0
         version: 5.3.0
       '@fontsource-variable/onest':
-        specifier: ^5.3.1
+        specifier: 5.3.1
         version: 5.3.1
       '@scenefile/scenes':
         specifier: workspace:*
@@ -242,8 +242,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@fontsource-variable/jetbrains-mono@5.3.0':
-    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
+  '@fontsource-variable/cascadia-code@5.3.0':
+    resolution: {integrity: sha512-6I6M029Lum62MGmP0o+rXRrIBiIiptNDC4slPKLPUJiSB7NHZTLb+Ihk9G7jLvUfWziGXHJLjJPJLBzlEPjS1g==}
 
   '@fontsource-variable/onest@5.3.1':
     resolution: {integrity: sha512-xaaw6G4HDB2/RczsWLD/2bnib4ykmQlTlBUN3GOEOiyErilZukQWVJG95h9zwAy0i8KY+QzDa+COPfqhI72Acw==}
@@ -1176,7 +1176,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+  '@fontsource-variable/cascadia-code@5.3.0': {}
 
   '@fontsource-variable/onest@5.3.1': {}
 

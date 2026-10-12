@@ -16,8 +16,8 @@
     "build": "tsup && tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource-variable/cascadia-code": "5.3.0",
+    "@fontsource-variable/onest": "5.3.1",
     "@scenefile/scenes": "workspace:*",
     "@scenefile/schema": "workspace:*"
   }
