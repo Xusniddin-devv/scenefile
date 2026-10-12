@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (13 October 2026)
 
 - `scenefile capture <url>` saves a picture of a web page, at desktop or phone size,
   for use in a `screenshot` scene. The MCP server offers it as a tool when started
