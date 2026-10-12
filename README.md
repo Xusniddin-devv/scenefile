@@ -105,8 +105,11 @@ What the server can touch:
 - It does not replace an existing file unless the caller passes `overwrite: true`.
 - It does not download images unless started with `--allow-remote-images`.
 - It offers no `capture` tool unless started with `--allow-capture`. With it, the model
-  can open any address this machine can reach, including local and private ones, and
-  save a picture of it inside the root. Turn it on only for a model you trust with that.
+  can open any http address this machine can reach, including `localhost` and private
+  network addresses (link-local ones are refused), the page's code runs, and the
+  picture is saved inside the root where the model can use it. The address itself can
+  also carry out anything the model knows. Turn it on only for a model you trust with
+  that.
 - It renders one video at a time, keeps at most five waiting, and stops at once when
   its client disconnects.
 
@@ -179,13 +182,17 @@ scenefile capture http://localhost:3000 -o home-phone.png --device phone
 
 `--device phone` captures at a phone's size, and `"device": "phone"` draws the picture
 inside a phone. `--full` takes the whole page, `--dark` asks for the page's dark look,
-`--wait 2` gives a slow page two more seconds.
+`--wait 2` waits two seconds after the page has loaded before taking the picture.
+
+A page that answers with an error (a 404, a sign-in wall) is reported, not saved. A
+picture too heavy for a scene to load is retaken at normal resolution. A capture that
+has not finished in a minute is stopped.
 
 What it is not: it captures web pages, so a native iOS or Android app cannot be opened
 this way. Take those pictures with the simulator or the phone itself and use them the
-same way; the phone frame fits any tall screenshot. Capturing is the one command that
-loads an address you give it, so it is separate from `render`, which never uses the
-network.
+same way; a picture taller than a phone's screen shows its top part. Capturing runs
+the page's own code and loads whatever the page asks for, which rendering never does,
+so it is a separate, deliberate step.
 
 ## A video from a GitHub repository
 
@@ -224,8 +231,10 @@ README may yield none. GitHub allows 60 requests an hour without an account; set
 | `mint` | green | blue | Unbounded (wide) |
 | `forest` | dark green | lime | Geologica |
 
-Set `"theme"`, and optionally your own `"accent"`. All four typefaces are bundled, are
-OFL-1.1, and cover Latin and Cyrillic.
+Set `"theme"`, and optionally your own `"accent"`. All four typefaces are bundled and
+OFL-1.1. All cover Latin and Russian Cyrillic; Unbounded lacks some Uzbek, Kazakh and
+Tajik letters, so for such text `ink` and `mint` set their headings in Onest and
+`check` says so.
 
 ## Transitions
 

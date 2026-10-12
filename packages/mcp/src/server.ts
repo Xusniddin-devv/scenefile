@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, lstat, readFile } from "node:fs/promises";
 import { dirname, extname, relative } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
@@ -336,26 +336,31 @@ export function createServer(options: ServerOptions): McpServer {
         if (extname(args.output).toLowerCase() !== ".png") return refuse(`The output must be a .png file; got "${args.output}".`);
         const target = await writableInside(root, args.output);
         if (!target.ok) return refuse(target.message);
-        const exists = await access(target.path).then(
-          () => true,
-          () => false,
-        );
-        if (exists && args.overwrite !== true) {
-          return refuse(`"${args.output}" already exists and was left alone. Choose another name, or pass \`overwrite: true\` to replace it.`);
-        }
         try {
-          // One browser at a time, in turn with layout checks.
-          const shot = await oneAtATime(() =>
-            (options.capture ?? capturePage)({
+          // One browser at a time, in turn with layout checks. Whether the file exists is asked
+          // inside the turn, so two calls naming one new file cannot both pass.
+          const shot = await oneAtATime(async () => {
+            const exists = await lstat(target.path).then(
+              () => true,
+              () => false,
+            );
+            if (exists && args.overwrite !== true) return null;
+            return (options.capture ?? capturePage)({
               url: args.url,
               output: target.path,
+              refuseLinkLocal: true,
               ...(args.device ? { device: args.device } : {}),
               ...(args.full_page ? { fullPage: true } : {}),
               ...(args.dark ? { dark: true } : {}),
-            }),
-          );
+            });
+          });
+          if (shot === null) {
+            return refuse(`"${args.output}" already exists and was left alone. Choose another name, or pass \`overwrite: true\` to replace it.`);
+          }
+          const tall = shot.width / shot.height > 0.4 && shot.width / shot.height < 0.6;
           return say(
-            `Saved ${args.output}: ${shot.width}x${shot.height} (${shot.device}). Use it as { "type": "screenshot", "src": "${args.output}"${shot.device === "phone" ? ', "device": "phone"' : ""} }.`,
+            `Saved ${args.output}: ${shot.width}x${shot.height} (${shot.device}), page title "${shot.title}", from ${shot.url}. ` +
+              `Use it as { "type": "screenshot", "src": "${args.output}"${shot.device === "phone" && tall ? ', "device": "phone"' : ""} }.`,
           );
         } catch (cause) {
           return refuse(withoutRoot(cause instanceof Error ? cause.message : String(cause)));

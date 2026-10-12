@@ -13,6 +13,8 @@ const CAPTION = 9;
 /** A phone: the thickness of its body around the screen, and the share of a wide frame it may take. */
 const BEZEL = 1.6;
 const PHONE_SHARE = 0.42;
+/** The tallest a phone's screen is, as width over height. A taller picture shows its top part. */
+const PHONE_TALLEST = 9 / 19.5;
 /** Callout labels, in units: text size, padding inside the box, and distance from the dot. */
 const LABEL_SIZE = 3.4;
 const LABEL_PADDING = 3;
@@ -27,9 +29,9 @@ const CHARACTER_WIDTH = 0.6;
  * A label may extend past a narrow image, but not past the frame: the side
  * with room is chosen, and the width is capped to the room there is.
  */
-function labelStyle(x: number, label: string, imageWidth: number, ctx: CompileContext): string {
+function labelStyle(x: number, label: string, imageWidth: number, ctx: CompileContext, inset = 0): string {
   const { width, unit } = ctx.frame;
-  const dot = SIDE * unit + x * imageWidth;
+  const dot = SIDE * unit + inset + x * imageWidth;
   const needed = (Array.from(label).length * CHARACTER_WIDTH * LABEL_SIZE + LABEL_PADDING) * unit;
   const roomRight = width - SAFE * unit - dot - LABEL_GAP * unit;
   const roomLeft = dot - LABEL_GAP * unit - SAFE * unit;
@@ -79,11 +81,18 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
           height: height - (TOP + BOTTOM + (props.url ? BAR : 0) + (props.caption ? CAPTION : 0)) * unit,
         };
     // 16:9 stands in for an image that is not available, so the layout still holds.
-    const size = containSize(asset ?? { width: 16, height: 9 }, box);
+    const natural = asset ?? { width: 16, height: 9 };
+    const screen =
+      phone && natural.width / natural.height < PHONE_TALLEST
+        ? { width: natural.width, height: Math.round(natural.width / PHONE_TALLEST) }
+        : natural;
+    const size = containSize(screen, box);
+    // Inside a phone the picture starts one bezel, and its border, in from the edge.
+    const inset = phone ? BEZEL * unit + 1 : 0;
     const pins = (props.callouts ?? [])
       .map(
         (callout, i) =>
-          `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed data-sf-path="${ctx.path}.callouts[${i}].label" style="${labelStyle(callout.x, callout.label, size.width, ctx)}">${escapeHtml(callout.label)}</b></span>`,
+          `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed data-sf-path="${ctx.path}.callouts[${i}].label" style="${labelStyle(callout.x, callout.label, size.width, ctx, inset)}">${escapeHtml(callout.label)}</b></span>`,
       )
       .join("");
     const bar = props.url && !phone ? `<div class="sf-shot__bar" data-sf-fixed data-sf-path="${ctx.path}.url">${escapeHtml(props.url)}</div>` : "";
@@ -98,7 +107,7 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
       "src": "The image: a PNG, JPEG or WebP file in the scenefile's folder. Required.",
       "url": "An address to show above the image, up to 80 characters.",
       "caption": "A line under the image, up to 80 characters.",
-      "device": 'Set to "phone" to draw a tall mobile screenshot inside a phone.',
+      "device": 'Set to "phone" to draw a tall mobile screenshot inside a phone. `url` is then not shown.',
       "callouts": "Up to 3 pointers: { \"x\": 0.5, \"y\": 0.5, \"label\": \"up to 40 characters\" }. x and y are fractions of the image, from its left and top."
     },
     example: {
@@ -120,8 +129,9 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
 .sf-shot__pin b{position:absolute;top:calc(var(--sf-unit)*-2.6);width:max-content;padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text);overflow-wrap:anywhere}
 .sf-shot__caption{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
 .sf-shot--phone{flex-direction:row;align-items:center;justify-content:flex-start;gap:calc(var(--sf-unit)*8)}
-.sf-shot--phone .sf-shot__frame{flex:none;margin:0;padding:calc(var(--sf-unit)*1.6);border-radius:calc(var(--sf-unit)*6.4);background:#0A0A0A}
+.sf-shot--phone .sf-shot__frame{flex:none;padding:calc(var(--sf-unit)*1.6);border-radius:calc(var(--sf-unit)*6.4);background:#0A0A0A}
 .sf-shot--phone .sf-shot__view{border-radius:calc(var(--sf-unit)*4.8)}
+.sf-shot--phone .sf-shot__img{object-fit:cover;object-position:top}
 .sf-shot--phone .sf-shot__caption{flex:1;min-width:0;font:800 calc(var(--sf-unit)*8)/1.06 var(--sf-font-display);letter-spacing:-0.035em;color:var(--sf-text);text-wrap:balance}
 @media (max-aspect-ratio:1/1){.sf-shot--phone{flex-direction:column;align-items:flex-start;justify-content:space-between;gap:0}.sf-shot--phone .sf-shot__caption{flex:none;font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);letter-spacing:0;color:var(--sf-muted)}}
 `,

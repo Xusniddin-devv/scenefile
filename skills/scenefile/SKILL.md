@@ -130,7 +130,7 @@ An image, such as a screenshot, with an optional address bar, caption and up to 
 - `src`: The image: a PNG, JPEG or WebP file in the scenefile's folder. Required.
 - `url`: An address to show above the image, up to 80 characters.
 - `caption`: A line under the image, up to 80 characters.
-- `device`: Set to "phone" to draw a tall mobile screenshot inside a phone.
+- `device`: Set to "phone" to draw a tall mobile screenshot inside a phone. `url` is then not shown.
 - `callouts`: Up to 3 pointers: { "x": 0.5, "y": 0.5, "label": "up to 40 characters" }. x and y are fractions of the image, from its left and top.
 Example: `{"type":"screenshot","src":"dashboard.png","caption":"Your own screenshot, framed and captioned."}`
 

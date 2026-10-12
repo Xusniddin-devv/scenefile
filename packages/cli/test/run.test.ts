@@ -364,12 +364,12 @@ describe("capture", () => {
     const { io, out } = capture();
     const shoot = async (options: { output: string; device?: string }) => {
       asked.push(options);
-      return { output: options.output, width: 1170, height: 2532, device: "phone" as const };
+      return { output: options.output, width: 1170, height: 2532, device: "phone" as const, title: "Home", url: "http://localhost:3000/", full: true };
     };
     expect(await run(["capture", "http://localhost:3000", "-o", "shots/home.png", "--device", "phone", "--dark"], { ...io, capture: shoot })).toBe(0);
     expect(asked).toEqual([{ url: "http://localhost:3000", output: "shots/home.png", device: "phone", fullPage: false, dark: true }]);
     expect(out()).toContain("1170x2532");
-    expect(out()).toContain('{ "type": "screenshot", "src": "home.png", "device": "phone" }');
+    expect(out()).toContain('{ "type": "screenshot", "src": "shots/home.png", "device": "phone" }');
   });
 
   it("explains what is missing or wrong", async () => {
@@ -417,7 +417,7 @@ describe("github", () => {
       capture: async (options) => {
         shots.push(`${options.url} -> ${options.output}`);
         writeFileSync(options.output, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64"));
-        return { output: options.output, width: 2560, height: 1600, device: "desktop" as const };
+        return { output: options.output, width: 2560, height: 1600, device: "desktop" as const, title: "", url: options.url, full: true };
       },
     });
     expect(said()).toContain(join(out, "pgsnap.json"));

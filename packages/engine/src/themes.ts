@@ -186,8 +186,16 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 /** CSS custom properties for a theme. `--sf-unit` is 1% of the short side of the frame. */
-export function themeCss(name: ThemeName, accent: string | undefined, width: number, height: number): string {
+export function themeCss(
+  name: ThemeName,
+  accent: string | undefined,
+  width: number,
+  height: number,
+  /** The face for headings, when it is not the theme's own. */
+  display?: FontKey,
+): string {
   const theme = getTheme(name);
+  const fontDisplay = display ?? theme.fontDisplay;
   return [
     ":root{",
     `--sf-bg:${theme.background};`,
@@ -198,7 +206,7 @@ export function themeCss(name: ThemeName, accent: string | undefined, width: num
     `--sf-accent:${accent ?? theme.accent};`,
     `--sf-font-sans:"${FONT_FAMILIES[theme.fontSans]}",sans-serif;`,
     `--sf-font-mono:"${FONT_FAMILIES[theme.fontMono]}",monospace;`,
-    `--sf-font-display:${theme.fontDisplay === theme.fontSans ? "" : `"${FONT_FAMILIES[theme.fontDisplay]}",`}"${FONT_FAMILIES[theme.fontSans]}",sans-serif;`,
+    `--sf-font-display:${fontDisplay === theme.fontSans ? "" : `"${FONT_FAMILIES[fontDisplay]}",`}"${FONT_FAMILIES[theme.fontSans]}",sans-serif;`,
     `--sf-heading-weight:${theme.headingWeight};`,
     `--sf-heading-tracking:${theme.headingTracking};`,
     `--sf-unit:${Math.min(width, height) / 100}px`,

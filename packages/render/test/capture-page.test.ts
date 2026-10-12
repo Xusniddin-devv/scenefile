@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { type Server, createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,8 +14,26 @@ beforeAll(async () => {
   server = createServer((request, response) => {
     if (request.url === "/slow") return; // never answers
     response.setHeader("content-type", "text/html");
+    const head = '<meta name="viewport" content="width=device-width, initial-scale=1">';
+    if (request.url === "/missing") {
+      response.statusCode = 404;
+      return response.end(`${head}<h1>Not here</h1>`);
+    }
+    if (request.url === "/busy") {
+      // Loads, then never lets the page answer another question.
+      return response.end(`${head}<body><script>addEventListener("load", () => setTimeout(() => { for (;;) {} }, 50))</script></body>`);
+    }
+    if (request.url === "/hero") {
+      return response.end(`${head}<title>Hero page</title><body style="margin:0"><div style="height:100vh;background:#06c"></div><div style="height:1000px;background:#fc0"></div></body>`);
+    }
+    if (request.url === "/noise") {
+      // A picture that does not compress: every pixel random.
+      return response.end(
+        `${head}<body style="margin:0"><canvas id="c"></canvas><script>const c=document.getElementById("c");c.width=innerWidth*devicePixelRatio;c.height=innerHeight*devicePixelRatio;c.style.width="100vw";c.style.height="100vh";const x=c.getContext("2d");const d=x.createImageData(c.width,c.height);for(let i=0;i<d.data.length;i++)d.data[i]=Math.random()*255;x.putImageData(d,0,0)</script></body>`,
+      );
+    }
     response.end(
-      `<body style="margin:0;background:#fff"><h1 id="w"></h1><div style="height:3000px"></div>
+      `${head}<title>Home</title><body style="margin:0;background:#fff"><h1 id="w"></h1><div style="height:3000px"></div>
        <script>document.getElementById("w").textContent = innerWidth + (matchMedia("(prefers-color-scheme: dark)").matches ? " dark" : " light")</script></body>`,
     );
   });
@@ -41,17 +59,17 @@ describe("capturing a web page", () => {
     expect(size(desktop.output)).toEqual([2560, 1600]);
     expect(desktop).toMatchObject({ width: 2560, height: 1600, device: "desktop" });
     const phone = await capturePage({ url: `${base}/`, output: join(dir, "phone.png"), device: "phone" });
-    // A phone-like page lays out a fraction of a pixel short, so the height may be one less.
-    const [width, height] = size(phone.output);
-    expect(width).toBe(1170);
-    expect(Math.abs(height - 2532)).toBeLessThanOrEqual(1);
-    expect([phone.width, phone.height]).toEqual([width, height]);
+    expect(size(phone.output)).toEqual([1170, 2532]);
+    expect(phone).toMatchObject({ width: 1170, height: 2532, title: "Home", url: `${base}/` });
   });
 
   it("can take the whole page, up to a limit, and ask for the page's dark look", async () => {
-    const whole = await capturePage({ url: `${base}/`, output: join(dir, "full.png"), device: "phone", fullPage: true, dark: true });
-    expect(whole.height).toBeGreaterThan(2532);
-    expect(whole.height).toBeLessThanOrEqual(8000);
+    // A tall first screen stays one screen tall; the rest of the page follows it.
+    const whole = await capturePage({ url: `${base}/hero`, output: join(dir, "full.png"), device: "phone", fullPage: true });
+    expect([whole.width, whole.height]).toEqual([1170, (844 + 1000) * 3]);
+    const long = await capturePage({ url: `${base}/`, output: join(dir, "long.png"), device: "phone", fullPage: true });
+    expect(long.height).toBeLessThanOrEqual(8000);
+    expect(long.height).toBeGreaterThan(7000);
   });
 
   it("refuses anything that is not a web address, and says so when a page does not load", async () => {
@@ -60,10 +78,74 @@ describe("capturing a web page", () => {
     const slow = capturePage({ url: `${base}/slow`, output: join(dir, "slow.png"), timeoutSeconds: 2 });
     await expect(slow).rejects.toBeInstanceOf(EnvironmentError);
     await expect(capturePage({ url: `${base}/`, output: join(dir, "x.jpg") })).rejects.toThrow(/\.png/);
+    await expect(capturePage({ url: "localhost:3000", output: join(dir, "x.png") })).rejects.toThrow("http://localhost:3000");
+  });
+
+  it("says what went wrong in plain words, quickly", async () => {
+    const started = Date.now();
+    // A port that was just in use and is now closed: nothing is listening there.
+    const gone = createServer();
+    await new Promise<void>((resolve) => gone.listen(0, "127.0.0.1", resolve));
+    const closed = (gone.address() as { port: number }).port;
+    await new Promise((resolve) => gone.close(resolve));
+    const refused = await capturePage({ url: `http://127.0.0.1:${closed}/`, output: join(dir, "r.png") }).catch((cause: Error) => cause);
+    expect(String(refused)).toMatch(/[Nn]othing is answering/);
+    expect(String(refused)).not.toMatch(/\u001b|Call log|did not load within/);
+    expect(Date.now() - started).toBeLessThan(15_000);
+    const missing = await capturePage({ url: `${base}/missing`, output: join(dir, "m.png") }).catch((cause: Error) => cause);
+    expect(String(missing)).toContain("404");
+    expect(existsSync(join(dir, "m.png"))).toBe(false);
+    mkdirSync(join(dir, "folder.png"));
+    await expect(capturePage({ url: `${base}/`, output: join(dir, "folder.png") })).rejects.toThrow(/folder/);
+  });
+
+  it("gives up on a page that never settles, and leaves nothing running or half written", async () => {
+    const started = Date.now();
+    const stuck = capturePage({ url: `${base}/busy`, output: join(dir, "busy.png"), fullPage: true, deadlineSeconds: 6 });
+    await expect(stuck).rejects.toBeInstanceOf(EnvironmentError);
+    expect(Date.now() - started).toBeLessThan(20_000);
+    expect(readdirSync(dir).filter((name) => name.startsWith("busy"))).toEqual([]);
+  });
+
+  it("never saves a picture too large to use: it takes a smaller one instead", async () => {
+    const shot = await capturePage({ url: `${base}/noise`, output: join(dir, "noise.png") });
+    expect(statSync(shot.output).size).toBeLessThanOrEqual(8 * 1024 * 1024);
+    expect([shot.width, shot.height]).toEqual([1280, 800]);
+  });
+
+  it("can be told to keep away from addresses that only this machine's network should reach", async () => {
+    const refused = capturePage({ url: "http://169.254.169.254/latest/meta-data/", output: join(dir, "meta.png"), refuseLinkLocal: true });
+    await expect(refused).rejects.toThrow(/link-local/);
   });
 });
 
 describe("a phone around a screenshot", () => {
+  it("crops a whole-page capture to one screen, from the top, instead of drawing a sliver", async () => {
+    const shot = await capturePage({ url: `${base}/`, output: join(dir, "tall.png"), device: "phone", fullPage: true });
+    const png = readFileSync(shot.output);
+    const asset = { id: "t1", src: "tall.png", width: shot.width, height: shot.height, dataUri: `data:image/png;base64,${png.toString("base64")}` };
+    const result = check(
+      { version: 1, scenes: [{ type: "screenshot", src: "tall.png", device: "phone" }, { type: "title", heading: "End" }] },
+      { assets: new Map([["tall.png", asset as never]]), diagnostics: [] },
+    );
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const session = await openComposition(result.composition);
+    try {
+      await captureFrame(session.page, 60);
+      const view = await session.page.evaluate(() => {
+        const box = document.querySelector(".sf-shot__view")?.getBoundingClientRect();
+        const image = document.querySelector<HTMLElement>(".sf-shot__img");
+        return { ratio: (box?.width ?? 0) / (box?.height ?? 1), fit: image ? getComputedStyle(image).objectFit : "", at: image ? getComputedStyle(image).objectPosition : "" };
+      });
+      expect(view.ratio).toBeGreaterThan(0.44);
+      expect(view.ratio).toBeLessThan(0.48);
+      expect(view.fit).toBe("cover");
+      expect(view.at).toMatch(/^50% 0/);
+    } finally {
+      await session.close();
+    }
+  });
+
   it.each(["landscape-1080p", "portrait-1080p"])("%s: the picture keeps its shape inside the phone, and everything stays in the frame", async (format) => {
     const shot = await capturePage({ url: `${base}/`, output: join(dir, "app.png"), device: "phone" });
     const png = readFileSync(shot.output);

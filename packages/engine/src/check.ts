@@ -2,7 +2,8 @@ import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning }
 import { getScene } from "@scenefile/scenes";
 import { type AssetSources, type LoadedAssets, assetRefs, loadAssets, loadAudio } from "./assets";
 import { type Composition, compile } from "./compile";
-import { glyphDiagnostics } from "./fonts";
+import { displayFace, glyphDiagnostics } from "./fonts";
+import { FONT_FAMILIES, getTheme } from "./themes";
 import { type InspectReport, verifyLayout } from "./layout";
 import { type ResolvedVideo, resolve } from "./resolve";
 import { DEFAULT_VOICE, MAX_SPEECH_CHARACTERS, type Speak, type Speech } from "./voice";
@@ -163,11 +164,42 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
   }
 
   const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech);
+  const notes: Diagnostic[] = [];
+  const headings = displayFace(resolved.video);
+  if (headings.missing.length > 0) {
+    const theme = getTheme(resolved.video.theme);
+    notes.push(
+      warning(
+        "FONT_FALLBACK",
+        "theme",
+        `The "${resolved.video.theme}" theme's heading face, ${FONT_FAMILIES[theme.fontDisplay]}, cannot draw ${headings.missing.slice(0, 8).join(" ")}, so headings are set in ${FONT_FAMILIES[theme.fontSans]} instead.`,
+        "Nothing needs fixing. For this text, a theme whose headings use Onest, Geologica or the monospace face keeps its own look.",
+      ),
+    );
+  }
+  for (const [index, scene] of normalized.scenefile.scenes.entries()) {
+    if (scene.type !== "screenshot" || scene.device !== "phone") continue;
+    const picture = loaded?.assets.get(scene.src);
+    if (picture && picture.width / picture.height > 0.75) {
+      notes.push(
+        warning(
+          "IMAGE_NOT_PHONE",
+          `scenes[${index}].device`,
+          `This picture is ${picture.width}x${picture.height}: wider than a phone's screen, so it will look squashed inside a phone.`,
+          'Use a tall picture (capture with the phone device), or remove "device".',
+        ),
+      );
+    }
+    if (scene.url !== undefined) {
+      notes.push(warning("FIELD_IGNORED", `scenes[${index}].url`, "A phone has no address bar, so this address is not shown.", 'Remove "url", or remove "device" to show a browser bar.'));
+    }
+  }
   const diagnostics = [
     ...normalized.diagnostics,
     ...assetDiagnostics,
     ...resolved.diagnostics,
     ...glyphDiagnostics(resolved.video),
+    ...notes,
   ];
   if (hasErrors(diagnostics)) {
     return {

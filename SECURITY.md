@@ -21,8 +21,12 @@ treated as hostile:
   download images unless started with `--allow-remote-images`, never downloads a voice,
   and does not replace an existing file unless asked to.
 - `scenefile capture`, and the MCP `capture` tool when the server is started with
-  `--allow-capture`, load whatever address they are given, by design. Rendering and
-  checking never do.
+  `--allow-capture`, open whatever http address they are given, by design: the page's
+  code runs (in the browser's sandbox where the system provides one), and `localhost`
+  and private addresses are reachable. Through MCP, link-local addresses are refused,
+  each capture is stopped after a minute, and the picture is confined to the root. A
+  model allowed to capture can still fetch internal pages and encode what it knows in
+  the address it asks for, so the flag is for models you trust with that.
 - A narrator's voice is downloaded from one fixed address and used only if its checksum
   matches.
 

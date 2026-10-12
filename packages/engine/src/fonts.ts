@@ -108,6 +108,29 @@ export function fontFaceCss(key: FontKey, text: string): string {
     .join("\n");
 }
 
+/**
+ * The face a video's headings are set in: the theme's display face, unless it
+ * cannot draw some letter the video uses. Then the text face is used for the
+ * whole video, because one borrowed letter in the middle of a word shows.
+ */
+export function displayFace(video: ResolvedVideo): { face: FontKey; missing: string[] } {
+  const theme = getTheme(video.theme);
+  if (theme.fontDisplay === theme.fontSans) return { face: theme.fontSans, missing: [] };
+  const display = loadFont(theme.fontDisplay);
+  const text = loadFont(theme.fontSans);
+  const missing = new Set<string>();
+  for (const entry of videoTexts(video)) {
+    if (entry.font !== "sans") continue;
+    for (const char of entry.text) {
+      const code = char.codePointAt(0) ?? 0;
+      if (/\s/u.test(char) || fontCovers(display, code)) continue;
+      // A letter neither face has is a different problem, reported elsewhere.
+      if (fontCovers(text, code)) missing.add(char);
+    }
+  }
+  return { face: missing.size > 0 ? theme.fontSans : theme.fontDisplay, missing: [...missing] };
+}
+
 /** Every string the video draws, with its full scenefile path. */
 export function videoTexts(video: ResolvedVideo): { path: string; text: string; font: "sans" | "mono" }[] {
   return video.scenes.flatMap((scene) => [

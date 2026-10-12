@@ -446,7 +446,7 @@ describe("narration through the server", () => {
 describe("capturing a web page through the server", () => {
   const shoot = (seen: string[]) => async (options: { output: string; device?: string }) => {
     seen.push(options.output);
-    return { output: options.output, width: 2880, height: 1800, device: "desktop" as const };
+    return { output: options.output, width: 2880, height: 1800, device: "desktop" as const, title: "Home", url: "http://localhost:3000/", full: true };
   };
 
   it("is not offered unless the server was started to allow it", async () => {

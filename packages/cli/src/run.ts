@@ -1,7 +1,7 @@
 import { type RepoFacts, type RepoRef, buildScenefile, fetchRepoFacts, parseRepo } from "./github";
 import { createRequire } from "node:module";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
+import { dirname, extname, join, relative, resolve as resolvePath, sep } from "node:path";
 import { parseArgs } from "node:util";
 import {
   type CheckResult,
@@ -78,7 +78,7 @@ const USAGE = `Usage:
   scenefile doctor                 check that this machine has what is needed
   scenefile voices                 the narrator voices
   scenefile voices install <name>  download a voice (about 67 MB, once)
-  scenefile mcp [--root <folder>] [--allow-remote-images]
+  scenefile mcp [--root <folder>] [--allow-remote-images] [--allow-capture]
                                    serve these as tools to an MCP client
 
   scenefile --version
@@ -218,8 +218,13 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         if (cause instanceof EnvironmentError) throw cause;
         throw new UsageError(cause instanceof Error ? cause.message : String(cause));
       }
-      io.out(`Captured ${shot.output}: ${shot.width}x${shot.height} (${shot.device}).`);
-      io.out(`Use it in a scene: { "type": "screenshot", "src": "${basename(shot.output)}"${shot.device === "phone" ? ', "device": "phone"' : ""} }`);
+      io.out(`Captured ${shot.output}: ${shot.width}x${shot.height} (${shot.device})${shot.title ? `, "${shot.title}"` : ""}.`);
+      if (!shot.full) io.out("The page was too heavy for a sharp picture to fit the size a scene can load, so this one is at normal resolution.");
+      // A phone's shape, give or take; a whole long page is not one.
+      const tall = shot.width / shot.height > 0.4 && shot.width / shot.height < 0.6;
+      const src = relative(process.cwd(), resolvePath(shot.output)).split(sep).join("/");
+      io.out(`Use it in a scene: { "type": "screenshot", "src": "${src}"${shot.device === "phone" && tall ? ', "device": "phone"' : ""} }`);
+      io.out("(`src` is read from the scenefile's own folder; adjust it if the scenefile is elsewhere.)");
       return 0;
     }
     if (command === "github") {

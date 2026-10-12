@@ -1,6 +1,7 @@
 import { THEMES, normalize } from "@scenefile/schema";
 import { describe, expect, it } from "vitest";
 import { compile } from "../src/compile";
+import { check } from "../src/check";
 import { resolve } from "../src/resolve";
 import { contrastRatio, getTheme, themeCss } from "../src/themes";
 
@@ -101,5 +102,38 @@ describe("themes with a voice of their own", () => {
     expect(html("ink")).toMatch(/\.sf-title__heading\{[^}]*var\(--sf-font-display\)/);
     expect(html("signal")).not.toContain('font-family:"Unbounded"');
     expect(html("studio")).toContain('font-family:"Geologica"');
+  });
+});
+
+describe("a display face that cannot draw the text", () => {
+  const html = (heading: string) => check({ version: 1, theme: "ink", scenes: [{ type: "title", heading }, { type: "outro", heading: "End" }] });
+
+  it("gives way to the text face for the whole video, and says so", () => {
+    const uzbek = html("Ўзбекистон қишлоғи ҳаёти");
+    expect(uzbek.ok).toBe(true);
+    expect(uzbek.diagnostics).toEqual([expect.objectContaining({ code: "FONT_FALLBACK", severity: "warning", path: "theme" })]);
+    expect(uzbek.composition?.html).toContain('--sf-font-display:"Onest",sans-serif');
+    expect(uzbek.composition?.html).not.toContain('font-family:"Unbounded"');
+  });
+
+  it("is used when it can draw everything", () => {
+    const russian = html("Привет, мир");
+    expect(russian.diagnostics).toEqual([]);
+    expect(russian.composition?.html).toContain('--sf-font-display:"Unbounded","Onest",sans-serif');
+  });
+});
+
+describe("a picture that does not suit a phone", () => {
+  const asset = (width: number, height: number) => ({ id: "a", src: "s.png", width, height, mime: "image/png", bytes: 10, dataUri: "data:image/png;base64,AA==" });
+  const shot = (extra: Record<string, unknown>, width: number, height: number) =>
+    check(
+      { version: 1, scenes: [{ type: "screenshot", src: "s.png", device: "phone", ...extra }, { type: "outro", heading: "End" }] },
+      { assets: new Map([["s.png", asset(width, height) as never]]), diagnostics: [] },
+    ).diagnostics.map((d) => [d.code, d.severity, d.path]);
+
+  it("warns about a wide picture and about an address that will not be shown", () => {
+    expect(shot({}, 1170, 2532)).toEqual([]);
+    expect(shot({}, 2560, 1600)).toEqual([["IMAGE_NOT_PHONE", "warning", "scenes[0].device"]]);
+    expect(shot({ url: "example.com" }, 1170, 2532)).toEqual([["FIELD_IGNORED", "warning", "scenes[0].url"]]);
   });
 });
