@@ -1,6 +1,7 @@
 import { type Diagnostic, type Scenefile, hasErrors, normalize } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
 import { type Composition, compile } from "./compile";
+import { glyphDiagnostics } from "./fonts";
 import { type ResolvedVideo, resolve } from "./resolve";
 
 export interface CheckResult {
@@ -33,7 +34,11 @@ export function check(input: unknown): CheckResult {
   }
 
   const resolved = resolve(normalized.scenefile);
-  const diagnostics = [...normalized.diagnostics, ...resolved.diagnostics];
+  const diagnostics = [
+    ...normalized.diagnostics,
+    ...resolved.diagnostics,
+    ...glyphDiagnostics(resolved.video),
+  ];
   if (hasErrors(diagnostics)) {
     return { ok: false, diagnostics, scenefile: normalized.scenefile, composition: null, storyboard: "" };
   }

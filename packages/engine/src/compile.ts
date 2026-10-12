@@ -1,6 +1,7 @@
 import { SHARED_CSS, getScene } from "@scenefile/scenes";
+import { fontFaceCss, videoTexts } from "./fonts";
 import type { ResolvedVideo } from "./resolve";
-import { themeCss } from "./themes";
+import { getTheme, themeCss } from "./themes";
 
 export interface ManifestScene {
   index: number;
@@ -60,6 +61,11 @@ export function compile(video: ResolvedVideo): Composition {
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
     })
     .join("\n");
+  const theme = getTheme(video.theme);
+  const texts = videoTexts(video);
+  const textIn = (font: "sans" | "mono"): string =>
+    texts.filter((entry) => entry.font === font).map((entry) => entry.text).join("");
+  const fontCss = `${fontFaceCss(theme.fontSans, textIn("sans"))}\n${fontFaceCss(theme.fontMono, textIn("mono"))}`;
   // "<" is escaped so nothing in the JSON can end the script element.
   const manifestJson = JSON.stringify(manifest).replace(/</g, "\\u003c");
 
@@ -67,7 +73,8 @@ export function compile(video: ResolvedVideo): Composition {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<style>${themeCss(video.theme, video.accent, video.width, video.height)}${baseCss(video.width, video.height)}
+<style>${fontCss}
+${themeCss(video.theme, video.accent, video.width, video.height)}${baseCss(video.width, video.height)}
 ${SHARED_CSS.trim()}
 ${sceneCss}</style>
 </head>

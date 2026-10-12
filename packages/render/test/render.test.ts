@@ -124,6 +124,32 @@ describe("openComposition", () => {
     }
   });
 
+  it("draws text in the bundled fonts, including Cyrillic", async () => {
+    const result = check({
+      version: 1,
+      scenes: [{ type: "title", heading: "Привет", sub: "one two three four five six" }],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const session = await openComposition(result.composition);
+    try {
+      await captureFrame(session.page, 40);
+      const fonts = await session.page.evaluate(() => {
+        const heading = document.querySelector(".sf-title__heading");
+        return {
+          loaded: Array.from(document.fonts, (face) => `${face.family}:${face.status}`),
+          family: heading ? getComputedStyle(heading).fontFamily : "",
+          cyrillicOk: document.fonts.check('900 40px "Onest"', "Привет"),
+        };
+      });
+      expect(fonts.family).toContain("Onest");
+      expect(fonts.cyrillicOk).toBe(true);
+      expect(fonts.loaded.length).toBeGreaterThanOrEqual(3);
+      expect(fonts.loaded.every((entry) => entry.endsWith(":loaded"))).toBe(true);
+    } finally {
+      await session.close();
+    }
+  });
+
   it("wraps long commands and long words instead of clipping them", async () => {
     const result = check({
       version: 1,

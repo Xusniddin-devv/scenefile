@@ -37,7 +37,8 @@ export async function openComposition(composition: Composition): Promise<Session
     await page.route("**/*", (route) => route.abort());
     await page.setContent(composition.html, { waitUntil: "load" });
     await page.addScriptTag({ content: runtime });
-    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    // Faces load lazily, on first use; a frame captured before then would show a fallback font.
+    await page.evaluate(() => Promise.all(Array.from(document.fonts, (face) => face.load())).then(() => undefined));
     const ready = await page.evaluate(() => "__scenefile" in window);
     if (!ready) throw new Error("The scenefile runtime did not start in the page.");
     return { page, close: () => browser.close() };
