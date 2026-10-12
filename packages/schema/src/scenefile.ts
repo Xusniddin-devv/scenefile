@@ -2,7 +2,7 @@ import { sceneSchema, transitionSchema } from "@scenefile/scenes";
 import { z } from "zod";
 
 export const FORMATS = ["landscape-1080p", "portrait-1080p", "square-1080p"] as const;
-export const THEMES = ["signal", "midnight"] as const;
+export const THEMES = ["signal", "midnight", "paper", "cobalt", "solar"] as const;
 /** Narrator voices: language, then the voice's name. All are free to use for any purpose. */
 export const VOICES = ["en-joe", "en-kristin", "en-bryce", "ru-denis", "ru-dmitri"] as const;
 

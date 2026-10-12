@@ -248,7 +248,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       }
       for (const [index, line] of lines.entries()) {
         inputs.push("-protocol_whitelist", "file", "-i", line.file);
-        filters.push(`[${next}:a]${SHAPE},adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
+        filters.push(`[${next}:a]${SHAPE},volume=6dB,alimiter=limit=0.89,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
         next += 1;
       }
       if (lines.length > 0) {

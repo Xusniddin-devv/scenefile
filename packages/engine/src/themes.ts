@@ -21,7 +21,7 @@ export interface Theme {
   headingTracking: string;
 }
 
-/** Neutral greys only: no hue tint in the darks. */
+/** Neutral greys only in the dark and white themes: no hue tint. The color themes are one flat color. */
 const THEME_TOKENS: Record<ThemeName, Theme> = {
   signal: {
     background: "#000000",
@@ -46,6 +46,45 @@ const THEME_TOKENS: Record<ThemeName, Theme> = {
     fontMono: "cascadiaCode",
     headingWeight: 800,
     headingTracking: "-0.04em",
+  },
+  // Pure white, black type, one hot accent.
+  paper: {
+    background: "#FFFFFF",
+    surface: "#F0F0F0",
+    line: "#D4D4D4",
+    text: "#0A0A0A",
+    muted: "#5C5C5C",
+    accent: "#E63200",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    headingWeight: 900,
+    headingTracking: "-0.055em",
+  },
+  // A flat field of blue with white type and a yellow accent.
+  cobalt: {
+    background: "#1433E6",
+    surface: "#0F28C4",
+    line: "#4C63F2",
+    text: "#FFFFFF",
+    muted: "#C7D0FF",
+    accent: "#FFE500",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    headingWeight: 900,
+    headingTracking: "-0.055em",
+  },
+  // A flat field of yellow with black type and a blue accent.
+  solar: {
+    background: "#FFE500",
+    surface: "#F2D900",
+    line: "#BFA900",
+    text: "#0A0A0A",
+    muted: "#5C5200",
+    accent: "#1433E6",
+    fontSans: "onest",
+    fontMono: "cascadiaCode",
+    headingWeight: 900,
+    headingTracking: "-0.055em",
   },
 };
 

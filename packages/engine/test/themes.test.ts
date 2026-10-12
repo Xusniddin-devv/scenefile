@@ -1,4 +1,4 @@
-import { normalize } from "@scenefile/schema";
+import { THEMES, normalize } from "@scenefile/schema";
 import { describe, expect, it } from "vitest";
 import { compile } from "../src/compile";
 import { resolve } from "../src/resolve";
@@ -57,5 +57,25 @@ describe("themes", () => {
     expect(html.match(/\.sf-chrome\{/g)).toHaveLength(1);
     expect(html.match(/class="sf-wipe"/g)).toHaveLength(1);
     expect(html).toContain('data-sf-path="scenes[1].steps"');
+  });
+});
+
+describe("every theme can be read", () => {
+  it.each([...THEMES])("%s keeps its text, quiet text and accent clear of the background", (name) => {
+    const theme = getTheme(name);
+    expect(contrastRatio(theme.text, theme.background)).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio(theme.muted, theme.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(theme.accent, theme.background)).toBeGreaterThanOrEqual(3);
+    // The accent has to read as a different color from the text, not as the text.
+    expect(theme.accent.toLowerCase()).not.toBe(theme.text.toLowerCase());
+  });
+
+  it("offers looks that are not dark", () => {
+    expect([...THEMES]).toEqual(expect.arrayContaining(["signal", "midnight", "paper", "cobalt", "solar"]));
+    expect(getTheme("paper").background).toBe("#FFFFFF");
+    const light = [...THEMES].filter((name) => contrastRatio(getTheme(name).background, "#000000") > 4);
+    // White and yellow are light; blue is a color, neither light nor black.
+    expect(light).toEqual(["paper", "solar"]);
+    expect(getTheme("cobalt").background).not.toMatch(/^#0[0-9A-F]0[0-9A-F]0[0-9A-F]$/i);
   });
 });

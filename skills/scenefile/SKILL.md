@@ -65,7 +65,7 @@ A scenefile is a JSON object that says what each scene of a video shows. You nev
 - `version`: Always 1. Required.
 - `format`: "landscape-1080p" (default), "portrait-1080p" for phones, or "square-1080p".
 - `fps`: 30 (default) or 60.
-- `theme`: "signal" (default: black with one bright accent) or "midnight".
+- `theme`: "signal" (default: black, lime accent), "midnight" (black, orange), "paper" (white, red), "cobalt" (blue, yellow) or "solar" (yellow, blue).
 - `accent`: The accent color as "#RRGGBB". Leave it out to use the theme's.
 - `audio`: Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile's folder.
 - `voice`: Who reads the `say` lines aloud: { "name": "en-joe" }. English: "en-joe", "en-kristin", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.

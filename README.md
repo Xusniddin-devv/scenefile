@@ -95,6 +95,37 @@ flash, MiniMax M3, Qwen 3.7 flash, GLM 5.3 flash), each given only the guide and
 one-paragraph brief, three briefs each: 11 of 12 scenefiles passed the full check on the
 first reply and all 12 by the second. That is one run of a small test, not a benchmark.
 
+## Narration
+
+Give a scene a `say` line and it is read aloud; the scene stays on screen until the
+line has been said, and music turns itself down under the voice.
+
+```json
+{ "version": 1, "voice": { "name": "en-joe" },
+  "scenes": [{ "type": "title", "heading": "Ship faster", "say": "This tool deploys your site with one command." }] }
+```
+
+The voice is made on your machine by an open speech model ([Piper](https://github.com/rhasspy/piper)
+voices run through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)). There is no
+account, no key and no charge, and the text is not sent anywhere. A voice is downloaded
+once (about 67 MB), from a fixed address, and checked against a known checksum.
+
+| Voice | Language | Recordings licensed as |
+|---|---|---|
+| `en-joe`, `en-kristin`, `en-bryce` | English | CC0 / public domain |
+| `ru-denis`, `ru-dmitri` | Russian | CC0 |
+
+`scenefile voices` lists them; `scenefile voices install <name>` downloads one ahead of
+time. The MCP server never downloads: it uses voices that are already installed.
+
+What it is not: these voices are clear but plainly synthetic, there is no Uzbek voice
+yet (no freely licensed one exists in this family), and there are no captions yet.
+
+## Themes
+
+`signal` (black, lime), `midnight` (black, orange), `paper` (white, red), `cobalt`
+(blue, yellow), `solar` (yellow, blue). Set `"theme"`, and optionally your own `"accent"`.
+
 ## Transitions
 
 Scenes give way to one another by `cut`, `fade`, `crossfade`, `push`, `wipe` or `zoom`.
