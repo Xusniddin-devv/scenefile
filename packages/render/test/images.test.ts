@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyLayout, checkWithAssets, verifyLayout } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
@@ -163,9 +166,10 @@ describe("images in a real browser", () => {
     expect(laidOut.storyboard).toMatch(/src\s+1280x720 image, shown at \d+x\d+/);
   });
 
-  it("fails the check, without rendering, when an image cannot be loaded", async () => {
+  it("fails the check, without rendering, when an image is missing or outside the scenefile's folder", async () => {
+    // The second path names a file that exists (the repository's README), so only confinement can refuse it.
     const result = await checkWithAssets(
-      { version: 1, scenes: [{ type: "screenshot", src: "assets/nope.png" }, { type: "screenshot", src: "../../README.md" }, filler] },
+      { version: 1, scenes: [{ type: "screenshot", src: "assets/nope.png" }, { type: "screenshot", src: "../../../README.md" }, filler] },
       { baseDir },
     );
     expect(result.ok).toBe(false);
@@ -174,5 +178,69 @@ describe("images in a real browser", () => {
       ["ASSET_NOT_FOUND", "scenes[0].src"],
       ["ASSET_NOT_FOUND", "scenes[1].src"],
     ]);
+    expect(result.diagnostics[0]?.message).toContain("no file");
+    expect(result.diagnostics[1]?.message).toContain("outside");
+  });
+
+  it("embeds an image once however many scenes show it", async () => {
+    const shot = { type: "screenshot", src: "assets/shot.png" };
+    const { composition } = await compose({ scenes: [shot, shot, { type: "compare", before: { src: "assets/shot.png" }, after: { text: "Same image." } }] });
+    expect(composition.html.match(/data:image\/png;base64,/g)).toHaveLength(1);
+    expect(composition.html).not.toMatch(/https?:\/\//);
+    const session = await openComposition(composition);
+    try {
+      for (const scene of composition.manifest.scenes) {
+        await captureFrame(session.page, scene.startFrame + scene.enterFrames + 5);
+        const drawn = await session.page.evaluate(() => {
+          const image = document.querySelector<HTMLImageElement>(".sf-scene:not([hidden]) img");
+          return Boolean(image?.complete && image.naturalWidth === 1280);
+        });
+        expect(drawn, `scene ${scene.index}`).toBe(true);
+      }
+    } finally {
+      await session.close();
+    }
+  });
+
+  it("reports an image that passes the header check but cannot be decoded, instead of crashing", async () => {
+    const folder = mkdtempSync(join(tmpdir(), "scenefile-broken-"));
+    try {
+      const good = readFileSync(join(baseDir, "assets", "small.png"));
+      // A real header followed by a truncated body: what a half-finished download looks like.
+      writeFileSync(join(folder, "cut.png"), Buffer.concat([good.subarray(0, 60), Buffer.alloc(40)]));
+      const result = await checkWithAssets(
+        { version: 1, scenes: [{ type: "screenshot", src: "cut.png", caption: "A caption." }, filler] },
+        { baseDir: folder },
+      );
+      if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+      const report = await inspectComposition(result.composition);
+      expect(report.broken).toEqual(["scenes[0].src"]);
+      const laidOut = applyLayout(result, report);
+      expect(laidOut.ok).toBe(false);
+      expect(laidOut.diagnostics.map((d) => [d.code, d.path])).toEqual([["ASSET_UNSUPPORTED", "scenes[0].src"]]);
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
+  it("reports callout labels that overlap each other, the caption, or the address bar", async () => {
+    const shot = (callouts: unknown[]) => ({ type: "screenshot", src: "assets/shot.png", url: "scenefile.dev", caption: "A caption under the image.", callouts });
+    const { composition } = await compose({
+      scenes: [
+        shot([{ x: 0.4, y: 0.5, label: "First label here" }, { x: 0.42, y: 0.52, label: "Second label here" }]),
+        shot([{ x: 0.1, y: 1, label: "Sits on the caption line below" }]),
+        shot([{ x: 0.3, y: 0, label: "Covers the address bar" }]),
+        shot([{ x: 0.2, y: 0.3, label: "Fine" }, { x: 0.7, y: 0.7, label: "Also fine" }]),
+      ],
+    });
+    const report = await inspectComposition(composition);
+    const conflicts = (report.conflicts ?? []).map((conflict) => [conflict.path, conflict.with]);
+    expect(conflicts).toContainEqual(["scenes[0].callouts[1].label", "scenes[0].callouts[0].label"]);
+    expect(conflicts).toContainEqual(["scenes[1].callouts[0].label", "scenes[1].caption"]);
+    expect(conflicts).toContainEqual(["scenes[2].callouts[0].label", "scenes[2].url"]);
+    expect(conflicts.filter(([path]) => path?.startsWith("scenes[3]"))).toEqual([]);
+    expect(report.labels?.filter((label) => label.path.startsWith("scenes[3].callouts"))).toHaveLength(2);
+    const codes = verifyLayout(report).filter((d) => d.severity === "error").map((d) => d.code);
+    expect(new Set(codes)).toEqual(new Set(["LABEL_OVERLAP"]));
   });
 });

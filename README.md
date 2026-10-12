@@ -52,6 +52,16 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
   fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, screenshot, compare, terminal.
 ```
 
+## Images, files and the network
+
+A scenefile can show images (`screenshot` and `compare` scenes). `check` and `render`
+load them, which means reading files and, for `https` addresses, making requests:
+
+- Local images must be inside the scenefile's own folder; links leading out of it are not followed.
+- Remote images must be `https` on the public internet. Addresses on this machine or a
+  private network are refused, including through redirects.
+- PNG, JPEG and still WebP, up to 8 MB each and 32 MB in total.
+
 ## Development
 
 ```bash

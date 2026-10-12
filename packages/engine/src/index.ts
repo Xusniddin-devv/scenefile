@@ -2,15 +2,26 @@ export {
   type AssetMap,
   type AssetRef,
   type AssetSources,
+  type HttpResponse,
   type LoadedAsset,
   type LoadedAssets,
   MAX_ASSET_BYTES,
+  MAX_TOTAL_ASSET_BYTES,
+  type ResolvedAddress,
   assetRefs,
   imageInfo,
+  isPrivateAddress,
   loadAssets,
 } from "./assets";
 export { type CheckResult, applyLayout, check, checkWithAssets, storyboard } from "./check";
-export { type ImageReport, type InspectReport, type SlotReport, verifyLayout } from "./layout";
+export {
+  type ConflictReport,
+  type ImageReport,
+  type InspectReport,
+  type LabelReport,
+  type SlotReport,
+  verifyLayout,
+} from "./layout";
 export { type Composition, type Manifest, type ManifestScene, compile } from "./compile";
 export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnostics, loadFont, videoTexts } from "./fonts";
 export { FORMAT_SIZES } from "./formats";

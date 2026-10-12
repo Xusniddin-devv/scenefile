@@ -2,6 +2,7 @@ import type { CompileContext } from "../src/types";
 
 /** A 1x1 PNG, reported as 1280x720 so scenes lay it out like a real screenshot. */
 export const STUB_ASSET = {
+  id: "stub",
   dataUri:
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
   width: 1280,

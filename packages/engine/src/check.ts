@@ -35,7 +35,8 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
     const prefix = `scenes[${scene.index}].`;
     const slots = (report?.slots ?? []).filter((slot) => slot.path.startsWith(prefix));
     const images = (report?.images ?? []).filter((image) => image.path.startsWith(prefix));
-    const fieldWidth = Math.max(0, ...[...slots, ...images].map((entry) => entry.path.length - prefix.length));
+    const labels = (report?.labels ?? []).filter((label) => label.path.startsWith(prefix));
+    const fieldWidth = Math.max(0, ...[...slots, ...images, ...labels].map((entry) => entry.path.length - prefix.length));
     for (const slot of slots) {
       const field = slot.path.slice(prefix.length).padEnd(fieldWidth);
       const count = slot.maxLines === null ? "" : `, ${slot.lines} ${slot.lines === 1 ? "line" : "lines"}`;
@@ -45,6 +46,12 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport): string
       const field = image.path.slice(prefix.length).padEnd(fieldWidth);
       lines.push(
         `     ${field}  ${image.naturalWidth}x${image.naturalHeight} image, shown at ${image.shownWidth}x${image.shownHeight}`,
+      );
+    }
+    for (const label of labels) {
+      const field = label.path.slice(prefix.length).padEnd(fieldWidth);
+      lines.push(
+        `     ${field}  label ${Math.round(label.width)}x${Math.round(label.height)} at ${Math.round(label.x)},${Math.round(label.y)}`,
       );
     }
   }

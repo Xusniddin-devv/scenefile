@@ -1,5 +1,13 @@
 import { type SceneHandle, mounts } from "@scenefile/scenes/browser";
-import { type SlotReport, fitSlots, isCrowded, relieveCrowding } from "./fit";
+import {
+  type ConflictReport,
+  type LabelReport,
+  type SlotReport,
+  fitSlots,
+  inspectLabels,
+  isCrowded,
+  relieveCrowding,
+} from "./fit";
 
 interface ManifestScene {
   index: number;
@@ -36,10 +44,17 @@ interface Mounted {
 interface Api {
   seek(frame: number): void;
   totalFrames: number;
-  report: { slots: SlotReport[]; crowded: number[]; images: ImageReport[] };
+  report: {
+    slots: SlotReport[];
+    crowded: number[];
+    images: ImageReport[];
+    broken: string[];
+    labels: LabelReport[];
+    conflicts: ConflictReport[];
+  };
 }
 
-function init(): Api {
+function init(broken: string[]): Api {
   const manifestEl = document.getElementById("sf-manifest");
   if (!manifestEl?.textContent) throw new Error("scenefile: the composition has no manifest");
   const manifest = JSON.parse(manifestEl.textContent) as Manifest;
@@ -65,6 +80,8 @@ function init(): Api {
   const slots: SlotReport[] = [];
   const crowded: number[] = [];
   const images: ImageReport[] = [];
+  const labels: LabelReport[] = [];
+  const conflicts: ConflictReport[] = [];
   for (const { scene, el, handle } of mounted) {
     el.hidden = false;
     handle.seek(Math.max(0, scene.durationFrames - scene.exitFrames - 1));
@@ -72,6 +89,9 @@ function init(): Api {
     relieveCrowding(el, unitPx, manifest, fitted);
     slots.push(...fitted);
     if (isCrowded(el)) crowded.push(scene.index);
+    const inspected = inspectLabels(el, manifest);
+    labels.push(...inspected.labels);
+    conflicts.push(...inspected.conflicts);
     for (const image of el.querySelectorAll<HTMLImageElement>("img[data-sf-image]")) {
       images.push({
         path: image.dataset.sfPath ?? "",
@@ -89,7 +109,7 @@ function init(): Api {
 
   return {
     totalFrames: manifest.totalFrames,
-    report: { slots, crowded, images },
+    report: { slots, crowded, images, broken, labels, conflicts },
     seek(frame) {
       // Chromium carries paint and compositing state from one frame to the next,
       // so identical DOM can differ by one level on anti-aliased edges depending
@@ -115,9 +135,24 @@ function init(): Api {
 async function start(): Promise<void> {
   // Faces load lazily; text measured before they arrive would be measured in a fallback font.
   await Promise.all(Array.from(document.fonts, (face) => face.load()));
-  // Images decode off the main thread; a frame captured before they finish would show a blank box.
-  await Promise.all(Array.from(document.images, (image) => image.decode()));
-  (window as unknown as { __scenefile: Api }).__scenefile = init();
+  // The page holds one copy of each image's data; attach it to every image that names it.
+  const assetsEl = document.getElementById("sf-assets");
+  const assets = (assetsEl?.textContent ? JSON.parse(assetsEl.textContent) : {}) as Record<string, string>;
+  const pictures = Array.from(document.querySelectorAll<HTMLImageElement>("img[data-sf-asset]"));
+  for (const image of pictures) image.src = assets[image.dataset.sfAsset ?? ""] ?? "";
+  // Images decode off the main thread; a frame captured before they finish would
+  // show a blank box. One that cannot be decoded is reported, not fatal: it is
+  // a problem with the scenefile's image, to be told to whoever wrote it.
+  const broken: string[] = [];
+  await Promise.all(
+    pictures.map((image) =>
+      image.decode().catch(() => {
+        const path = image.dataset.sfPath ?? "";
+        if (!broken.includes(path)) broken.push(path);
+      }),
+    ),
+  );
+  (window as unknown as { __scenefile: Api }).__scenefile = init(broken);
 }
 
 (window as unknown as { __scenefileReady: Promise<void> }).__scenefileReady = start();

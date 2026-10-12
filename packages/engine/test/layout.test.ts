@@ -84,6 +84,40 @@ describe("images", () => {
   });
 });
 
+describe("what the browser found wrong with images and labels", () => {
+  it("reports an image the browser could not decode", () => {
+    expect(verifyLayout({ slots: [], broken: ["scenes[1].src"] })).toEqual([
+      expect.objectContaining({ code: "ASSET_UNSUPPORTED", severity: "error", path: "scenes[1].src" }),
+    ]);
+  });
+
+  it("reports a label that leaves the frame, covers the counter, or overlaps other text", () => {
+    const diagnostics = verifyLayout({
+      slots: [],
+      conflicts: [
+        { path: "scenes[0].callouts[0].label", with: "frame" },
+        { path: "scenes[0].callouts[1].label", with: "counter" },
+        { path: "scenes[0].callouts[2].label", with: "scenes[0].caption" },
+      ],
+    });
+    expect(diagnostics.map((d) => [d.code, d.severity, d.path])).toEqual([
+      ["SAFE_AREA", "error", "scenes[0].callouts[0].label"],
+      ["LABEL_OVERLAP", "error", "scenes[0].callouts[1].label"],
+      ["LABEL_OVERLAP", "error", "scenes[0].callouts[2].label"],
+    ]);
+    expect(diagnostics[2]?.message).toContain("scenes[0].caption");
+    expect(diagnostics[2]?.fix).toMatch(/x or y|shorten/i);
+  });
+
+  it("warns about an image shown as a sliver", () => {
+    const [diagnostic] = verifyLayout({
+      slots: [],
+      images: [{ path: "scenes[0].src", naturalWidth: 3000, naturalHeight: 30, shownWidth: 885, shownHeight: 9 }],
+    });
+    expect(diagnostic).toMatchObject({ code: "IMAGE_TINY", severity: "warning", path: "scenes[0].src" });
+  });
+});
+
 describe("applyLayout", () => {
   it("adds sizes and line counts to the storyboard", () => {
     const result = applyLayout(check(valid), {
@@ -102,6 +136,14 @@ describe("applyLayout", () => {
       "2. terminal  3.00s-5.40s  $ npx x init",
       "     steps  48px",
     ]);
+  });
+
+  it("tells a model that cannot see the frame where each callout label landed", () => {
+    const result = applyLayout(check(valid), {
+      slots: [],
+      labels: [{ path: "scenes[0].callouts[0].label", x: 312.4, y: 188, width: 240.2, height: 56 }],
+    });
+    expect(result.storyboard).toContain("callouts[0].label  label 240x56 at 312,188");
   });
 
   it("blocks rendering when layout fails but keeps the storyboard", () => {

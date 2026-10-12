@@ -73,10 +73,10 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
     const pins = (props.callouts ?? [])
       .map(
         (callout, i) =>
-          `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed style="${labelStyle(callout.x, callout.label, size.width, ctx)}">${escapeHtml(callout.label)}</b></span>`,
+          `<span class="sf-shot__pin" data-sf-pin="${i}" style="left:${percent(callout.x)};top:${percent(callout.y)}"><b data-sf-fixed data-sf-path="${ctx.path}.callouts[${i}].label" style="${labelStyle(callout.x, callout.label, size.width, ctx)}">${escapeHtml(callout.label)}</b></span>`,
       )
       .join("");
-    const bar = props.url ? `<div class="sf-shot__bar" data-sf-fixed>${escapeHtml(props.url)}</div>` : "";
+    const bar = props.url ? `<div class="sf-shot__bar" data-sf-fixed data-sf-path="${ctx.path}.url">${escapeHtml(props.url)}</div>` : "";
     const caption = props.caption
       ? `<p class="sf-shot__caption" data-sf-enter="1" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
       : "";
@@ -92,7 +92,7 @@ export const screenshotDefinition: SceneDefinition<ScreenshotProps> = {
 .sf-shot__img,.sf-shot__missing{display:block}
 .sf-shot__pin{position:absolute;width:0;height:0}
 .sf-shot__pin::before{content:"";position:absolute;left:calc(var(--sf-unit)*-1);top:calc(var(--sf-unit)*-1);width:calc(var(--sf-unit)*2);height:calc(var(--sf-unit)*2);border-radius:50%;background:var(--sf-accent);box-shadow:0 0 0 calc(var(--sf-unit)*0.5) var(--sf-bg)}
-.sf-shot__pin b{position:absolute;top:calc(var(--sf-unit)*-2.6);width:max-content;padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text)}
+.sf-shot__pin b{position:absolute;top:calc(var(--sf-unit)*-2.6);width:max-content;padding:0 calc(var(--sf-unit)*1.4);background:var(--sf-bg);border:1px solid var(--sf-line);font:600 calc(var(--sf-unit)*3.4)/calc(var(--sf-unit)*5.2) var(--sf-font-sans);color:var(--sf-text);overflow-wrap:anywhere}
 .sf-shot__caption{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
 `,
 };

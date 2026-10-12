@@ -30,7 +30,7 @@ function imageBox(ctx: CompileContext): { width: number; height: number } {
 }
 
 function sideHtml(side: CompareSide, key: "before" | "after", fallback: string, index: number, ctx: CompileContext): string {
-  const label = `<p class="sf-compare__label" data-sf-fixed>${escapeHtml(side.label ?? fallback)}</p>`;
+  const label = `<p class="sf-compare__label" data-sf-fixed data-sf-path="${ctx.path}.${key}.label">${escapeHtml(side.label ?? fallback)}</p>`;
   if (side.src !== undefined) {
     const asset = ctx.asset(side.src);
     const size = containSize(asset ?? { width: 16, height: 9 }, imageBox(ctx));

@@ -68,6 +68,12 @@ export function compile(video: ResolvedVideo): Composition {
   const textIn = (font: "sans" | "mono"): string =>
     texts.filter((entry) => entry.font === font).map((entry) => entry.text).join("");
   const fontCss = `${fontFaceCss(theme.fontSans, textIn("sans"))}\n${fontFaceCss(theme.fontMono, textIn("mono"))}`;
+  // One copy of each image, by id; the runtime attaches them to the images that name them.
+  const assetData = Object.fromEntries([...video.assets.values()].map((asset) => [asset.id, asset.dataUri]));
+  const assetsScript =
+    video.assets.size > 0
+      ? `\n<script id="sf-assets" type="application/json">${JSON.stringify(assetData).replace(/</g, "\\u003c")}</script>`
+      : "";
   // "<" is escaped so nothing in the JSON can end the script element.
   const manifestJson = JSON.stringify(manifest).replace(/</g, "\\u003c");
 
@@ -84,7 +90,7 @@ ${sceneCss}</style>
 <div id="sf-stage">
 ${sections}
 </div>
-<script id="sf-manifest" type="application/json">${manifestJson}</script>
+<script id="sf-manifest" type="application/json">${manifestJson}</script>${assetsScript}
 </body>
 </html>`;
 

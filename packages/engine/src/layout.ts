@@ -31,9 +31,31 @@ export interface ImageReport {
 /** An image may be enlarged this much before it is called soft. */
 const MAX_UPSCALE = 1.25;
 
+/** Where a fixed-size label (a callout, a side label) ended up, in frame pixels. */
+export interface LabelReport {
+  path: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** A label that is not where it can be read. `with` is "frame", "counter", or the path of what it overlaps. */
+export interface ConflictReport {
+  path: string;
+  with: string;
+}
+
+/** An image shown smaller than this on either side, in pixels, is a sliver rather than a picture. */
+const MIN_SHOWN_SIDE = 54;
+
 export interface InspectReport {
   slots: SlotReport[];
   images?: ImageReport[];
+  /** Paths of images the browser could not decode. */
+  broken?: string[];
+  labels?: LabelReport[];
+  conflicts?: ConflictReport[];
   /** Indexes of scenes whose content reaches up into the scene counter at the top of the frame. */
   crowded?: number[];
 }
@@ -85,7 +107,40 @@ export function verifyLayout(report: InspectReport): Diagnostic[] {
       );
     }
   }
+  for (const path of report.broken ?? []) {
+    diagnostics.push(
+      error(
+        "ASSET_UNSUPPORTED",
+        path,
+        "The browser could not decode this image; the file is damaged or incomplete.",
+        "Export the image again as PNG or JPEG, or download it again.",
+      ),
+    );
+  }
+  for (const conflict of report.conflicts ?? []) {
+    const move = "Move the callout (change its x or y), or shorten the label.";
+    if (conflict.with === "frame") {
+      diagnostics.push(error("SAFE_AREA", conflict.path, "This label runs off the frame.", move));
+    } else if (conflict.with === "counter") {
+      diagnostics.push(
+        error("LABEL_OVERLAP", conflict.path, "This label covers the scene counter at the top of the frame.", move),
+      );
+    } else {
+      diagnostics.push(error("LABEL_OVERLAP", conflict.path, `This label overlaps ${conflict.with}.`, move));
+    }
+  }
   for (const image of report.images ?? []) {
+    if (report.broken?.includes(image.path)) continue;
+    if (image.shownWidth < MIN_SHOWN_SIDE || image.shownHeight < MIN_SHOWN_SIDE) {
+      diagnostics.push(
+        warning(
+          "IMAGE_TINY",
+          image.path,
+          `This image is shown only ${image.shownWidth}x${image.shownHeight} pixels: its shape does not suit this frame.`,
+          "Crop the image closer to the shape of the frame.",
+        ),
+      );
+    }
     if (image.shownWidth > image.naturalWidth * MAX_UPSCALE) {
       diagnostics.push(
         warning(

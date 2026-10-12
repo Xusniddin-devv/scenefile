@@ -33,6 +33,82 @@ export function isCrowded(scene: HTMLElement): boolean {
   return false;
 }
 
+/** Where a fixed-size label ended up. Mirrors `LabelReport` in @scenefile/engine. */
+export interface LabelReport {
+  path: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Mirrors `ConflictReport` in @scenefile/engine. */
+export interface ConflictReport {
+  path: string;
+  with: string;
+}
+
+function textRects(el: Element): DOMRect[] {
+  const rects: DOMRect[] = [];
+  const range = document.createRange();
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    if (!walker.currentNode.textContent?.trim()) continue;
+    range.selectNodeContents(walker.currentNode);
+    for (const rect of range.getClientRects()) if (rect.width > 0 && rect.height > 0) rects.push(rect);
+  }
+  return rects;
+}
+
+/** True when two boxes share more than a pixel-wide sliver. */
+function overlaps(a: DOMRect, b: DOMRect): boolean {
+  return a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+}
+
+/**
+ * Fixed-size labels are placed where the scenefile says, so they can land on
+ * top of each other, on other text, on the scene counter, or off the frame.
+ * Nothing shrinks them; this finds where they ended up and what they hit.
+ */
+export function inspectLabels(
+  scene: HTMLElement,
+  frame: { width: number; height: number },
+): { labels: LabelReport[]; conflicts: ConflictReport[] } {
+  const found = Array.from(scene.querySelectorAll<HTMLElement>("[data-sf-fixed][data-sf-path]"), (el) => ({
+    el,
+    path: el.dataset.sfPath ?? "",
+    rect: el.getBoundingClientRect(),
+  }));
+  const fitted = Array.from(scene.querySelectorAll<HTMLElement>("[data-sf-fit]"), (el) => ({
+    el,
+    path: el.dataset.sfPath ?? "",
+    rects: textRects(el),
+  }));
+  const counter = scene.querySelector(".sf-chrome")?.getBoundingClientRect().bottom ?? 0;
+  const conflicts: ConflictReport[] = [];
+
+  found.forEach((label, i) => {
+    const { rect } = label;
+    if (rect.left < -0.5 || rect.top < -0.5 || rect.right > frame.width + 0.5 || rect.bottom > frame.height + 0.5) {
+      conflicts.push({ path: label.path, with: "frame" });
+    } else if (rect.top < counter - 0.5) {
+      conflicts.push({ path: label.path, with: "counter" });
+    }
+    for (const earlier of found.slice(0, i)) {
+      if (overlaps(rect, earlier.rect)) conflicts.push({ path: label.path, with: earlier.path });
+    }
+    for (const slot of fitted) {
+      if (slot.el.contains(label.el) || label.el.contains(slot.el)) continue;
+      if (slot.rects.some((text) => overlaps(rect, text))) conflicts.push({ path: label.path, with: slot.path });
+    }
+  });
+
+  return {
+    labels: found.map(({ path, rect }) => ({ path, x: rect.left, y: rect.top, width: rect.width, height: rect.height })),
+    conflicts,
+  };
+}
+
 /**
  * When a scene is crowded, makes its largest line-fitted text one step smaller,
  * and repeats until the scene fits or nothing can shrink further. Fitting text

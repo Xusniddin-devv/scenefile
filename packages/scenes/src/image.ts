@@ -19,10 +19,11 @@ export function containSize(image: Size, box: Size): Size {
 }
 
 /**
- * An image at an exact size, marked so the runtime decodes it before drawing
- * and reports how large it is shown. With no asset, an empty box of that size.
+ * An image at an exact size. It names its data rather than carrying it: the
+ * page holds one copy of each image and the runtime attaches it, so an image
+ * used in ten scenes is not embedded ten times. With no asset, an empty box.
  */
 export function imageHtml(asset: SceneAsset | undefined, path: string, size: Size, className: string): string {
   if (!asset) return `<div class="${className} sf-shot__missing" style="width:${size.width}px;height:${size.height}px"></div>`;
-  return `<img class="${className}" data-sf-image data-sf-path="${path}" src="${asset.dataUri}" width="${size.width}" height="${size.height}" alt="">`;
+  return `<img class="${className}" data-sf-image data-sf-asset="${asset.id}" data-sf-path="${path}" width="${size.width}" height="${size.height}" alt="">`;
 }

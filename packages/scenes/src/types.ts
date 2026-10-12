@@ -12,6 +12,8 @@ export interface CompileContext {
 
 /** An image ready to draw: embedded data and its real size in pixels. */
 export interface SceneAsset {
+  /** A short name, unique in the video, by which the page refers to the image's data. */
+  readonly id: string;
   readonly dataUri: string;
   readonly width: number;
   readonly height: number;

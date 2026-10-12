@@ -98,7 +98,9 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
     expect(images.map((image) => image.dataset.sfPath).sort()).toEqual([...declared].sort());
     for (const image of images) {
       expect("sfImage" in image.dataset).toBe(true);
-      expect(image.getAttribute("src")?.startsWith("data:image/")).toBe(true);
+      // The image data is attached by the runtime, from one copy per image; the markup only names it.
+      expect(image.getAttribute("data-sf-asset")).toBe("stub");
+      expect(image.hasAttribute("src")).toBe(false);
       for (const side of ["width", "height"] as const) {
         const value = Number(image.getAttribute(side));
         expect(Number.isInteger(value) && value > 0, `${side}=${image.getAttribute(side)}`).toBe(true);
