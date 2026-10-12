@@ -170,7 +170,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       if (!file) {
         io.out(
           Object.entries(VOICE_CATALOG)
-            .map(([name, info]) => `${name.padEnd(11)} ${info.language}, ${info.describes}${isVoice(name) && voiceInstalled(voicesDir, name) ? "  (installed)" : ""}`)
+            .map(([name, info]) => `${name.padEnd(11)} ${info.language}, ${info.describes}; ${info.basis}${isVoice(name) && voiceInstalled(voicesDir, name) ? "  (installed)" : ""}`)
             .join("\n"),
         );
         return 0;

@@ -9,7 +9,11 @@ export interface Speech {
 /** Turns a line into speech in the named voice. Rejects with a plain message when it cannot. */
 export type Speak = (text: string, voice: VoiceName) => Promise<Speech>;
 
-export const DEFAULT_VOICE: VoiceName = "en-joe";
+/** The one voice trained only on public-domain recordings. */
+export const DEFAULT_VOICE: VoiceName = "en-kristin";
+
+/** The most there may be to say in one video, in characters: about ten minutes of speech. */
+export const MAX_SPEECH_CHARACTERS = 10_000;
 
 /** Seconds of screen time before a scene's narration starts: long enough for a transition to finish. */
 export const SPEECH_LEAD_SECONDS = 0.5;
@@ -18,5 +22,6 @@ export const SPEECH_TAIL_SECONDS = 0.35;
 
 /** A guess at how long a line takes to say, for checking before the voice has been made. */
 export function estimateSpeechSeconds(text: string): number {
-  return Math.max(1, text.length / 13 + 0.5);
+  // Measured: the voices say 17 to 21 characters a second.
+  return Math.max(1, text.length / 18 + 0.3);
 }

@@ -9,7 +9,7 @@ export const TOP_LEVEL_DOCS: Readonly<Record<string, string>> = {
   theme: '"signal" (default: black, lime accent), "midnight" (black, orange), "paper" (white, red), "cobalt" (blue, yellow) or "solar" (yellow, blue).',
   accent: 'The accent color as "#RRGGBB". Leave it out to use the theme\'s.',
   audio: 'Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile\'s folder.',
-  voice: 'Who reads the `say` lines aloud: { "name": "en-joe" }. English: "en-joe", "en-kristin", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.',
+  voice: 'Who reads the `say` lines aloud: { "name": "en-kristin" }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.',
   transition: 'How scenes change: "auto" (default), "cut", "fade", "crossfade", "push", "wipe" or "zoom".',
   scenes: "The scenes, in order. Required: 1 to 60.",
 };

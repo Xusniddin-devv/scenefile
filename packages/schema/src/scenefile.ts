@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const FORMATS = ["landscape-1080p", "portrait-1080p", "square-1080p"] as const;
 export const THEMES = ["signal", "midnight", "paper", "cobalt", "solar"] as const;
-/** Narrator voices: language, then the voice's name. All are free to use for any purpose. */
+/** Narrator voices: language, then the voice's name. Where each comes from is in the voice catalog. */
 export const VOICES = ["en-joe", "en-kristin", "en-bryce", "ru-denis", "ru-dmitri"] as const;
 
 export const scenefileSchema = z.strictObject({
@@ -24,7 +24,7 @@ export const scenefileSchema = z.strictObject({
     })
     .optional(),
   /** Who reads the scenes' `say` text aloud. */
-  voice: z.strictObject({ name: z.enum(VOICES).default("en-joe") }).optional(),
+  voice: z.strictObject({ name: z.enum(VOICES).default("en-kristin") }).optional(),
   /** How scenes give way to one another, unless a scene says otherwise. */
   transition: transitionSchema.default("auto"),
   scenes: z.array(sceneSchema).min(1).max(60),

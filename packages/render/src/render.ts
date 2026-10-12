@@ -248,7 +248,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       }
       for (const [index, line] of lines.entries()) {
         inputs.push("-protocol_whitelist", "file", "-i", line.file);
-        filters.push(`[${next}:a]${SHAPE},volume=6dB,alimiter=limit=0.89,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
+        filters.push(`[${next}:a]${SHAPE},volume=6.5dB,alimiter=limit=0.8:level=disabled,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
         next += 1;
       }
       if (lines.length > 0) {
@@ -260,7 +260,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         // The music gives way while someone is speaking and comes back after.
         filters.push(
           "[voice]asplit=2[said][key]",
-          "[music][key]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=400[bed]",
+          "[music][key]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=900[bed]",
           "[bed][said]amix=inputs=2:normalize=0:dropout_transition=0[sound]",
         );
       }

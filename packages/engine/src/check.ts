@@ -1,11 +1,11 @@
-import { type Diagnostic, type Scenefile, error, hasErrors, normalize } from "@scenefile/schema";
+import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
 import { type AssetSources, type LoadedAssets, assetRefs, loadAssets, loadAudio } from "./assets";
 import { type Composition, compile } from "./compile";
 import { glyphDiagnostics } from "./fonts";
 import { type InspectReport, verifyLayout } from "./layout";
 import { type ResolvedVideo, resolve } from "./resolve";
-import { DEFAULT_VOICE, type Speak, type Speech } from "./voice";
+import { DEFAULT_VOICE, MAX_SPEECH_CHARACTERS, type Speak, type Speech } from "./voice";
 
 export interface CheckResult {
   /** True when there are no errors. Warnings do not block rendering. */
@@ -67,6 +67,56 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
   return lines.join("\n");
 }
 
+const SCRIPT = { en: /\p{Script=Latin}/gu, ru: /\p{Script=Cyrillic}/gu } as const;
+const OTHER = { en: /\p{Script=Cyrillic}/gu, ru: /\p{Script=Latin}/gu } as const;
+const SPEAKER = { en: "en-kristin", ru: "ru-denis" } as const;
+
+/** Problems with what the narrator is asked to say, found without making any sound. */
+function voiceDiagnostics(scenefile: Scenefile): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  const voice = scenefile.voice?.name ?? DEFAULT_VOICE;
+  const language = voice.slice(0, 2) as keyof typeof SCRIPT;
+  let characters = 0;
+  for (const [index, scene] of scenefile.scenes.entries()) {
+    if (scene.say === undefined) continue;
+    characters += scene.say.length;
+    const own = scene.say.match(SCRIPT[language])?.length ?? 0;
+    const foreign = scene.say.match(OTHER[language])?.length ?? 0;
+    const path = `scenes[${index}].say`;
+    if (foreign > own) {
+      const other = language === "en" ? "ru" : "en";
+      diagnostics.push(
+        error(
+          "VOICE_LANGUAGE",
+          path,
+          `The voice "${voice}" speaks ${language === "en" ? "English" : "Russian"}, but this line is written in another language; it would come out as noise.`,
+          `Set "voice": { "name": "${SPEAKER[other]}" } at the top of the scenefile, or write the line in the voice's language.`,
+        ),
+      );
+    } else if (/https?:\/\/|www\.|\p{Extended_Pictographic}/u.test(scene.say)) {
+      diagnostics.push(
+        warning(
+          "VOICE_UNSPEAKABLE",
+          path,
+          "This line has a web address or an emoji in it, which a voice reads badly or not at all.",
+          'Say it in words ("example dot com"), or leave it to the text on screen.',
+        ),
+      );
+    }
+  }
+  if (characters > MAX_SPEECH_CHARACTERS) {
+    diagnostics.push(
+      error(
+        "VOICE_TOO_LONG",
+        "scenes",
+        `There are ${characters} characters of narration; more than ${MAX_SPEECH_CHARACTERS} would run past the ten minutes a video may last.`,
+        "Shorten the `say` lines or remove some.",
+      ),
+    );
+  }
+  return diagnostics;
+}
+
 /**
  * Everything that can be checked without a browser: validate, resolve, compile.
  * Images must be loaded first and passed in; without them, a scenefile that
@@ -85,7 +135,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     };
   }
 
-  const assetDiagnostics = [...(loaded?.diagnostics ?? [])];
+  const assetDiagnostics = [...(loaded?.diagnostics ?? []), ...voiceDiagnostics(normalized.scenefile)];
   for (const ref of assetRefs(normalized.scenefile)) {
     const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === ref.path);
     if (!reported && !loaded?.assets.has(ref.src)) {
@@ -160,14 +210,21 @@ export async function checkWithAssets(
   const music = await loadAudio(scenefile, sources);
 
   const speech = new Map<number, Speech>();
-  const voiceDiagnostics: Diagnostic[] = [];
+  const spoken: Diagnostic[] = [];
+  const loaded = { ...images, audio: music.audio, diagnostics: [...images.diagnostics, ...music.diagnostics] };
+  // Speech is the slow part. A scenefile with other problems is reported before any is made;
+  // only its length is left to judge afterwards, when the real lengths are known.
+  const first = check(input, loaded);
+  if (first.diagnostics.some((diagnostic) => diagnostic.severity === "error" && diagnostic.code !== "TOTAL_DURATION")) {
+    return first;
+  }
   if (sources.speak) {
     for (const [index, scene] of scenefile.scenes.entries()) {
       if (scene.say === undefined) continue;
       try {
         speech.set(index, await sources.speak(scene.say, scenefile.voice?.name ?? DEFAULT_VOICE));
       } catch (cause) {
-        voiceDiagnostics.push(
+        spoken.push(
           error(
             "VOICE_FAILED",
             `scenes[${index}].say`,
@@ -180,12 +237,7 @@ export async function checkWithAssets(
       }
     }
   }
-  return check(input, {
-    ...images,
-    audio: music.audio,
-    speech,
-    diagnostics: [...images.diagnostics, ...music.diagnostics, ...voiceDiagnostics],
-  });
+  return check(input, { ...loaded, speech, diagnostics: [...loaded.diagnostics, ...spoken] });
 }
 
 /**

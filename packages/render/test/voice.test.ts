@@ -1,11 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { check } from "@scenefile/engine";
 import { VOICES } from "@scenefile/schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { VOICE_CATALOG, createSpeaker, probeVideo, renderVideo, voiceHome, voiceInstalled } from "../src/index";
+import { VOICE_CATALOG, createSpeaker, installVoice, probeVideo, renderVideo, voiceHome, voiceInstalled } from "../src/index";
 
 let dir: string;
 beforeAll(() => {
@@ -23,13 +24,20 @@ function fakeVoice(calls: string[] = []) {
   };
 }
 
+/** What an unpacked voice holds. */
+function fill(folder: string, model: string, parts = [`${model}.onnx`, "tokens.txt", "espeak-ng-data/phontab"]): void {
+  for (const part of parts) {
+    mkdirSync(join(folder, part, ".."), { recursive: true });
+    writeFileSync(join(folder, part), "");
+  }
+}
+
 /** A home folder in which the given voices look installed. */
 function homeWith(...names: (keyof typeof VOICE_CATALOG)[]): string {
   const home = mkdtempSync(join(dir, "home-"));
   for (const name of names) {
     const model = VOICE_CATALOG[name].model;
-    mkdirSync(join(home, "voices", `vits-piper-${model}`), { recursive: true });
-    writeFileSync(join(home, "voices", `vits-piper-${model}`, `${model}.onnx`), "");
+    fill(join(home, "voices", `vits-piper-${model}`), model);
   }
   return home;
 }
@@ -70,12 +78,67 @@ describe("making the voice", () => {
     expect(readdirSync(join(home, "voices"))).toEqual([]);
   });
 
-  it("every voice in the catalog is one a scenefile can name, with a licence that allows any use", () => {
-    expect(Object.keys(VOICE_CATALOG).sort()).toEqual([...VOICES].sort());
-    for (const info of Object.values(VOICE_CATALOG)) {
-      expect(["CC0", "public domain"]).toContain(info.licence);
-      expect(info.sha256).toMatch(/^[0-9a-f]{64}$/);
+  it("installs a voice from its fixed address, and only once it is whole", async () => {
+    const body = "the archive";
+    const info = { ...VOICE_CATALOG["en-joe"], sha256: createHash("sha256").update(body).digest("hex"), bytes: body.length };
+    const asked: string[] = [];
+    const fetcher = (async (url: string | URL | Request) => {
+      asked.push(String(url));
+      return new Response(body);
+    }) as typeof fetch;
+
+    // An unpack that stops half way leaves nothing that looks installed.
+    const half = join(homeWith(), "voices");
+    const broken = installVoice("en-joe", { voicesDir: half, info, fetch: fetcher, unpack: async (_archive, into) => fill(join(into, `vits-piper-${info.model}`), info.model, [`${info.model}.onnx`]) });
+    await expect(broken).rejects.toThrow(/could not be unpacked/);
+    expect(voiceInstalled(half, "en-joe")).toBe(false);
+    expect(readdirSync(half)).toEqual([]);
+
+    const whole = join(homeWith(), "voices");
+    await installVoice("en-joe", { voicesDir: whole, info, fetch: fetcher, unpack: async (_archive, into) => fill(join(into, `vits-piper-${info.model}`), info.model) });
+    expect(voiceInstalled(whole, "en-joe")).toBe(true);
+    expect(readdirSync(whole)).toEqual([`vits-piper-${info.model}`]);
+    expect(new Set(asked)).toEqual(new Set(["https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-joe-medium.tar.bz2"]));
+
+    // A download larger than the voice is known to be is cut off, not saved.
+    const huge = installVoice("en-bryce", { voicesDir: whole, info: { ...info, model: "en_US-bryce-medium", bytes: 4 }, fetch: fetcher, unpack: async () => undefined });
+    await expect(huge).rejects.toThrow(/larger than expected|not the file/);
+  });
+
+  it("does not count a voice with files missing as installed", () => {
+    const home = homeWith();
+    fill(join(home, "voices", "vits-piper-en_US-joe-medium"), "en_US-joe-medium", ["en_US-joe-medium.onnx"]);
+    expect(voiceInstalled(join(home, "voices"), "en-joe")).toBe(false);
+  });
+
+  it("makes a line again when what it saved is damaged", async () => {
+    const calls: string[] = [];
+    const home = homeWith("en-joe");
+    const speak = createSpeaker({ home, download: false, synthesize: fakeVoice(calls) });
+    const first = await speak("Twenty characters...", "en-joe");
+    writeFileSync(`${first.file}.json`, '{"seconds":"soon"}');
+    expect((await speak("Twenty characters...", "en-joe")).seconds).toBeCloseTo(2, 3);
+    rmSync(first.file);
+    expect(existsSync((await speak("Twenty characters...", "en-joe")).file)).toBe(true);
+    expect(calls).toHaveLength(3);
+  });
+
+  it("keeps saved lines under a size limit by dropping the oldest", async () => {
+    const home = homeWith("en-joe");
+    // Each one-second line is about 44 kB.
+    const speak = createSpeaker({ home, download: false, synthesize: fakeVoice(), maxCacheBytes: 100_000 });
+    const lines = [];
+    for (const text of ["First one", "Second one", "Third line"]) {
+      lines.push(await speak(text.padEnd(10, "."), "en-joe"));
+      await new Promise((resolve) => setTimeout(resolve, 15));
     }
+    expect(lines.map((line) => existsSync(line.file))).toEqual([false, true, true]);
+  });
+
+  it("says where each voice comes from, and the catalog matches what a scenefile can name", () => {
+    expect(Object.keys(VOICE_CATALOG).sort()).toEqual([...VOICES].sort());
+    expect(VOICE_CATALOG["en-kristin"].basis).toMatch(/public-domain/);
+    for (const name of ["en-joe", "ru-denis", "ru-dmitri"] as const) expect(VOICE_CATALOG[name].basis).toMatch(/research/);
   });
 
   it.skipIf(!voiceInstalled(join(voiceHome(), "voices"), "en-joe"))("speaks for real when the voice is installed", async () => {

@@ -425,6 +425,24 @@ describe("limits on what a caller can make the server do", () => {
   });
 });
 
+describe("narration through the server", () => {
+  it("never downloads a voice: one that is missing is reported with how to install it", async () => {
+    const before = process.env.SCENEFILE_HOME;
+    process.env.SCENEFILE_HOME = join(outer, "empty-home");
+    try {
+      const { call, close } = await connect();
+      const narrated = { ...valid, scenes: [{ ...valid.scenes[0], say: "This tool deploys your site." }, valid.scenes[1]] };
+      const { text } = await call("check", { scenefile: narrated });
+      expect(text).toContain("VOICE_FAILED");
+      expect(text).toContain("scenefile voices install en-kristin");
+      await close();
+    } finally {
+      if (before === undefined) delete process.env.SCENEFILE_HOME;
+      else process.env.SCENEFILE_HOME = before;
+    }
+  });
+});
+
 describe("where the server may work", () => {
   it("refuses a root that is not an existing folder", () => {
     expect(() => createServer({ root: join(outer, "no-such-folder") })).toThrow(/folder/);

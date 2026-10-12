@@ -54,7 +54,7 @@ describe("timing a scene to what is said in it", () => {
   });
 
   it("estimates the length from the text until the voice has been made", () => {
-    expect(estimateSpeechSeconds("a".repeat(130))).toBeCloseTo(10.5, 0);
+    expect(estimateSpeechSeconds("a".repeat(126))).toBeCloseTo(7.3, 5);
     const { video } = resolve(parsed(narrated));
     expect(video.scenes[0]?.speech?.file).toBeUndefined();
     expect(video.scenes[0]?.speech?.seconds).toBeCloseTo(estimateSpeechSeconds(narrated.scenes[0]?.say ?? ""), 5);
@@ -92,7 +92,7 @@ describe("checking a narrated scenefile", () => {
   it("asks for each line in the scenefile's voice, and reports a line that could not be spoken", async () => {
     const asked: [string, string][] = [];
     const result = await checkWithAssets(
-      { ...narrated, voice: { name: "ru-denis" } },
+      { ...narrated, voice: { name: "en-joe" } },
       {
         baseDir: "/nowhere",
         speak: async (text, voice) => {
@@ -103,14 +103,90 @@ describe("checking a narrated scenefile", () => {
       },
     );
     expect(asked).toEqual([
-      ["This tool deploys your site with a single command.", "ru-denis"],
-      ["Releases are sixty times faster.", "ru-denis"],
+      ["This tool deploys your site with a single command.", "en-joe"],
+      ["Releases are sixty times faster.", "en-joe"],
     ]);
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toEqual([
       expect.objectContaining({ code: "VOICE_FAILED", severity: "error", path: "scenes[1].say" }),
     ]);
     expect(result.diagnostics[0]?.message).toContain("402");
+  });
+});
+
+describe("catching narration that would come out wrong", () => {
+  const one = (say: string, voice?: string) => ({
+    version: 1,
+    ...(voice ? { voice: { name: voice } } : {}),
+    scenes: [{ type: "title", heading: "One" }, { type: "title", heading: "Two", say }],
+  });
+
+  it("uses the voice trained only on public-domain recordings unless another is named", () => {
+    expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-kristin" });
+  });
+
+  it("refuses text in a language the voice does not speak, and names a voice that does", () => {
+    const russian = check(one("Готовьтесь к экзамену каждый день."));
+    expect(russian.ok).toBe(false);
+    expect(russian.diagnostics).toEqual([expect.objectContaining({ code: "VOICE_LANGUAGE", severity: "error", path: "scenes[1].say" })]);
+    expect(russian.diagnostics[0]?.fix).toContain("ru-denis");
+    const english = check(one("Prepare for the exam every day.", "ru-denis"));
+    expect(english.diagnostics[0]).toMatchObject({ code: "VOICE_LANGUAGE", path: "scenes[1].say" });
+    expect(english.diagnostics[0]?.fix).toContain("en-kristin");
+    // A product name in another alphabet inside a sentence is fine.
+    expect(check(one("Билим помогает сдать TOPIK.", "ru-denis")).ok).toBe(true);
+  });
+
+  it("warns about things a voice cannot say well", () => {
+    const result = check(one("Read more at https://example.com/docs today."));
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([expect.objectContaining({ code: "VOICE_UNSPEAKABLE", severity: "warning", path: "scenes[1].say" })]);
+  });
+
+  it("refuses a line with nothing in it to say", () => {
+    expect(normalize(one(" . ")).diagnostics[0]).toMatchObject({ severity: "error", path: "scenes[1].say" });
+  });
+
+  it("makes no speech for a scenefile that has other errors, or far too much to say", async () => {
+    let asked = 0;
+    const speak = async () => {
+      asked += 1;
+      return { file: "/cache/a.wav", seconds: 3 };
+    };
+    const broken = await checkWithAssets(one("Привет, мир, как дела сегодня."), { baseDir: "/nowhere", speak });
+    expect(broken.ok).toBe(false);
+    const long = { version: 1, scenes: Array.from({ length: 30 }, () => ({ type: "title", heading: "One", say: "word ".repeat(100).trim() })) };
+    const tooMuch = await checkWithAssets(long, { baseDir: "/nowhere", speak });
+    expect(tooMuch.diagnostics).toContainEqual(expect.objectContaining({ code: "VOICE_TOO_LONG", severity: "error", path: "scenes" }));
+    expect(asked).toBe(0);
+  });
+
+  it("never lets lines overlap or run past their scene, whatever the pacing", () => {
+    const kinds = ["cut", "fade", "crossfade", "push", "wipe", "zoom", "auto"];
+    let seed = 7;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let round = 0; round < 300; round++) {
+      const count = 2 + Math.floor(random() * 5);
+      const lengths = Array.from({ length: count }, () => (random() < 0.3 ? 0 : 0.05 + random() * 12));
+      const scenes = lengths.map((seconds, index) => ({
+        type: index % 2 ? "stat" : "title",
+        ...(index % 2 ? { value: "9", label: "things" } : { heading: "Heading here" }),
+        ...(seconds > 0 ? { say: "Some words to say." } : {}),
+        ...(random() < 0.4 ? { duration: 0.5 + random() * 6 } : {}),
+        transition: kinds[Math.floor(random() * kinds.length)],
+      }));
+      const fps = random() < 0.5 ? 30 : 60;
+      const made = new Map(lengths.flatMap((seconds, index) => (seconds > 0 ? [[index, { file: "x.wav", seconds }] as const] : [])));
+      const { video } = resolve(parsed({ version: 1, fps, scenes }), new Map(), made);
+      let lastEnd = -1;
+      for (const scene of video.scenes) {
+        if (!scene.speech) continue;
+        const end = scene.speech.startFrame + Math.ceil(scene.speech.seconds * fps);
+        expect(scene.speech.startFrame, `round ${round}`).toBeGreaterThan(lastEnd);
+        expect(end, `round ${round}`).toBeLessThanOrEqual(scene.startFrame + scene.durationFrames);
+        lastEnd = end;
+      }
+    }
   });
 });
 

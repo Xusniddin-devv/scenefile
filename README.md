@@ -105,21 +105,34 @@ line has been said, and music turns itself down under the voice.
   "scenes": [{ "type": "title", "heading": "Ship faster", "say": "This tool deploys your site with one command." }] }
 ```
 
-The voice is made on your machine by an open speech model ([Piper](https://github.com/rhasspy/piper)
-voices run through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)). There is no
-account, no key and no charge, and the text is not sent anywhere. A voice is downloaded
-once (about 67 MB), from a fixed address, and checked against a known checksum.
+The voice is made on your machine by an open speech model. There is no account, no key
+and no charge, and the text is not sent anywhere. A voice is downloaded once (about
+67 MB), from a fixed address, and checked against a known checksum. `scenefile voices`
+lists them; `scenefile voices install <name>` downloads one ahead of time. The MCP
+server never downloads: it uses voices that are already installed.
 
-| Voice | Language | Recordings licensed as |
+| Voice | Language | Where it comes from |
 |---|---|---|
-| `en-joe`, `en-kristin`, `en-bryce` | English | CC0 / public domain |
-| `ru-denis`, `ru-dmitri` | Russian | CC0 |
+| `en-kristin` (default) | English | Trained only on public-domain recordings (LibriVox). |
+| `en-bryce` | English | Public-domain recordings, fine-tuned from a voice whose own basis is not published. |
+| `en-joe` | English | Its own recordings are CC0, but it was fine-tuned from a voice trained on recordings licensed for research only. |
+| `ru-denis`, `ru-dmitri` | Russian | The same as `en-joe`. No Russian voice here is free of that. |
 
-`scenefile voices` lists them; `scenefile voices install <name>` downloads one ahead of
-time. The MCP server never downloads: it uses voices that are already installed.
+**Licences, plainly.** scenefile's own code is MIT. Narration uses parts scenefile does
+not ship: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0, with
+espeak-ng, GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voices,
+each with the history in the table. For commercial work, use `en-kristin` or check the
+voice's model card first.
 
-What it is not: these voices are clear but plainly synthetic, there is no Uzbek voice
-yet (no freely licensed one exists in this family), and there are no captions yet.
+What it is not:
+
+- The voices are clear but plainly synthetic.
+- English and Russian only. There is no Uzbek voice: none with a usable licence exists
+  in this family. A line in a language the voice does not speak is refused by `check`.
+- No captions yet.
+- Narration is made fresh on each machine and differs slightly each time. A rerun on the
+  same machine reuses the saved lines and gives the same video; saved lines live in
+  `~/.cache/scenefile` (or `$SCENEFILE_HOME`), capped at 500 MB.
 
 ## Themes
 

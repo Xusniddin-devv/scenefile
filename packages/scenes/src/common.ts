@@ -6,7 +6,11 @@ export const durationSchema = z.union([z.literal("auto"), z.number().positive().
 export type Duration = z.infer<typeof durationSchema>;
 
 /** Words for the narrator to speak while the scene is on screen. */
-export const saySchema = z.string().min(1).max(500);
+export const saySchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/[\p{L}\p{N}]/u, "Must contain words to say.");
 
 /** The ways one scene can give way to the next. */
 export const TRANSITIONS = ["cut", "fade", "crossfade", "push", "wipe", "zoom"] as const;
