@@ -1,4 +1,4 @@
-import { SHARED_CSS, escapeHtml, getScene, sceneChrome } from "@scenefile/scenes";
+import { SHARED_CSS, clipPlacement, escapeHtml, getScene, sceneChrome } from "@scenefile/scenes";
 import { captionCues } from "./captions";
 import { displayFace, fontFaceCss, videoTexts } from "./fonts";
 import type { ResolvedVideo } from "./resolve";
@@ -35,6 +35,25 @@ export interface Composition {
   audio?: { file: string; volume: number };
   /** Narration to play over the video: each line's sound file and when it starts. */
   narration?: { file: string; atSeconds: number; seconds: number }[];
+  /** The person's own footage, laid over the rendered picture: which part of which file, when, where and how loud. */
+  clips?: PlacedClip[];
+}
+
+export interface PlacedClip {
+  file: string;
+  /** Seconds into the file at which to start, and how long it plays. */
+  fromSeconds: number;
+  seconds: number;
+  /** When it starts in the video. */
+  atSeconds: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** True to fill the rectangle and crop; false to fit the whole picture in it. */
+  cover: boolean;
+  /** 0 when the clip is silent, by choice or because the file has no sound. */
+  volume: number;
 }
 
 function baseCss(width: number, height: number): string {
@@ -88,6 +107,7 @@ export function compile(video: ResolvedVideo): Composition {
         path: `scenes[${scene.index}]`,
         frame: { width: video.width, height: stageHeight, unit },
         asset: (src) => video.assets.get(src),
+        clip: (src) => video.clips.get(src),
       });
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
     })
@@ -140,5 +160,20 @@ ${sceneChrome(total)}${captions}
 </body>
 </html>`;
 
-  return { html, manifest };
+  const frame = { width: video.width, height: stageHeight, unit };
+  const clips = video.scenes.flatMap((scene): PlacedClip[] => {
+    const size = scene.props.type === "clip" ? video.clips.get(scene.props.src) : undefined;
+    if (scene.props.type !== "clip" || !scene.clip?.file || !size) return [];
+    return [
+      {
+        file: scene.clip.file,
+        fromSeconds: scene.clip.fromSeconds,
+        seconds: scene.durationFrames / video.fps,
+        atSeconds: scene.startFrame / video.fps,
+        ...clipPlacement(scene.props, frame, size),
+        volume: scene.clip.audio ? scene.props.volume : 0,
+      },
+    ];
+  });
+  return { html, manifest, ...(clips.length > 0 ? { clips } : {}) };
 }

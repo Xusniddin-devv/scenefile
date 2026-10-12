@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
-import { type AssetSources, type LoadedAssets, assetRefs, loadAssets, loadAudio } from "./assets";
+import { type AssetSources, type ClipInfo, type LoadedAssets, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
 import { type Composition, compile } from "./compile";
 import { displayFace, glyphDiagnostics } from "./fonts";
 import { FONT_FAMILIES, getTheme } from "./themes";
@@ -33,6 +33,8 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
     lines.push(
       `${scene.index + 1}. ${scene.type.padEnd(typeWidth)}  ${range}  ${getScene(scene.type).summary(scene.props)}${
+        scene.clip?.totalSeconds === undefined ? "" : ` of ${scene.clip.totalSeconds.toFixed(2)}s`
+      }${
         scene.transition === "none"
           ? ""
           : `  (enters by ${scene.transition}${scene.overlapFrames > 0 ? ` over ${seconds(scene.overlapFrames)}` : ""})`
@@ -151,6 +153,15 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     }
   }
 
+  for (const ref of clipRefs(normalized.scenefile)) {
+    const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === ref.path);
+    if (!reported && !loaded?.clips?.has(ref.src)) {
+      assetDiagnostics.push(
+        error("ASSET_NOT_FOUND", ref.path, `The video "${ref.src}" has not been read.`, "Check the scenefile with the scenefile command, which reads its files."),
+      );
+    }
+  }
+
   const wantedMusic = normalized.scenefile.audio;
   if (wantedMusic && !loaded?.audio && !assetDiagnostics.some((diagnostic) => diagnostic.path === "audio.src")) {
     assetDiagnostics.push(
@@ -163,7 +174,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
 
-  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech);
+  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech, loaded?.clips);
   const notes: Diagnostic[] = [];
   const headings = displayFace(resolved.video);
   if (headings.missing.length > 0) {
@@ -178,6 +189,9 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
   for (const [index, scene] of normalized.scenefile.scenes.entries()) {
+    if (scene.type === "clip" && scene.fit === "cover" && scene.caption !== undefined) {
+      notes.push(warning("FIELD_IGNORED", `scenes[${index}].caption`, "A clip that fills the frame leaves no room for a caption, so it is not shown.", 'Remove "caption", or remove "fit" to show the clip inside the frame with its caption.'));
+    }
     if (scene.type !== "screenshot" || scene.device !== "phone") continue;
     const picture = loaded?.assets.get(scene.src);
     if (picture && picture.width / picture.height > 0.75) {
@@ -234,7 +248,12 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
 /** `check`, after loading the images the scenefile uses. */
 export async function checkWithAssets(
   input: unknown,
-  sources: AssetSources & { /** Makes the narration. Without it, narrated scenes are timed by estimate. */ speak?: Speak },
+  sources: AssetSources & {
+    /** Makes the narration. Without it, narrated scenes are timed by estimate. */
+    speak?: Speak;
+    /** Reads a video file's size, length and sound. Without it, clips cannot be used. */
+    probeClip?: (file: string) => Promise<ClipInfo | null>;
+  },
 ): Promise<CheckResult> {
   const { scenefile } = normalize(input);
   if (!scenefile) return check(input);
@@ -243,7 +262,13 @@ export async function checkWithAssets(
 
   const speech = new Map<number, Speech>();
   const spoken: Diagnostic[] = [];
-  const loaded = { ...images, audio: music.audio, diagnostics: [...images.diagnostics, ...music.diagnostics] };
+  const footage = await loadClips(clipRefs(scenefile), sources);
+  const loaded = {
+    ...images,
+    audio: music.audio,
+    clips: footage.clips,
+    diagnostics: [...images.diagnostics, ...music.diagnostics, ...footage.diagnostics],
+  };
   // Speech is the slow part. A scenefile with other problems is reported before any is made;
   // only its length is left to judge afterwards, when the real lengths are known.
   const first = check(input, loaded);

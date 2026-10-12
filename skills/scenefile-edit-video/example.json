@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "voice": {
+    "name": "en-emma",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Release walkthrough",
+      "say": "Here is the new release, in two recordings."
+    },
+    {
+      "type": "clip",
+      "src": "first.mp4",
+      "from": 2,
+      "to": 14,
+      "caption": "Signing in",
+      "volume": 0,
+      "say": "First, signing in with one tap."
+    },
+    {
+      "type": "clip",
+      "src": "second.mp4",
+      "to": 10,
+      "caption": "The new dashboard",
+      "volume": 0,
+      "say": "Then the new dashboard, with every project on one page."
+    },
+    {
+      "type": "outro",
+      "heading": "That is the release.",
+      "say": "And that is the release."
+    }
+  ]
+}

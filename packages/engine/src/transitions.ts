@@ -24,6 +24,7 @@ const PREFERRED: Record<SceneType, readonly TransitionKind[]> = {
   quote: ["push", "crossfade"],
   bullets: ["push", "wipe"],
   chart: ["push", "wipe"],
+  clip: ["cut"],
   stat: ["zoom", "crossfade"],
   code: ["wipe", "push"],
   terminal: ["wipe", "push"],

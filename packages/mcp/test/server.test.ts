@@ -69,7 +69,7 @@ describe("the tools on offer", () => {
     expect(text).toContain("# Making a video with scenefile");
     expect(text).toContain("### stat");
     for (const tool of ["check", "render", "job", "scene_docs"]) expect(text).toContain(`\`${tool}\``);
-    expect(text.length).toBeLessThan(9000);
+    expect(text.length).toBeLessThan(10_000);
     await close();
   });
 

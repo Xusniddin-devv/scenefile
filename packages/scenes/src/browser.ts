@@ -1,5 +1,6 @@
 import { mountBullets } from "./bullets/mount";
 import { mountChart } from "./chart/mount";
+import { mountClip } from "./clip/mount";
 import { mountCode } from "./code/mount";
 import { mountCompare } from "./compare/mount";
 import { mountOutro } from "./outro/mount";
@@ -23,6 +24,7 @@ export const mounts: Record<string, SceneMount> = {
   screenshot: mountScreenshot,
   compare: mountCompare,
   chart: mountChart,
+  clip: mountClip,
   terminal: mountTerminal,
 };
 

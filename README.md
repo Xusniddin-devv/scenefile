@@ -6,8 +6,8 @@
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
-**Status: early development.** Eleven scene types (`title`, `statement`, `quote`,
-`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `outro`, `terminal`), ten
+**Status: early development.** Twelve scene types (`title`, `statement`, `quote`,
+`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `clip`, `outro`, `terminal`), ten
 themes, screenshots captured from your own web app, narration in English and Russian made on your own machine, captions and a music
 bed work today. Fonts are bundled, so Latin and
 Cyrillic text is set in the same typefaces and layout on every machine (edges differ
@@ -86,7 +86,7 @@ is sent to a service and nothing costs money.
 
 Then ask for what you want: "make a video explaining how auth works in this repo",
 "make a walkthrough video of the app on localhost:3000", "make a release video for
-v2.1". The plugin's recipes cover five kinds of video:
+v2.1". The plugin's recipes cover six kinds of video:
 
 | Recipe | For |
 |---|---|
@@ -94,6 +94,7 @@ v2.1". The plugin's recipes cover five kinds of video:
 | `scenefile-app-walkthrough` | A tour of a running web app, from real captures of its screens. |
 | `scenefile-launch-video` | A short announcement of a project or feature. |
 | `scenefile-changelog-video` | What changed in a release, from the changelog and commits. |
+| `scenefile-edit-video` | Cutting and joining your own recordings, with titles, captions and narration. |
 | `scenefile-repo-tour` | A video about a GitHub repository, starting from its public facts. |
 
 Each recipe holds the model to the same rule: use only facts from the code, the
@@ -119,7 +120,7 @@ prints a JSON Schema for tools that can enforce one on a model's output.
 }
 ```
 
-The server offers five tools: `guide` (how to write a scenefile, in about 2,100 tokens),
+The server offers five tools: `guide` (how to write a scenefile, in about 2,400 tokens),
 `scene_docs`, `check`, `render` (returns a job id at once) and `job` (progress, then the
 finished file; it can also cancel). A scenefile can be passed inline or as a path.
 
@@ -197,6 +198,35 @@ What it is not:
 - Narration is made fresh on each machine and differs slightly each time. A rerun on the
   same machine reuses the saved lines and gives the same video; saved lines live in
   `~/.cache/scenefile` (or `$SCENEFILE_HOME`), capped at 500 MB.
+
+## Editing your own videos
+
+A `clip` scene is one of your own video files, or a part of it. Put several in a row
+and they are joined; put other scenes around them for titles and endings.
+
+```json
+{ "version": 1,
+  "scenes": [
+    { "type": "title", "heading": "Release walkthrough" },
+    { "type": "clip", "src": "signin.mov", "from": 2, "to": 14, "caption": "Signing in" },
+    { "type": "clip", "src": "dashboard.mp4", "to": 10, "fit": "cover" },
+    { "type": "outro", "heading": "That is the release." }
+  ] }
+```
+
+- `from` and `to` are seconds into the file. `scenefile probe *.mp4` prints each file's
+  size, length and whether it has sound; `check` refuses a cut past the end of a file and
+  says how long the file is.
+- A clip is shown whole inside the frame, or fills it with `"fit": "cover"`. A phone
+  recording stored on its side is turned upright.
+- A clip keeps its own sound unless you set `"volume": 0`; music and narration mix with
+  it, and narrated lines get captions like any other scene.
+- Your files are only read. The result is a new file.
+
+What it is not: an editor with a timeline. Clips are joined with cuts; there are no
+transitions through footage, no speed changes, no colour work, and it does not transcribe
+what is said in a clip. Clips must be in the scenefile's folder, like images. Rendering
+re-encodes the whole video once more when it contains clips, so it takes longer.
 
 ## Screenshots of your app
 

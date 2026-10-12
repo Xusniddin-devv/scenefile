@@ -17,5 +17,6 @@ export function context(index = 0, total = 1): CompileContext {
     path: `scenes[${index}]`,
     frame: { width: 1920, height: 1080, unit: 10.8 },
     asset: () => STUB_ASSET,
+    clip: () => ({ width: 1280, height: 720 }),
   };
 }

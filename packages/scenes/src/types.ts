@@ -8,6 +8,8 @@ export interface CompileContext {
   readonly frame: { readonly width: number; readonly height: number; readonly unit: number };
   /** A loaded image, by the `src` the scenefile gave. Undefined if it was not loaded. */
   asset(src: string): SceneAsset | undefined;
+  /** The size of a video clip, by the `src` the scenefile gave. Undefined if it was not read. */
+  clip?(src: string): { readonly width: number; readonly height: number } | undefined;
 }
 
 /** An image ready to draw: embedded data and its real size in pixels. */
@@ -50,6 +52,8 @@ export interface SceneDefinition<P> {
   texts(props: P): SceneText[];
   /** Every image the scene shows: its `src`, and the path of the field that names it, relative to the scene. */
   assets?(props: P): { path: string; src: string }[];
+  /** Every video file the scene plays, in the same form. */
+  clips?(props: P): { path: string; src: string }[];
   /**
    * Inner HTML of the scene's <section>. All text must be escaped.
    *

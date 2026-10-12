@@ -36,6 +36,7 @@ import {
   type CaptureOptions,
   type CaptureReport,
   capturePage,
+  probeClip,
 } from "@scenefile/render";
 import { THEMES, type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -70,6 +71,7 @@ const USAGE = `Usage:
                                    save a picture of a web page, to use in a screenshot scene
   scenefile github <owner/name or address> [-o <out.mp4>] [--dir <folder>] [--theme <name>] [--narrate] [--no-screenshot]
                                    a scenefile, and a video, from a GitHub repository's own facts
+  scenefile probe <video>...       the size, length and sound of video files, for planning clips
   scenefile guide                  how to write a scenefile
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
@@ -278,6 +280,22 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Next: scenefile check ${target}\nThen: scenefile render ${target} -o ${slug}.mp4`);
       return 0;
     }
+    if (command === "probe") {
+      const files = positionals.slice(1);
+      if (files.length === 0) throw new UsageError('"probe" needs one or more video files.');
+      let unreadable = 0;
+      const width = Math.max(...files.map((name) => name.length));
+      for (const name of files) {
+        const found = await probeClip(resolvePath(name));
+        if (!found) {
+          unreadable += 1;
+          io.err(`${name}: not a video that can be read.`);
+          continue;
+        }
+        io.out(`${name.padEnd(width)}  ${found.width}x${found.height}  ${found.seconds.toFixed(1)}s  ${found.audio ? "with sound" : "no sound"}`);
+      }
+      return unreadable > 0 ? 1 : 0;
+    }
     if (command === "setup") {
       const code = await (io.installBrowser ?? installBrowser)(values["with-deps"]);
       if (code !== 0) {
@@ -323,7 +341,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, capture, github, guide, scenes, schema, init, setup, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, capture, github, probe, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 

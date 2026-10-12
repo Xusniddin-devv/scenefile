@@ -6,6 +6,7 @@ export const FIXTURES: Record<SceneType, Record<string, unknown>> = {
   statement: { type: "statement", text: "Describe the scenes. The engine does the rest.", highlight: "The engine" },
   quote: { type: "quote", text: "It rendered correctly on the first try.", author: "Dilnoza K.", role: "Staff engineer" },
   bullets: { type: "bullets", heading: "Why it works", items: ["Write JSON, not keyframes", "Errors a model can fix", "Same input, same frames"] },
+  clip: { type: "clip", src: "assets/demo.mp4", from: 3, to: 9, caption: "Signing in" },
   chart: { type: "chart", heading: "Median build time", unit: "s", bars: [{ label: "Webpack", value: 48 }, { label: "Vite", value: 12 }, { label: "Ours", value: 3 }], highlight: "Ours" },
   stat: { type: "stat", value: "1,200+", label: "videos rendered", note: "In the first week, from four different models." },
   code: {
@@ -41,6 +42,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   statement: { type: "statement", text: NASTY, highlight: "<u>x</u>" },
   quote: { type: "quote", text: NASTY, author: NASTY, role: NASTY },
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
+  clip: { type: "clip", src: NASTY, from: 1, to: 2, fit: "contain", volume: 0.5, caption: NASTY },
   chart: { type: "chart", heading: NASTY, unit: "<b>", bars: [{ label: "<i>a</i>", value: 2 }, { label: "<u>b</u>", value: 1 }], highlight: "<i>a</i>" },
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, highlight: [1], caption: NASTY },

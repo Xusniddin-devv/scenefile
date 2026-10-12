@@ -42,7 +42,23 @@ export interface LoadedAssets {
   audio?: LoadedAudio | null;
   /** Narration already made, by scene index. Scenes without an entry are timed by estimate. */
   speech?: Map<number, Speech>;
+  /** Video clips that were found and read, by the `src` the scenefile gave. */
+  clips?: Map<string, ClipInfo>;
 }
+
+/** What is known about a video file used as a clip. */
+export interface ClipInfo {
+  /** The file's real location, already confined to the scenefile's folder. */
+  file: string;
+  width: number;
+  height: number;
+  seconds: number;
+  /** Whether it has a sound track. */
+  audio: boolean;
+}
+
+/** The largest video file used as a clip. */
+export const MAX_CLIP_BYTES = 4 * 1024 * 1024 * 1024;
 
 export interface ResolvedAddress {
   address: string;
@@ -77,6 +93,13 @@ export function assetRefs(scenefile: Scenefile): AssetRef[] {
       path: `scenes[${index}].${ref.path}`,
       src: ref.src,
     })),
+  );
+}
+
+/** Every video file a scenefile plays, with the path of the field that names it. */
+export function clipRefs(scenefile: Scenefile): AssetRef[] {
+  return scenefile.scenes.flatMap((scene, index) =>
+    (getScene(scene.type).clips?.(scene) ?? []).map((ref) => ({ path: `scenes[${index}].${ref.path}`, src: ref.src })),
   );
 }
 
@@ -564,4 +587,45 @@ export async function loadAudio(
     });
   }
   return { audio: { file: located, volume: wanted.volume }, diagnostics: [] };
+}
+
+/**
+ * Finds each clip in the scenefile's folder and asks what it is. Clips are
+ * local files only, confined like images and music; reading the video itself
+ * needs ffprobe, so that is passed in.
+ */
+export async function loadClips(
+  refs: readonly AssetRef[],
+  sources: AssetSources & { probeClip?: (file: string) => Promise<ClipInfo | null> },
+): Promise<{ clips: Map<string, ClipInfo>; diagnostics: Diagnostic[] }> {
+  const clips = new Map<string, ClipInfo>();
+  const diagnostics: Diagnostic[] = [];
+  const failed = new Map<string, Failure>();
+  for (const ref of refs) {
+    if (!sources.probeClip) break;
+    if (!clips.has(ref.src) && !failed.has(ref.src)) {
+      let failure: Failure | null = null;
+      if (isAddress(ref.src)) {
+        failure = notFound("A clip must be a video file in the scenefile's folder; addresses are not downloaded.", "Save the video beside the scenefile and give its file name.");
+      } else {
+        const located = await locateLocal(ref.src, sources, MAX_CLIP_BYTES);
+        if (typeof located !== "string") failure = located;
+        else {
+          const info = await sources.probeClip(located);
+          if (info) clips.set(ref.src, info);
+          else {
+            failure = {
+              code: "ASSET_UNSUPPORTED",
+              message: `"${ref.src}" is not a video that can be read: it is damaged, or it is not a video file.`,
+              fix: "Use an MP4, MOV or WebM file, or convert this one with ffmpeg.",
+            };
+          }
+        }
+      }
+      if (failure) failed.set(ref.src, failure);
+    }
+    const failure = failed.get(ref.src);
+    if (failure) diagnostics.push(error(failure.code, ref.path, failure.message, failure.fix));
+  }
+  return { clips, diagnostics };
 }

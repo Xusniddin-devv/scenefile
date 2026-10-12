@@ -11,6 +11,7 @@ describe("recipe skills", () => {
     expect(recipes.sort()).toEqual([
       "scenefile-app-walkthrough",
       "scenefile-changelog-video",
+      "scenefile-edit-video",
       "scenefile-explain-code",
       "scenefile-launch-video",
       "scenefile-repo-tour",
@@ -26,7 +27,7 @@ describe("recipe skills", () => {
     expect(skill).toContain("Do not invent");
     expect(skill).toContain("scenefile check");
     // Short enough to read in one go beside the guide.
-    expect(skill.length).toBeLessThan(5000);
+    expect(skill.length).toBeLessThan(5500);
 
     const example = JSON.parse(readFileSync(join(root, name, "example.json"), "utf8")) as { scenes: { type: string; src?: string; say?: string }[] };
     // Pictures are stood in for; everything else is checked for real.
@@ -35,7 +36,12 @@ describe("recipe skills", () => {
         scene.src ? [[scene.src, { id: scene.src, src: scene.src, width: scene.src.includes("phone") ? 1170 : 2560, height: scene.src.includes("phone") ? 2532 : 1600, mime: "image/png", bytes: 10, dataUri: "data:image/png;base64,AA==" }] as const] : [],
       ),
     );
-    const result = check(example, { assets: assets as never, diagnostics: [] });
+    // So are video files: thirty seconds each, with sound.
+    const clips = new Map(
+      example.scenes.flatMap((scene) => (scene.type === "clip" && scene.src ? [[scene.src, { file: `/videos/${scene.src}`, width: 1920, height: 1080, seconds: 30, audio: true }] as const] : [])),
+    );
+    const pictures = new Map([...assets].filter(([src]) => !clips.has(src)));
+    const result = check(example, { assets: pictures as never, clips, diagnostics: [] });
     expect(result.diagnostics).toEqual([]);
     expect(example.scenes.every((scene) => typeof scene.say === "string")).toBe(true);
     expect(example.scenes.length).toBeGreaterThanOrEqual(4);

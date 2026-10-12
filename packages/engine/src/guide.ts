@@ -48,7 +48,7 @@ const EVERY_SCENE =
   'Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) `transition` (how it arrives, if not the scenefile\'s) and `say` (a sentence for the narrator to speak, up to 500 characters; the scene stays until it has been said).';
 
 /**
- * Everything a model needs to write a scenefile, in about 2,100 tokens. It is
+ * Everything a model needs to write a scenefile, in about 2,400 tokens. It is
  * assembled from the scenes' own documentation, so adding a scene or a field
  * changes the guide, and tests fail if anything is left undocumented.
  */

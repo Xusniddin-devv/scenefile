@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, type ThemeName, error, warning } from "@scenefile/schema";
 import { type Scene, type TransitionKind, getScene } from "@scenefile/scenes";
-import type { AssetMap } from "./assets";
+import type { AssetMap, ClipInfo } from "./assets";
 import { FORMAT_SIZES } from "./formats";
 import { contrastRatio, getTheme } from "./themes";
 import { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
@@ -20,6 +20,8 @@ export interface ResolvedScene {
   overlapFrames: number;
   /** This scene's narration: when it starts, how long it is, and its sound file once made. */
   speech?: { startFrame: number; seconds: number; file?: string };
+  /** For a clip: the file once read, where in it this scene starts, and how long the file is. */
+  clip?: { file?: string; fromSeconds: number; totalSeconds?: number; audio: boolean };
 }
 
 export interface ResolvedVideo {
@@ -34,6 +36,8 @@ export interface ResolvedVideo {
   assets: AssetMap;
   /** Whether spoken lines are also shown as captions. */
   captions: boolean;
+  /** Video clips that were read, by the `src` the scenefile gave. */
+  clips: ReadonlyMap<string, ClipInfo>;
 }
 
 const MIN_TOTAL_SECONDS = 3;
@@ -55,6 +59,7 @@ export function resolve(
   scenefile: Scenefile,
   assets: AssetMap = new Map(),
   speech: ReadonlyMap<number, Speech> = new Map(),
+  clips: ReadonlyMap<string, ClipInfo> = new Map(),
 ): { video: ResolvedVideo; diagnostics: Diagnostic[] } {
   const { fps } = scenefile;
   const diagnostics: Diagnostic[] = [];
@@ -74,10 +79,54 @@ export function resolve(
     }
   }
 
-  const transitions = pickTransitions(scenefile);
+  // Footage is cut to and cut from: its first and last frames are its own.
+  const transitions = pickTransitions(scenefile).map((kind, index) =>
+    index > 0 && (scenefile.scenes[index]?.type === "clip" || scenefile.scenes[index - 1]?.type === "clip") ? "cut" : kind,
+  );
   const scenes: ResolvedScene[] = [];
   for (const [index, props] of scenefile.scenes.entries()) {
     const definition = getScene(props.type);
+    if (props.type === "clip") {
+      const info = clips.get(props.src);
+      const total = info?.seconds ?? 3;
+      const from = props.from ?? 0;
+      const to = props.to ?? total;
+      const length = total.toFixed(1);
+      if (info && from >= total - 0.02) {
+        diagnostics.push(
+          error("CLIP_RANGE", `scenes[${index}].from`, `This clip is ${length}s long, so it cannot start ${from}s in.`, `Set "from" below ${length}, or remove it to start at the beginning.`),
+        );
+      } else if (info && to > total + 0.05) {
+        diagnostics.push(
+          error("CLIP_RANGE", `scenes[${index}].to`, `This clip is ${length}s long, so it cannot run to ${to}s.`, `Set "to" to at most ${(Math.floor(total * 10) / 10).toFixed(1)}, or remove it to play to the end.`),
+        );
+      }
+      const span = Math.max(1 / fps, Math.min(to, total) - Math.min(from, total));
+      const asked = props.duration === "auto" ? Number.POSITIVE_INFINITY : toFrames(props.duration, fps);
+      const durationFrames = Math.max(1, Math.min(Math.round(span * fps), asked));
+      const spoken = props.say === undefined ? undefined : (speech.get(index) ?? { seconds: estimateSpeechSeconds(props.say) });
+      const leadFrames = toFrames(SPEECH_LEAD_SECONDS, fps);
+      if (spoken && leadFrames + Math.ceil(spoken.seconds * fps) + toFrames(SPEECH_TAIL_SECONDS, fps) > durationFrames) {
+        diagnostics.push(
+          error(
+            "CLIP_TOO_SHORT",
+            `scenes[${index}].say`,
+            `This line takes about ${spoken.seconds.toFixed(1)}s to say, but the clip is on screen for ${(durationFrames / fps).toFixed(1)}s.`,
+            "Shorten the line, or show more of the clip.",
+          ),
+        );
+      }
+      const before = scenes[index - 1];
+      if (before) before.exitFrames = 0;
+      scenes.push({
+        index, type: props.type, props, startFrame: cursor, durationFrames, enterFrames: 0, exitFrames: 0,
+        transition: transitions[index] ?? "none", overlapFrames: 0,
+        ...(spoken ? { speech: { startFrame: cursor + leadFrames, ...spoken } } : {}),
+        clip: { ...(info ? { file: info.file, totalSeconds: info.seconds } : {}), fromSeconds: from, audio: info?.audio ?? false },
+      });
+      cursor += durationFrames;
+      continue;
+    }
     const enterFrames = toFrames(definition.enterSeconds, fps);
     const exitFrames = toFrames(definition.exitSeconds, fps);
     const autoSeconds =
@@ -185,6 +234,7 @@ export function resolve(
       scenes,
       assets,
       captions: scenefile.voice?.captions === true && scenes.some((scene) => scene.speech),
+      clips,
     },
     diagnostics,
   };

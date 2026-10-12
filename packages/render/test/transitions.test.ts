@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { check, checkWithAssets } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
 import { ALL_SCENES } from "../../scenes/test/fixtures";
-import { captureFrame, openComposition } from "../src/index";
+import { captureFrame, openComposition, probeClip } from "../src/index";
 
 const baseDir = fileURLToPath(new URL("../../scenes/test", import.meta.url));
 
@@ -143,7 +143,7 @@ describe("the scene counter at the ends of the video", () => {
 
 describe("the automatic choice, with every scene type, in a tall frame at 60 fps", () => {
   it("leaves nothing behind after each transition, and draws the same pixels in any order", async () => {
-    const result = await checkWithAssets({ version: 1, fps: 60, format: "portrait-1080p", scenes: ALL_SCENES }, { baseDir });
+    const result = await checkWithAssets({ version: 1, fps: 60, format: "portrait-1080p", scenes: ALL_SCENES }, { baseDir, probeClip });
     if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
     const composition = result.composition;
     const kinds = new Set(composition.manifest.scenes.map((scene) => scene.transition));

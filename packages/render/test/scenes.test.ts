@@ -2,12 +2,12 @@ import { fileURLToPath } from "node:url";
 import { type Composition, check, checkWithAssets, verifyLayout } from "@scenefile/engine";
 import { describe, expect, it } from "vitest";
 import { ALL_SCENES } from "../../scenes/test/fixtures";
-import { captureFrame, inspectComposition, openComposition } from "../src/index";
+import { captureFrame, inspectComposition, openComposition, probeClip } from "../src/index";
 
 const baseDir = fileURLToPath(new URL("../../scenes/test", import.meta.url));
 
 async function compose(format: string): Promise<Composition> {
-  const result = await checkWithAssets({ version: 1, format, scenes: ALL_SCENES }, { baseDir });
+  const result = await checkWithAssets({ version: 1, format, scenes: ALL_SCENES }, { baseDir, probeClip });
   if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
   return result.composition;
 }

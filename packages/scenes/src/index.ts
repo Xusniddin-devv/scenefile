@@ -2,6 +2,8 @@ import { z } from "zod";
 import { bulletsDefinition } from "./bullets/definition";
 import { chartDefinition } from "./chart/definition";
 import { chartSchema } from "./chart/schema";
+import { clipDefinition } from "./clip/definition";
+import { clipSchema } from "./clip/schema";
 import { bulletsSchema } from "./bullets/schema";
 import { compareDefinition } from "./compare/definition";
 import { compareSchema } from "./compare/schema";
@@ -34,6 +36,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   screenshotSchema,
   compareSchema,
   chartSchema,
+  clipSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -59,6 +62,7 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   screenshot: widen(screenshotDefinition),
   compare: widen(compareDefinition),
   chart: widen(chartDefinition),
+  clip: widen(clipDefinition),
   terminal: widen(terminalDefinition),
 };
 
@@ -85,3 +89,4 @@ export type {
   SceneMount,
   SceneText,
 } from "./types";
+export { type ClipPlacement, clipPlacement } from "./clip/definition";

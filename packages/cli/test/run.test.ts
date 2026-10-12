@@ -453,3 +453,14 @@ describe("github", () => {
     expect(err()).toContain("github.com/owner/name");
   });
 });
+
+describe("probe", () => {
+  it("says what each video file is, so its cuts can be planned", async () => {
+    const { io, out, err } = capture();
+    const sample = join(import.meta.dirname, "..", "..", "scenes", "test", "assets", "demo.mp4");
+    expect(await run(["probe", sample, join(dir, "nothing.mp4")], io)).toBe(1);
+    expect(out()).toMatch(/demo\.mp4\s+320x180\s+10\.0s\s+with sound/);
+    expect(err()).toContain("nothing.mp4");
+    expect(await run(["probe"], io)).toBe(2);
+  });
+});

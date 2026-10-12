@@ -148,6 +148,16 @@ Two to six numbers compared as bars that grow, such as speeds, sizes or prices.
 - `highlight`: The label of the one bar to draw in the accent color, copied exactly.
 Example: `{"type":"chart","heading":"Seconds to render a 52 second video","unit":"s","bars":[{"label":"1 worker","value":62},{"label":"4 workers","value":30}],"highlight":"4 workers"}`
 
+### clip
+One of the person's own video files, or a part of it. Put several in a row to join them.
+- `src`: The video: an MP4, MOV or WebM file in the scenefile's folder. Required.
+- `from`: Seconds into the file to start at. Leave out to start at the beginning.
+- `to`: Seconds into the file to stop at. Leave out to play to the end.
+- `fit`: "contain" (default) shows the whole picture inside the frame; "cover" fills the frame and crops.
+- `volume`: The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.
+- `caption`: A line under the clip, up to 80 characters. Not shown with "cover".
+Example: `{"type":"clip","src":"demo.mp4","from":3,"to":9,"caption":"Signing in"}`
+
 ### terminal
 Commands typed into a terminal, each followed by what it prints.
 - `steps`: A list of 1 to 6 steps: { "run": "command up to 120 characters", "output": "what it prints, up to 400, optional" }. Required.

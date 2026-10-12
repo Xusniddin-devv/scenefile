@@ -9,7 +9,7 @@ import {
 } from "@scenefile/engine";
 import { error } from "@scenefile/schema";
 import { inspectComposition } from "./inspect";
-import { hasSound } from "./probe";
+import { hasSound, probeClip } from "./probe";
 
 export interface PrepareOptions extends AssetSources {
   /** Replaces measuring the layout in Chromium. For tests. */
@@ -28,7 +28,7 @@ export interface PrepareOptions extends AssetSources {
  */
 export async function prepareScenefile(input: unknown, options: PrepareOptions): Promise<CheckResult> {
   const { inspect, hasSound: probeSound, ...sources } = options;
-  const result = await checkWithAssets(input, sources);
+  const result = await checkWithAssets(input, { probeClip, ...sources });
   if (!result.ok || !result.composition) return result;
 
   // The first bytes said it was audio; make sure there is sound ffmpeg can actually read.

@@ -72,3 +72,44 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     audio,
   };
 }
+
+interface ClipJson {
+  streams?: { codec_type?: string; width?: number; height?: number; duration?: string; tags?: { rotate?: string }; side_data_list?: { rotation?: number }[] }[];
+  format?: { duration?: string };
+}
+
+/**
+ * What a video file is, for use as a clip: its size as it is shown (a phone
+ * recording stored on its side is reported upright), its length and whether
+ * it has sound. Null when the file is not a video ffmpeg can read.
+ */
+export async function probeClip(
+  file: string,
+  ffprobePath = "ffprobe",
+): Promise<{ file: string; width: number; height: number; seconds: number; audio: boolean } | null> {
+  let json: ClipJson;
+  try {
+    json = JSON.parse(
+      await run(ffprobePath, [
+        "-v", "error", "-protocol_whitelist", "file", "-select_streams", "v:0",
+        "-show_entries", "stream=codec_type,width,height,duration:stream_tags=rotate:stream_side_data=rotation:format=duration",
+        "-of", "json", file,
+      ]),
+    ) as ClipJson;
+  } catch (cause) {
+    if (cause instanceof EnvironmentError) throw cause;
+    return null;
+  }
+  const stream = json.streams?.[0];
+  const seconds = Number(stream?.duration ?? json.format?.duration);
+  if (!stream?.width || !stream.height || !(seconds > 0)) return null;
+  const turn = Math.abs(Number(stream.side_data_list?.find((entry) => entry.rotation !== undefined)?.rotation ?? stream.tags?.rotate ?? 0));
+  const sideways = turn === 90 || turn === 270;
+  return {
+    file,
+    width: sideways ? stream.height : stream.width,
+    height: sideways ? stream.width : stream.height,
+    seconds,
+    audio: await hasSound(file, ffprobePath),
+  };
+}

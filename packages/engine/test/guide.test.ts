@@ -1,7 +1,7 @@
 import { TOP_LEVEL_FIELDS } from "@scenefile/schema";
 import { SCENE_TYPES, getScene } from "@scenefile/scenes";
 import { describe, expect, it } from "vitest";
-import { assetRefs } from "../src/assets";
+import { assetRefs, clipRefs } from "../src/assets";
 import { check } from "../src/check";
 import { TOP_LEVEL_DOCS, authoringGuide, formatDiagnostics, sceneGuide } from "../src/guide";
 
@@ -18,7 +18,8 @@ function checkWithStubImages(scenes: unknown[]) {
       { id: `a${i}`, mime: "image/png" as const, width: 1280, height: 720, bytes: 1, dataUri: "data:image/png;base64,AAAA" },
     ]),
   );
-  return check(input, { assets, diagnostics: [] });
+  const clips = new Map(clipRefs(first.scenefile).map((ref) => [ref.src, { file: `/videos/${ref.src}`, width: 1280, height: 720, seconds: 30, audio: true }]));
+  return check(input, { assets, clips, diagnostics: [] });
 }
 
 describe.each(SCENE_TYPES)("documentation of the %s scene", (type) => {
@@ -47,8 +48,8 @@ describe.each(SCENE_TYPES)("documentation of the %s scene", (type) => {
 describe("the authoring guide", () => {
   const guide = authoringGuide();
 
-  it("fits in a small model's context: under 8,500 characters, about 2,100 tokens", () => {
-    expect(guide.length).toBeLessThan(8500);
+  it("fits in a small model's context: under 9,500 characters, about 2,400 tokens", () => {
+    expect(guide.length).toBeLessThan(9500);
     expect(guide.length).toBeGreaterThan(3000);
   });
 

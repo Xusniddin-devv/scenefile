@@ -227,12 +227,55 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     }
 
     let finished = picture;
-    const lines = composition.narration ?? [];
-    if (composition.audio || lines.length > 0) {
-      finished = join(scratch, "with-sound.mp4");
-      const seconds = totalFrames / fps;
+    const seconds = totalFrames / fps;
+    const clips = composition.clips ?? [];
+    if (clips.length > 0) {
+      // The person's footage is laid over the places the page kept for it. Each clip is brought to
+      // the video's frame rate and colour, sized to its rectangle, and shown for exactly its scene.
+      finished = join(scratch, "with-clips.mp4");
       const inputs: string[] = [];
       const filters: string[] = [];
+      let base = "0:v";
+      for (const [index, clip] of clips.entries()) {
+        inputs.push("-protocol_whitelist", "file", "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
+        const size = clip.cover
+          ? `scale=${clip.width}:${clip.height}:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv,crop=${clip.width}:${clip.height}`
+          : `scale=${clip.width}:${clip.height}:out_color_matrix=bt709:out_range=tv`;
+        const until = clip.atSeconds + clip.seconds - 0.5 / fps;
+        filters.push(
+          `[${index + 1}:v]fps=${fps},${size},setsar=1,format=yuv420p,setpts=PTS-STARTPTS+${clip.atSeconds.toFixed(6)}/TB[clip${index}]`,
+          `[${base}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=pass:enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'[over${index}]`,
+        );
+        base = `over${index}`;
+      }
+      await runFfmpeg(
+        [
+          "-i", picture,
+          ...inputs,
+          "-filter_complex", `${filters.join(";")};[${base}]setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv[out]`,
+          "-map", "[out]", "-an",
+          "-c:v", "libx264", "-threads", "4", "-crf", String(CRF[options.quality ?? "standard"]), "-pix_fmt", "yuv420p",
+          "-frames:v", String(totalFrames),
+          "-movflags", "+faststart",
+          finished,
+        ],
+        options.ffmpegPath,
+      );
+      const laid = await probeVideo(finished, options.ffprobePath);
+      if (laid.frames !== totalFrames || laid.width !== width || laid.height !== height) {
+        throw new Error(`Laying in the clips changed the video: expected ${totalFrames} frames at ${width}x${height}, got ${laid.frames} at ${laid.width}x${laid.height}.`);
+      }
+    }
+
+    const lines = composition.narration ?? [];
+    const heard = clips.filter((clip) => clip.volume > 0);
+    if (composition.audio || lines.length > 0 || heard.length > 0) {
+      const silent = finished;
+      finished = join(scratch, "with-sound.mp4");
+      const inputs: string[] = [];
+      const filters: string[] = [];
+      /** The tracks added together at the end. */
+      const tracks: string[] = [];
       const SHAPE = "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo";
       let next = 1;
       if (composition.audio) {
@@ -248,29 +291,40 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       }
       for (const [index, line] of lines.entries()) {
         inputs.push("-protocol_whitelist", "file", "-i", line.file);
-        filters.push(`[${next}:a]${SHAPE},volume=6.5dB,alimiter=limit=0.8:level=disabled,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
+        filters.push(
+          `[${next}:a]${SHAPE},volume=6.5dB,alimiter=limit=0.8:level=disabled,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`,
+        );
         next += 1;
       }
       if (lines.length > 0) {
         const all = lines.map((_, index) => `[line${index}]`).join("");
-        // Lines never overlap, so adding them needs no levelling; silence fills the rest.
-        filters.push(`${all}amix=inputs=${lines.length}:normalize=0:dropout_transition=0,apad[voice]`);
+        // Lines never overlap, so adding them needs no levelling.
+        filters.push(`${all}amix=inputs=${lines.length}:normalize=0:dropout_transition=0[voice]`);
       }
       if (composition.audio && lines.length > 0) {
         // The music gives way while someone is speaking and comes back after.
-        filters.push(
-          "[voice]asplit=2[said][key]",
-          "[music][key]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=900[bed]",
-          "[bed][said]amix=inputs=2:normalize=0:dropout_transition=0[sound]",
-        );
+        filters.push("[voice]asplit=2[said][key]", "[music][key]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=900[bed]");
+        tracks.push("[bed]", "[said]");
+      } else if (composition.audio) tracks.push("[music]");
+      else if (lines.length > 0) tracks.push("[voice]");
+      for (const [index, clip] of heard.entries()) {
+        // The clip's own sound, for the part of it that is shown, starting when it does.
+        inputs.push("-protocol_whitelist", "file", "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
+        // Sound cut from the middle of a file keeps the file's clock; it is restarted from zero before being placed.
+        filters.push(`[${next}:a]asetpts=PTS-STARTPTS,${SHAPE},volume=${clip.volume},adelay=${Math.round(clip.atSeconds * 1000)}:all=1[heard${index}]`);
+        tracks.push(`[heard${index}]`);
+        next += 1;
       }
-      const sound = composition.audio && lines.length > 0 ? "[sound]" : composition.audio ? "[music]" : "[voice]";
+      // Added together as they are, then padded with silence to the picture's length.
+      // A single track is used as it is: the mixer misorders one that starts late on its own.
+      const together = tracks.length === 1 ? `${tracks[0]}anull` : `${tracks.join("")}amix=inputs=${tracks.length}:normalize=0:dropout_transition=0`;
+      filters.push(`${together},apad[sound]`);
       await runFfmpeg(
         [
-          "-i", picture,
+          "-i", silent,
           ...inputs,
           "-filter_complex", filters.join(";"),
-          "-map", "0:v:0", "-map", sound,
+          "-map", "0:v:0", "-map", "[sound]",
           // Stereo at 48 kHz, whatever the source was: what players and upload sites expect.
           "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-ar", "48000",
           "-t", seconds.toFixed(3),
@@ -306,6 +360,9 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     durationSeconds: probed.durationSeconds,
     elapsedMs: Date.now() - started,
     workers,
-    audio: Boolean(composition.audio) || (composition.narration?.length ?? 0) > 0,
+    audio:
+      Boolean(composition.audio) ||
+      (composition.narration?.length ?? 0) > 0 ||
+      (composition.clips ?? []).some((clip) => clip.volume > 0),
   };
 }
