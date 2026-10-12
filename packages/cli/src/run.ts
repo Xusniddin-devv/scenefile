@@ -9,6 +9,7 @@ import {
   exampleScenefile,
   formatDiagnostics,
   sceneGuide,
+  type Speak,
 } from "@scenefile/engine";
 import {
   EnvironmentError,
@@ -19,6 +20,12 @@ import {
   type RenderOptions,
   type RenderReport,
   renderVideo,
+  VOICE_CATALOG,
+  createSpeaker,
+  installVoice,
+  isVoice,
+  voiceHome,
+  voiceInstalled,
 } from "@scenefile/render";
 import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -32,6 +39,8 @@ export interface Io {
   inspect?: (composition: Composition) => Promise<InspectReport>;
   /** Test seam. Defaults to asking ffprobe whether a file has a sound track. */
   hasSound?: (file: string) => Promise<boolean>;
+  /** Test seam. Defaults to the speech engine on this machine, downloading a voice the first time it is used. */
+  speak?: Speak;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -43,6 +52,8 @@ const USAGE = `Usage:
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
   scenefile init [folder]          write an example scenefile.json
+  scenefile voices                 the narrator voices
+  scenefile voices install <name>  download a voice (about 67 MB, once)
   scenefile mcp [--root <folder>] [--allow-remote-images]
                                    serve these as tools to an MCP client
 
@@ -73,6 +84,13 @@ async function load(path: string, io: Io): Promise<CheckResult> {
     baseDir: dirname(resolvePath(path)),
     ...(io.inspect ? { inspect: io.inspect } : {}),
     ...(io.hasSound ? { hasSound: io.hasSound } : {}),
+    speak:
+      io.speak ??
+      createSpeaker({
+        download: true,
+        onDownload: (name, info) =>
+          io.err(`Downloading the voice "${name}" (${Math.round(info.bytes / 1e6)} MB). This happens once.`),
+      }),
   });
   return { ...prepared, diagnostics: [...parsed.diagnostics, ...prepared.diagnostics] };
 }
@@ -147,8 +165,31 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);
       return 0;
     }
+    if (command === "voices") {
+      const voicesDir = join(voiceHome(), "voices");
+      if (!file) {
+        io.out(
+          Object.entries(VOICE_CATALOG)
+            .map(([name, info]) => `${name.padEnd(11)} ${info.language}, ${info.describes}${isVoice(name) && voiceInstalled(voicesDir, name) ? "  (installed)" : ""}`)
+            .join("\n"),
+        );
+        return 0;
+      }
+      const name = positionals[2] ?? "";
+      if (file !== "install" || !isVoice(name)) {
+        throw new UsageError(`Use "scenefile voices" or "scenefile voices install <name>". The voices are: ${Object.keys(VOICE_CATALOG).join(", ")}.`);
+      }
+      try {
+        await installVoice(name, { voicesDir });
+      } catch (cause) {
+        io.err(cause instanceof Error ? cause.message : String(cause));
+        return 2;
+      }
+      io.out(`The voice "${name}" is installed.`);
+      return 0;
+    }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init or mcp.");
+      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -191,7 +232,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     if (!values.json) {
       io.out(
         `Rendered ${rendered.output}: ${rendered.width}x${rendered.height}, ${rendered.fps} fps, ` +
-          `${rendered.durationSeconds.toFixed(2)}s${rendered.audio ? ", with music" : ""}, in ${(rendered.elapsedMs / 1000).toFixed(1)}s ` +
+          `${rendered.durationSeconds.toFixed(2)}s${rendered.audio ? ", with sound" : ""}, in ${(rendered.elapsedMs / 1000).toFixed(1)}s ` +
           `with ${rendered.workers} ${rendered.workers === 1 ? "worker" : "workers"}.`,
       );
     }

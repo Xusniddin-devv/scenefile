@@ -30,6 +30,8 @@ export interface Composition {
   manifest: Manifest;
   /** Music to mix under the video: a checked local file and its volume. */
   audio?: { file: string; volume: number };
+  /** Narration to play over the video: each line's sound file and when it starts. */
+  narration?: { file: string; atSeconds: number; seconds: number }[];
 }
 
 function baseCss(width: number, height: number): string {

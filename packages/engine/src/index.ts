@@ -40,3 +40,4 @@ export {
 export { type FontKey, type Theme, contrastRatio, getTheme, themeCss } from "./themes";
 export { type ResolvedScene, type ResolvedVideo, resolve } from "./resolve";
 export { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
+export { DEFAULT_VOICE, type Speak, type Speech, estimateSpeechSeconds } from "./voice";

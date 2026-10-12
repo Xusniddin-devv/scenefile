@@ -9,6 +9,7 @@ export const TOP_LEVEL_DOCS: Readonly<Record<string, string>> = {
   theme: '"signal" (default: black with one bright accent) or "midnight".',
   accent: 'The accent color as "#RRGGBB". Leave it out to use the theme\'s.',
   audio: 'Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile\'s folder.',
+  voice: 'Who reads the `say` lines aloud: { "name": "en-joe" }. English: "en-joe", "en-kristin", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.',
   transition: 'How scenes change: "auto" (default), "cut", "fade", "crossfade", "push", "wipe" or "zoom".',
   scenes: "The scenes, in order. Required: 1 to 60.",
 };
@@ -44,7 +45,7 @@ function sceneSection(type: SceneType, example: "inline" | "block"): string {
 }
 
 const EVERY_SCENE =
-  'Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) and `transition` (how it arrives, if not the scenefile\'s).';
+  'Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) `transition` (how it arrives, if not the scenefile\'s) and `say` (a sentence for the narrator to speak, up to 500 characters; the scene stays until it has been said).';
 
 /**
  * Everything a model needs to write a scenefile, in under 2,000 tokens. It is
@@ -75,6 +76,7 @@ export function authoringGuide(): string {
       "- Keep text short. If check reports `TEXT_OVERFLOW`, shorten the text to the number of characters it gives.",
       "- The whole video must last between 3 seconds and 10 minutes.",
       "- `highlight` must be copied exactly, letter for letter, from the text it belongs to.",
+      "- In `say`, write full spoken sentences in the voice's language, with numbers and symbols as words (\"sixty times\", not \"60x\"). Narrate every scene or none.",
       "- Images and music are files in the same folder as the scenefile, named by their file name.",
       '- Write in Latin or Cyrillic letters. Avoid arrows, check marks and emoji: write "->" and "ok".',
       "- A good video has 5 to 9 scenes, opens with `title`, closes with `outro`, and makes one point per scene.",

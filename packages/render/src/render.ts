@@ -227,21 +227,50 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     }
 
     let finished = picture;
-    if (composition.audio) {
-      finished = join(scratch, "with-music.mp4");
+    const lines = composition.narration ?? [];
+    if (composition.audio || lines.length > 0) {
+      finished = join(scratch, "with-sound.mp4");
       const seconds = totalFrames / fps;
-      const fadeOut = Math.min(MUSIC_FADE_OUT_SECONDS, seconds / 3);
-      const filter =
-        `[1:a]volume=${composition.audio.volume},afade=t=in:st=0:d=${MUSIC_FADE_IN_SECONDS},` +
-        `afade=t=out:st=${(seconds - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}[music]`;
+      const inputs: string[] = [];
+      const filters: string[] = [];
+      const SHAPE = "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo";
+      let next = 1;
+      if (composition.audio) {
+        const fadeOut = Math.min(MUSIC_FADE_OUT_SECONDS, seconds / 3);
+        // The music is repeated without end and then cut to the picture's length.
+        // It may only be read as a file: nothing inside it can point ffmpeg elsewhere.
+        inputs.push("-protocol_whitelist", "file", "-stream_loop", "-1", "-i", composition.audio.file);
+        filters.push(
+          `[${next}:a]${SHAPE},volume=${composition.audio.volume},afade=t=in:st=0:d=${MUSIC_FADE_IN_SECONDS},` +
+            `afade=t=out:st=${(seconds - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}[music]`,
+        );
+        next += 1;
+      }
+      for (const [index, line] of lines.entries()) {
+        inputs.push("-protocol_whitelist", "file", "-i", line.file);
+        filters.push(`[${next}:a]${SHAPE},adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`);
+        next += 1;
+      }
+      if (lines.length > 0) {
+        const all = lines.map((_, index) => `[line${index}]`).join("");
+        // Lines never overlap, so adding them needs no levelling; silence fills the rest.
+        filters.push(`${all}amix=inputs=${lines.length}:normalize=0:dropout_transition=0,apad[voice]`);
+      }
+      if (composition.audio && lines.length > 0) {
+        // The music gives way while someone is speaking and comes back after.
+        filters.push(
+          "[voice]asplit=2[said][key]",
+          "[music][key]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=400[bed]",
+          "[bed][said]amix=inputs=2:normalize=0:dropout_transition=0[sound]",
+        );
+      }
+      const sound = composition.audio && lines.length > 0 ? "[sound]" : composition.audio ? "[music]" : "[voice]";
       await runFfmpeg(
         [
           "-i", picture,
-          // The music is repeated without end and then cut to the picture's length.
-          // It may only be read as a file: nothing inside it can point ffmpeg elsewhere.
-          "-protocol_whitelist", "file", "-stream_loop", "-1", "-i", composition.audio.file,
-          "-filter_complex", filter,
-          "-map", "0:v:0", "-map", "[music]",
+          ...inputs,
+          "-filter_complex", filters.join(";"),
+          "-map", "0:v:0", "-map", sound,
           // Stereo at 48 kHz, whatever the source was: what players and upload sites expect.
           "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ac", "2", "-ar", "48000",
           "-t", seconds.toFixed(3),
@@ -253,7 +282,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       const mixed = await probeVideo(finished, options.ffprobePath);
       if (!mixed.audio || mixed.frames !== totalFrames) {
         throw new Error(
-          `Mixing in the music changed the video: expected ${totalFrames} frames with sound, ` +
+          `Mixing in the sound changed the video: expected ${totalFrames} frames with sound, ` +
             `got ${mixed.frames}${mixed.audio ? "" : " without sound"}.`,
         );
       }
@@ -277,6 +306,6 @@ export async function renderVideo(composition: Composition, options: RenderOptio
     durationSeconds: probed.durationSeconds,
     elapsedMs: Date.now() - started,
     workers,
-    audio: Boolean(composition.audio),
+    audio: Boolean(composition.audio) || (composition.narration?.length ?? 0) > 0,
   };
 }

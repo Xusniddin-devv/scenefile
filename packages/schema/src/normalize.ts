@@ -30,6 +30,9 @@ const FIELD_ALIASES: Readonly<Record<string, string>> = {
   time: "duration",
   length: "duration",
   seconds: "duration",
+  narration: "say",
+  voiceover: "say",
+  speech: "say",
 };
 
 /** Names people and models use for the transitions, mapped to the real ones. */

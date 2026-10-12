@@ -3,6 +3,8 @@ import { z } from "zod";
 
 export const FORMATS = ["landscape-1080p", "portrait-1080p", "square-1080p"] as const;
 export const THEMES = ["signal", "midnight"] as const;
+/** Narrator voices: language, then the voice's name. All are free to use for any purpose. */
+export const VOICES = ["en-joe", "en-kristin", "en-bryce", "ru-denis", "ru-dmitri"] as const;
 
 export const scenefileSchema = z.strictObject({
   version: z.literal(1),
@@ -21,6 +23,8 @@ export const scenefileSchema = z.strictObject({
       volume: z.number().min(0).max(1).default(0.4),
     })
     .optional(),
+  /** Who reads the scenes' `say` text aloud. */
+  voice: z.strictObject({ name: z.enum(VOICES).default("en-joe") }).optional(),
   /** How scenes give way to one another, unless a scene says otherwise. */
   transition: transitionSchema.default("auto"),
   scenes: z.array(sceneSchema).min(1).max(60),
@@ -29,6 +33,7 @@ export const scenefileSchema = z.strictObject({
 export type Scenefile = z.infer<typeof scenefileSchema>;
 export type Format = (typeof FORMATS)[number];
 export type ThemeName = (typeof THEMES)[number];
+export type VoiceName = (typeof VOICES)[number];
 
 export const TOP_LEVEL_FIELDS: readonly string[] = Object.keys(scenefileSchema.shape);
 

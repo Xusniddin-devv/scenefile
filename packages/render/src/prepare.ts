@@ -3,6 +3,7 @@ import {
   type CheckResult,
   type Composition,
   type InspectReport,
+  type Speak,
   applyLayout,
   checkWithAssets,
 } from "@scenefile/engine";
@@ -15,6 +16,8 @@ export interface PrepareOptions extends AssetSources {
   inspect?: (composition: Composition) => Promise<InspectReport>;
   /** Replaces asking ffprobe whether the music has a sound track. For tests. */
   hasSound?: (file: string) => Promise<boolean>;
+  /** Makes the narration. Without it, narrated scenes are timed by estimate and rendered silent. */
+  speak?: Speak;
 }
 
 /**

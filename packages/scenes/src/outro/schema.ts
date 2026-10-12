@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema, transitionSchema } from "../common";
+import { durationSchema, saySchema, transitionSchema } from "../common";
 
 export const outroSchema = z
   .strictObject({
@@ -13,6 +13,8 @@ export const outroSchema = z
     duration: durationSchema.default("auto"),
     /** How this scene arrives from the one before it. */
     transition: transitionSchema.default("auto"),
+    /** Words for the narrator to speak during this scene. */
+    say: saySchema.optional(),
   })
   .refine((scene) => scene.highlight === undefined || scene.heading.includes(scene.highlight), {
     path: ["highlight"],

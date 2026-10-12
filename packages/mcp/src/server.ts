@@ -6,6 +6,7 @@ import {
   type CheckResult,
   type Composition,
   type InspectReport,
+  type Speak,
   authoringGuide,
   formatDiagnostics,
   sceneGuide,
@@ -17,8 +18,7 @@ import {
   type RenderOptions,
   type RenderReport,
   prepareScenefile,
-  renderVideo,
-} from "@scenefile/render";
+  renderVideo, createSpeaker } from "@scenefile/render";
 import { type Diagnostic, nearest, parseScenefileText } from "@scenefile/schema";
 import { SCENE_TYPES, isSceneType } from "@scenefile/scenes";
 import { z } from "zod";
@@ -35,6 +35,8 @@ export interface ServerOptions {
   inspect?: (composition: Composition) => Promise<InspectReport>;
   /** Replaces asking ffprobe whether music has a sound track. For tests. */
   hasSound?: (file: string) => Promise<boolean>;
+  /** Makes narration. The server never downloads a voice; one that is missing is reported with how to install it. */
+  speak?: Speak;
   /** Replaces name lookup and https requests for image downloads. For tests. */
   network?: Pick<AssetSources, "lookup" | "request">;
 }
@@ -144,6 +146,7 @@ export function createServer(options: ServerOptions): McpServer {
         ...options.network,
         ...(options.inspect ? { inspect: options.inspect } : {}),
         ...(options.hasSound ? { hasSound: options.hasSound } : {}),
+        speak: options.speak ?? createSpeaker({ download: false }),
       }),
     );
     return { result: { ...result, diagnostics: [...notes, ...result.diagnostics] }, source, notes };

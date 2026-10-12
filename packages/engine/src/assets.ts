@@ -1,3 +1,4 @@
+import type { Speech } from "./voice";
 import { lookup as dnsLookup } from "node:dns/promises";
 import { open, readFile, realpath, stat } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
@@ -39,6 +40,8 @@ export interface LoadedAssets {
   diagnostics: Diagnostic[];
   /** The scenefile's music, once found; null or absent when there is none. */
   audio?: LoadedAudio | null;
+  /** Narration already made, by scene index. Scenes without an entry are timed by estimate. */
+  speech?: Map<number, Speech>;
 }
 
 export interface ResolvedAddress {

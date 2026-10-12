@@ -50,7 +50,7 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
   });
 
   it("has a hostile fixture that exercises every field", () => {
-    const fields = getScene(type).fields.filter((field) => !["type", "duration", "transition"].includes(field));
+    const fields = getScene(type).fields.filter((field) => !["type", "duration", "transition", "say"].includes(field));
     for (const field of fields) expect(Object.keys(HOSTILE[type]), field).toContain(field);
   });
 

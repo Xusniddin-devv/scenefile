@@ -15,3 +15,16 @@ export {
   renderVideo,
 } from "./render";
 export { type Session, openComposition } from "./session";
+export {
+  type InstallOptions,
+  type Samples,
+  type SpeakerOptions,
+  type Synthesize,
+  type VoiceInfo,
+  VOICE_CATALOG,
+  createSpeaker,
+  installVoice,
+  isVoice,
+  voiceHome,
+  voiceInstalled,
+} from "./voice";

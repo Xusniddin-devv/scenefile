@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { durationSchema, transitionSchema } from "../common";
+import { durationSchema, saySchema, transitionSchema } from "../common";
 
 export const statSchema = z.strictObject({
   type: z.literal("stat"),
@@ -10,6 +10,8 @@ export const statSchema = z.strictObject({
   duration: durationSchema.default("auto"),
   /** How this scene arrives from the one before it. */
   transition: transitionSchema.default("auto"),
+  /** Words for the narrator to speak during this scene. */
+  say: saySchema.optional(),
 });
 
 export type StatProps = z.infer<typeof statSchema>;

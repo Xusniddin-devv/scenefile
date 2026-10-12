@@ -70,7 +70,7 @@ export function getScene(type: SceneType): SceneDefinition<Scene> {
 
 export { SHARED_CSS, sceneChrome } from "./chrome";
 export { CODE_LANGS, type CodeLang, MAX_CODE_LINES } from "./code/langs";
-export { TRANSITIONS, type TransitionKind, durationSchema, type Duration, transitionSchema } from "./common";
+export { TRANSITIONS, type TransitionKind, durationSchema, type Duration, saySchema, transitionSchema } from "./common";
 export { escapeHtml, highlightHtml, readingSeconds } from "./text";
 export type {
   CompileContext,

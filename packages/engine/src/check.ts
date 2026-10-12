@@ -5,6 +5,7 @@ import { type Composition, compile } from "./compile";
 import { glyphDiagnostics } from "./fonts";
 import { type InspectReport, verifyLayout } from "./layout";
 import { type ResolvedVideo, resolve } from "./resolve";
+import { DEFAULT_VOICE, type Speak, type Speech } from "./voice";
 
 export interface CheckResult {
   /** True when there are no errors. Warnings do not block rendering. */
@@ -25,7 +26,7 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
   const seconds = (frames: number): string => `${(frames / video.fps).toFixed(2)}s`;
   const typeWidth = Math.max(...video.scenes.map((scene) => scene.type.length));
   const lines = [
-    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}`,
+    `${video.width}x${video.height}, ${video.fps} fps, ${seconds(video.totalFrames)}, ${video.scenes.length} scenes${music ? ", music" : ""}${video.scenes.some((scene) => scene.speech) ? ", voice" : ""}`,
   ];
   for (const scene of video.scenes) {
     const range = `${seconds(scene.startFrame)}-${seconds(scene.startFrame + scene.durationFrames)}`;
@@ -36,6 +37,10 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
           : `  (enters by ${scene.transition}${scene.overlapFrames > 0 ? ` over ${seconds(scene.overlapFrames)}` : ""})`
       }`,
     );
+    if (scene.speech) {
+      const about = scene.speech.file === undefined ? "about " : "";
+      lines.push(`     say  ${about}${scene.speech.seconds.toFixed(1)}s of speech from ${seconds(scene.speech.startFrame)}`);
+    }
     const prefix = `scenes[${scene.index}].`;
     const slots = (report?.slots ?? []).filter((slot) => slot.path.startsWith(prefix));
     const images = (report?.images ?? []).filter((image) => image.path.startsWith(prefix));
@@ -107,7 +112,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
 
-  const resolved = resolve(normalized.scenefile, loaded?.assets);
+  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech);
   const diagnostics = [
     ...normalized.diagnostics,
     ...assetDiagnostics,
@@ -126,23 +131,61 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
   }
 
   const music = loaded?.audio ?? undefined;
+  const { fps } = resolved.video;
+  const narration = resolved.video.scenes.flatMap(({ speech }) =>
+    speech?.file === undefined ? [] : [{ file: speech.file, atSeconds: speech.startFrame / fps, seconds: speech.seconds }],
+  );
   return {
     ok: true,
     diagnostics,
     scenefile: normalized.scenefile,
     video: resolved.video,
-    composition: { ...compile(resolved.video), ...(music ? { audio: music } : {}) },
+    composition: {
+      ...compile(resolved.video),
+      ...(music ? { audio: music } : {}),
+      ...(narration.length > 0 ? { narration } : {}),
+    },
     storyboard: storyboard(resolved.video, undefined, Boolean(music)),
   };
 }
 
 /** `check`, after loading the images the scenefile uses. */
-export async function checkWithAssets(input: unknown, sources: AssetSources): Promise<CheckResult> {
+export async function checkWithAssets(
+  input: unknown,
+  sources: AssetSources & { /** Makes the narration. Without it, narrated scenes are timed by estimate. */ speak?: Speak },
+): Promise<CheckResult> {
   const { scenefile } = normalize(input);
   if (!scenefile) return check(input);
   const images = await loadAssets(assetRefs(scenefile), sources);
   const music = await loadAudio(scenefile, sources);
-  return check(input, { ...images, audio: music.audio, diagnostics: [...images.diagnostics, ...music.diagnostics] });
+
+  const speech = new Map<number, Speech>();
+  const voiceDiagnostics: Diagnostic[] = [];
+  if (sources.speak) {
+    for (const [index, scene] of scenefile.scenes.entries()) {
+      if (scene.say === undefined) continue;
+      try {
+        speech.set(index, await sources.speak(scene.say, scenefile.voice?.name ?? DEFAULT_VOICE));
+      } catch (cause) {
+        voiceDiagnostics.push(
+          error(
+            "VOICE_FAILED",
+            `scenes[${index}].say`,
+            cause instanceof Error ? cause.message : String(cause),
+            "Fix what the message says and try again, or remove `say` to make the video without narration.",
+          ),
+        );
+        // One failure is enough: the others would only repeat it.
+        break;
+      }
+    }
+  }
+  return check(input, {
+    ...images,
+    audio: music.audio,
+    speech,
+    diagnostics: [...images.diagnostics, ...music.diagnostics, ...voiceDiagnostics],
+  });
 }
 
 /**

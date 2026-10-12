@@ -7,6 +7,8 @@ export {
   type Format,
   type Scenefile,
   THEMES,
+  VOICES,
+  type VoiceName,
   TOP_LEVEL_FIELDS,
   type ThemeName,
   scenefileJsonSchema,

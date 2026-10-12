@@ -4,6 +4,7 @@ import type { AssetMap } from "./assets";
 import { FORMAT_SIZES } from "./formats";
 import { contrastRatio, getTheme } from "./themes";
 import { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
+import { SPEECH_LEAD_SECONDS, SPEECH_TAIL_SECONDS, type Speech, estimateSpeechSeconds } from "./voice";
 
 export interface ResolvedScene {
   index: number;
@@ -17,6 +18,8 @@ export interface ResolvedScene {
   transition: TransitionKind | "none";
   /** Frames at the start of this scene during which the scene before it is still drawn. */
   overlapFrames: number;
+  /** This scene's narration: when it starts, how long it is, and its sound file once made. */
+  speech?: { startFrame: number; seconds: number; file?: string };
 }
 
 export interface ResolvedVideo {
@@ -49,6 +52,7 @@ function toFrames(seconds: number, fps: number): number {
 export function resolve(
   scenefile: Scenefile,
   assets: AssetMap = new Map(),
+  speech: ReadonlyMap<number, Speech> = new Map(),
 ): { video: ResolvedVideo; diagnostics: Diagnostic[] } {
   const { fps } = scenefile;
   const diagnostics: Diagnostic[] = [];
@@ -82,11 +86,16 @@ export function resolve(
     // A scene must last long enough for its content to finish appearing; cut
     // shorter, it would end on a half-typed command or a number still counting.
     const reveal = definition.revealSeconds?.(props) ?? 0;
-    const minFrames = Math.max(
-      enterFrames + exitFrames + 1,
-      reveal > 0 ? enterFrames + Math.ceil((reveal + MIN_REST_SECONDS) * fps) + exitFrames : 0,
-    );
-    const lengthened = props.duration !== "auto" && reveal > 0 && toFrames(props.duration, fps) < minFrames;
+    const spoken = props.say === undefined ? undefined : (speech.get(index) ?? { seconds: estimateSpeechSeconds(props.say) });
+    const leadFrames = toFrames(SPEECH_LEAD_SECONDS, fps);
+    // A narrated scene stays until its line has been said, with a breath after it.
+    const speechFrames = spoken
+      ? leadFrames + Math.ceil(spoken.seconds * fps) + toFrames(SPEECH_TAIL_SECONDS, fps) + exitFrames
+      : 0;
+    const revealFrames = reveal > 0 ? enterFrames + Math.ceil((reveal + MIN_REST_SECONDS) * fps) + exitFrames : 0;
+    const minFrames = Math.max(enterFrames + exitFrames + 1, revealFrames, speechFrames);
+    const lengthened =
+      props.duration !== "auto" && (reveal > 0 || spoken !== undefined) && toFrames(props.duration, fps) < minFrames;
 
     if (props.duration !== "auto") {
       const path = `scenes[${index}].duration`;
@@ -97,7 +106,7 @@ export function resolve(
           warning(
             "PACING_FAST",
             path,
-            `${props.duration}s would end this scene before its animation finishes, so it was lengthened to ${minimum}s.`,
+            `${props.duration}s would end this scene before its ${speechFrames > revealFrames ? "narration" : "animation"} finishes, so it was lengthened to ${minimum}s.`,
             `Set "duration" to "auto" or to at least ${minimum}.`,
           ),
         );
@@ -140,7 +149,10 @@ export function resolve(
       }
     }
     const startFrame = cursor - overlapFrames;
-    scenes.push({ index, type: props.type, props, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames });
+    scenes.push({
+      index, type: props.type, props, startFrame, durationFrames, enterFrames, exitFrames, transition, overlapFrames,
+      ...(spoken ? { speech: { startFrame: startFrame + leadFrames, ...spoken } } : {}),
+    });
     cursor = startFrame + durationFrames;
   }
 

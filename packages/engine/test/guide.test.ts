@@ -31,7 +31,7 @@ describe.each(SCENE_TYPES)("documentation of the %s scene", (type) => {
   });
 
   it("documents every field of its own, and no field it does not have", () => {
-    const own = fields.filter((field) => !["type", "duration", "transition"].includes(field));
+    const own = fields.filter((field) => !["type", "duration", "transition", "say"].includes(field));
     expect(Object.keys(doc.fields).sort()).toEqual([...own].sort());
     for (const [field, text] of Object.entries(doc.fields)) expect(text.length, field).toBeGreaterThan(10);
   });

@@ -20,5 +20,8 @@
     "@scenefile/runtime": "workspace:*",
     "@scenefile/schema": "workspace:*",
     "playwright-core": "^1.64.0"
+  },
+  "optionalDependencies": {
+    "sherpa-onnx-node": "1.13.8"
   }
 }
