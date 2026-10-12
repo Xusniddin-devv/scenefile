@@ -138,7 +138,7 @@ describe("making the voice", () => {
   it("offers a natural English voice of each sex from one shared model, and tells them apart", async () => {
     const emma = VOICE_CATALOG["en-emma"];
     const george = VOICE_CATALOG["en-george"];
-    expect([emma.describes, george.describes]).toEqual(["woman, British", "man, British"]);
+    expect([emma.describes, george.describes]).toEqual(["woman", "man"]);
     expect(emma.folder).toBe(george.folder);
     expect(emma.speaker).not.toBe(george.speaker);
     // One download serves both.
@@ -168,6 +168,85 @@ describe("making the voice", () => {
     const line = await createSpeaker({ download: false })("Scenefile turns a short script into a finished video.", "en-george");
     expect(line.seconds).toBeGreaterThan(1.5);
     expect(line.seconds).toBeLessThan(8);
+  });
+
+  it("saves every line at the same loudness, however loud the voice came out", async () => {
+    const at = (amplitude: number) => (_folder: string, _model: string, text: string) => {
+      const samples = new Float32Array(22050);
+      for (let i = 0; i < samples.length; i++) samples[i] = Math.sin(i / 8) * amplitude;
+      void text;
+      return { samples, sampleRate: 22050 };
+    };
+    const level = async (amplitude: number): Promise<number> => {
+      const speak = createSpeaker({ home: homeWith("en-joe"), download: false, synthesize: at(amplitude) });
+      const wav = readFileSync((await speak("A line.", "en-joe")).file);
+      let sum = 0;
+      for (let i = 44; i < wav.length; i += 2) sum += (wav.readInt16LE(i) / 32768) ** 2;
+      return 10 * Math.log10(sum / ((wav.length - 44) / 2));
+    };
+    const [quiet, loud] = [await level(0.03), await level(0.7)];
+    expect(Math.abs(quiet - loud)).toBeLessThan(0.5);
+    expect(quiet).toBeGreaterThan(-26);
+    expect(quiet).toBeLessThan(-20);
+  });
+
+  it("gives up on a download that stops arriving, clears away what an earlier attempt left, and reports progress", async () => {
+    const home = homeWith();
+    const voicesDir = join(home, "voices");
+    mkdirSync(join(voicesDir, ".en-joe.installing-99999999"), { recursive: true });
+    const info = { ...VOICE_CATALOG["en-joe"], sha256: createHash("sha256").update("abcdef").digest("hex"), bytes: 6 };
+    // Three bytes arrive, then nothing more ever does.
+    const stalled = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("abc"));
+          },
+        }),
+      )) as typeof fetch;
+    const started = Date.now();
+    await expect(installVoice("en-joe", { voicesDir, info, fetch: stalled, stallSeconds: 0.4, unpack: async () => undefined })).rejects.toThrow(/stopped arriving/);
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(readdirSync(voicesDir)).toEqual([]);
+
+    const seen: number[] = [];
+    await installVoice("en-joe", {
+      voicesDir,
+      info,
+      fetch: (async () => new Response("abcdef")) as typeof fetch,
+      unpack: async (_archive, into) => fill(join(into, `vits-piper-${info.model}`), info.model),
+      onProgress: (received, total) => void seen.push(received / total),
+    });
+    expect(seen.at(-1)).toBe(1);
+  });
+
+  it.skipIf(!voiceInstalled(join(voiceHome(), "voices"), "en-emma"))("makes speech without stopping everything else, and the man's voice is the lower one", async () => {
+    const speak = createSpeaker({ home: join(dir, "real-kokoro"), download: false, voicesDir: join(voiceHome(), "voices") });
+    let ticks = 0;
+    const clock = setInterval(() => {
+      ticks += 1;
+    }, 50);
+    const text = "Scenefile turns a short script into a finished video, and this sentence is long enough to take a moment to say.";
+    const [emma, george] = [await speak(text, "en-emma"), await speak(text, "en-george")];
+    clearInterval(clock);
+    // The clock kept ticking while the voice was being made.
+    expect(ticks).toBeGreaterThan(20);
+    /** The voice's pitch in hertz: the lag, within the range of speech, at which the sound best matches itself. */
+    const pitch = (file: string): number => {
+      const wav = readFileSync(file);
+      const rate = wav.readUInt32LE(24);
+      const samples = new Float32Array(Math.min(rate * 3, (wav.length - 44) / 2));
+      for (let i = 0; i < samples.length; i++) samples[i] = wav.readInt16LE(44 + rate + i * 2) / 32768;
+      let best = 0;
+      let bestLag = 1;
+      for (let lag = Math.floor(rate / 300); lag <= Math.floor(rate / 70); lag++) {
+        let sum = 0;
+        for (let i = 0; i + lag < samples.length; i += 2) sum += (samples[i] ?? 0) * (samples[i + lag] ?? 0);
+        if (sum > best) [best, bestLag] = [sum, lag];
+      }
+      return rate / bestLag;
+    };
+    expect(pitch(george.file)).toBeLessThan(pitch(emma.file) - 15);
   });
 
   it("says where each voice comes from, and the catalog matches what a scenefile can name", () => {

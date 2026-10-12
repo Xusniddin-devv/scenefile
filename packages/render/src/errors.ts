@@ -14,7 +14,7 @@ export const FFMPEG_REMEDY =
 export const ENCODE_REMEDY =
   "Check that ffmpeg includes the libx264 encoder (`ffmpeg -encoders | grep libx264`) and that the disk has free space.";
 export const WRITE_REMEDY = "Choose an output path inside a directory you can write to.";
-export const CHROMIUM_REMEDY = "Install the browser: `scenefile setup`.";
+export const CHROMIUM_REMEDY = "Install the browser: `scenefile setup` (or `npx -y scenefile setup` if scenefile is not installed as a command).";
 export const CHROMIUM_LIBRARIES_REMEDY =
   "Install the system libraries Chromium needs: `scenefile setup --with-deps` (on Linux this asks for administrator rights).";
 

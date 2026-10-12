@@ -11,6 +11,9 @@ The person has recordings; you turn them into a finished video. Each recording, 
 
 1. Run `scenefile doctor` (or `npx -y scenefile doctor`). If it is not ready, run `scenefile setup` and install `ffmpeg` as it says.
 2. Run `scenefile guide` once and keep to it: it is the whole format, and it is short.
+3. If `scenefile` is not found as a command, put `npx -y` in front of it every time.
+4. For a narrated video, run `scenefile voices install en-emma` once first. It is a 320 MB download that can take several minutes: give that one command a long timeout, and do not start it twice.
+5. If the person has not said, ask how long the video should be and whether it is for a wide screen or a phone. Otherwise make it wide and under 90 seconds.
 
 ## Steps
 

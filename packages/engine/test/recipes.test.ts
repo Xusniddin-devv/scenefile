@@ -47,3 +47,17 @@ describe("recipe skills", () => {
     expect(example.scenes.length).toBeGreaterThanOrEqual(4);
   });
 });
+
+describe("the plugin", () => {
+  const top = join(root, "..");
+  const read = (path: string) => JSON.parse(readFileSync(join(top, path), "utf8"));
+
+  it("runs the same version of scenefile that its skills describe", () => {
+    const plugin = read(".claude-plugin/plugin.json");
+    const published = read("packages/cli/package.json").version as string;
+    expect(plugin.version).toBe(published);
+    expect(plugin.mcpServers.scenefile.args).toEqual(["-y", `scenefile@${published}`, "mcp"]);
+    // Kept inside the plugin, so merely opening this repository offers nobody a server.
+    expect(() => readFileSync(join(top, ".mcp.json"))).toThrow();
+  });
+});

@@ -121,7 +121,7 @@ describe("catching narration that would come out wrong", () => {
     scenes: [{ type: "title", heading: "One" }, { type: "title", heading: "Two", say }],
   });
 
-  it("uses the voice trained only on public-domain recordings unless another is named", () => {
+  it("uses the natural English voice unless another is named", () => {
     expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-emma", captions: false });
   });
 
@@ -130,6 +130,9 @@ describe("catching narration that would come out wrong", () => {
       const { scenefile, diagnostics } = normalize({ ...narrated, voice: { name: asked } });
       expect(scenefile?.voice?.name, asked).toBe(name);
       expect(diagnostics).toEqual([expect.objectContaining({ code: "AUTOFIXED", severity: "warning", path: "voice.name" })]);
+    }
+    for (const [asked, name] of [[{ name: "George" }, "en-george"], [{ name: "emma" }, "en-emma"], [{ gender: "male" }, "en-george"], [{ name: "Denis" }, "ru-denis"]] as const) {
+      expect(normalize({ ...narrated, voice: asked }).scenefile?.voice?.name, JSON.stringify(asked)).toBe(name);
     }
     const plain = normalize({ ...narrated, voice: "male" });
     expect(plain.scenefile?.voice?.name).toBe("en-george");

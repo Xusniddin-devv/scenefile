@@ -79,7 +79,7 @@ const USAGE = `Usage:
   scenefile setup [--with-deps]    download the browser scenefile draws with
   scenefile doctor                 check that this machine has what is needed
   scenefile voices                 the narrator voices
-  scenefile voices install <name>  download a voice (about 67 MB, once)
+  scenefile voices install <name>  download a voice (67 to 320 MB, once)
   scenefile mcp [--root <folder>] [--allow-remote-images] [--allow-capture]
                                    serve these as tools to an MCP client
 
@@ -88,6 +88,18 @@ const USAGE = `Usage:
 Exit codes: 0 success, 1 the scenefile has errors, 2 usage or environment problem.`;
 
 class UsageError extends Error {}
+
+/** Reports a download every tenth of the way, so a long one is seen to be moving. */
+function progress(io: Io): (received: number, total: number) => void {
+  let said = 0;
+  return (received, total) => {
+    const tenth = Math.floor((received / total) * 10);
+    if (tenth > said && tenth < 10) {
+      said = tenth;
+      io.err(`  ${tenth * 10}% of ${Math.round(total / 1e6)} MB`);
+    }
+  };
+}
 
 function isQuality(value: string): value is Quality {
   return (QUALITIES as readonly string[]).includes(value);
@@ -118,6 +130,7 @@ async function load(path: string, io: Io): Promise<CheckResult> {
         download: true,
         onDownload: (name, info) =>
           io.err(`Downloading the voice "${name}" (${Math.round(info.bytes / 1e6)} MB). This happens once.`),
+        install: { onProgress: progress(io) },
       }),
   });
   return { ...prepared, diagnostics: [...parsed.diagnostics, ...prepared.diagnostics] };
@@ -332,7 +345,8 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         throw new UsageError(`Use "scenefile voices" or "scenefile voices install <name>". The voices are: ${Object.keys(VOICE_CATALOG).join(", ")}.`);
       }
       try {
-        await installVoice(name, { voicesDir });
+        io.err(`Downloading the voice "${name}" (${Math.round(VOICE_CATALOG[name].bytes / 1e6)} MB). This happens once.`);
+        await installVoice(name, { voicesDir, onProgress: progress(io) });
       } catch (cause) {
         io.err(cause instanceof Error ? cause.message : String(cause));
         return 2;

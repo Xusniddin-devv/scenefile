@@ -112,7 +112,7 @@ export function skillFile(): string {
   return [
     "---",
     "name: scenefile",
-    "description: Make a video (MP4) from a JSON description of its scenes - product launch videos, explainers, short clips for social media. Use when asked to create a video, a product demo, or an animated summary of a project. Needs the scenefile command.",
+    "description: The scenefile format and commands - how to write the JSON that scenefile turns into a video (MP4), and how to check and render it. Use together with one of the scenefile recipe skills, or alone when asked for a video that none of them covers. Needs the scenefile command.",
     "---",
     "",
     "## Commands",

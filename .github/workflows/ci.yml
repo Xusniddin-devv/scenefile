@@ -33,6 +33,13 @@ jobs:
       - name: Install Chromium
         run: pnpm --filter @scenefile/render exec playwright-core install --with-deps chromium --only-shell
       - run: pnpm typecheck
+      - name: Keep the default voice between runs
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/scenefile/voices
+          key: voices-kokoro-en-v0_19
+      - name: Install the default voice, so narration is tested for real
+        run: node packages/cli/dist/main.js voices install en-emma
       - run: pnpm test
       - name: The generated skill file is up to date
         run: pnpm generate && git diff --exit-code skills

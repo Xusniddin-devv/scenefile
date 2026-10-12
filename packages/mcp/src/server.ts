@@ -146,7 +146,9 @@ export function createServer(options: ServerOptions): McpServer {
       notes = parsed.diagnostics;
     }
 
-    const result = await oneAtATime(() =>
+    let result: CheckResult;
+    try {
+      result = await oneAtATime(() =>
       prepareScenefile(value, {
         baseDir,
         allowRemote: options.allowRemoteImages === true,
@@ -155,7 +157,13 @@ export function createServer(options: ServerOptions): McpServer {
         ...(options.hasSound ? { hasSound: options.hasSound } : {}),
         speak: options.speak ?? createSpeaker({ download: false }),
       }),
-    );
+      );
+    } catch (cause) {
+      // Something this machine lacks, not a fault in the scenefile: say what, and how to put it right.
+      if (cause instanceof EnvironmentError) return refuse(withoutRoot(`${cause.message}
+${cause.remedy}`));
+      throw cause;
+    }
     return { result: { ...result, diagnostics: [...notes, ...result.diagnostics] }, source, notes };
   }
 

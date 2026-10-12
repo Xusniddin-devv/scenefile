@@ -15,16 +15,19 @@
     {
       "type": "screenshot",
       "src": "home.png",
-      "url": "jobhunterkr.xusniddin.dev",
-      "caption": "Every board in one feed.",
       "say": "The home page is a single feed, collected from many Korean job boards."
     },
     {
       "type": "screenshot",
       "src": "home-phone.png",
       "device": "phone",
-      "caption": "The same feed on a phone.",
       "say": "It is the same feed on a phone."
+    },
+    {
+      "type": "statement",
+      "text": "Every title is shown in English.",
+      "highlight": "in English.",
+      "say": "Every job title is shown in English, whatever language it was posted in."
     },
     {
       "type": "outro",

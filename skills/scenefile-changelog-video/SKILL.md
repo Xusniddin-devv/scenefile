@@ -11,6 +11,9 @@ What changed in this version, for people who already use the project.
 
 1. Run `scenefile doctor` (or `npx -y scenefile doctor`). If it is not ready, run `scenefile setup` and install `ffmpeg` as it says.
 2. Run `scenefile guide` once and keep to it: it is the whole format, and it is short.
+3. If `scenefile` is not found as a command, put `npx -y` in front of it every time.
+4. For a narrated video, run `scenefile voices install en-emma` once first. It is a 320 MB download that can take several minutes: give that one command a long timeout, and do not start it twice.
+5. If the person has not said, ask how long the video should be and whether it is for a wide screen or a phone. Otherwise make it wide and under 90 seconds.
 
 ## Steps
 
@@ -20,7 +23,7 @@ What changed in this version, for people who already use the project.
    1. `title`: the project and version, for example "scenefile 0.2".
    2. One scene per headline change: `terminal` for a new command (the real command), `code` for a new option (real syntax), `screenshot` for something visible, `compare` for a behaviour that changed (before and after, both true).
    3. `bullets`: the smaller changes, one short line each.
-   4. `outro`: how to upgrade, with the real command.
+   4. `outro`: how to upgrade, with the command the README or changelog gives. If neither gives one, end on the version number instead.
 4. **Say nothing about speed, size or counts** unless the changelog or a measurement you ran gives the number.
 
 

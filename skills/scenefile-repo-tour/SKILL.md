@@ -11,10 +11,13 @@ description: Use when given a GitHub repository address and asked for a video ab
 
 1. Run `scenefile doctor` (or `npx -y scenefile doctor`). If it is not ready, run `scenefile setup` and install `ffmpeg` as it says.
 2. Run `scenefile guide` once and keep to it: it is the whole format, and it is short.
+3. If `scenefile` is not found as a command, put `npx -y` in front of it every time.
+4. For a narrated video, run `scenefile voices install en-emma` once first. It is a 320 MB download that can take several minutes: give that one command a long timeout, and do not start it twice.
+5. If the person has not said, ask how long the video should be and whether it is for a wide screen or a phone. Otherwise make it wide and under 90 seconds.
 
 ## Steps
 
-1. **Get the facts:** `scenefile github owner/name --dir tour --narrate`. It writes `tour/<name>.json` with the name, description, install command, languages, stars and a picture of the home page. Everything in it is true as of today.
+1. **Get the facts:** `scenefile github owner/name --dir tour --narrate`. It writes `tour/<name>.json` with the name and description and, where the repository has them, the install command, languages, star count and a picture of the home page. Everything in it is true as of today; what is missing was not there to find. Work on that file rather than starting a new one.
 2. **Read the repository** (clone it, or read the README and the main source files). Find what the project is for and one thing that makes it different.
 3. **Improve the script, keeping its facts:**
    - Rewrite the `title` sub and its `say` so they say what the project is for in plain words.

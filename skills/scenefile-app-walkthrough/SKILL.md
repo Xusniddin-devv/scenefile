@@ -11,6 +11,9 @@ The video shows the real app. You capture its screens; scenefile frames and narr
 
 1. Run `scenefile doctor` (or `npx -y scenefile doctor`). If it is not ready, run `scenefile setup` and install `ffmpeg` as it says.
 2. Run `scenefile guide` once and keep to it: it is the whole format, and it is short.
+3. If `scenefile` is not found as a command, put `npx -y` in front of it every time.
+4. For a narrated video, run `scenefile voices install en-emma` once first. It is a 320 MB download that can take several minutes: give that one command a long timeout, and do not start it twice.
+5. If the person has not said, ask how long the video should be and whether it is for a wide screen or a phone. Otherwise make it wide and under 90 seconds.
 
 ## Steps
 
@@ -20,7 +23,7 @@ The video shows the real app. You capture its screens; scenefile frames and narr
    - `scenefile capture http://localhost:3000/ -o home-phone.png --device phone` for a phone-sized picture.
    Read what it prints: it gives the page title and the exact `screenshot` scene to use. If it says the page answered with an error, or needs signing in, tell the person; do not use that picture.
 3. **Look at the picture if you can read images.** If you cannot, describe the screen only from the page's code and title, and do not use `callouts`: they need positions you cannot see.
-4. **One screen per scene**, in the order a person would use the app. Give each a `caption` of a few words and a `say` line that explains what the person does there and what they get. Use `"device": "phone"` for phone pictures.
+4. **One screen per scene**, in the order a person would use the app, each with a `say` line that explains what the person does there and what they get. When you narrate with captions, leave `caption` and `url` off the screenshot scenes: the picture is then drawn as large as the frame allows, and the captions already carry the words. Use `"device": "phone"` for phone pictures.
 5. **Open with a `title`** that names what the app is for, and **close with an `outro`** that says where to get it.
 6. Screens behind a sign-in cannot be captured. Ask the person for screenshots of those and use the files the same way.
 

@@ -1,7 +1,7 @@
 import { SCENE_TYPES, TRANSITIONS, getScene, isSceneType } from "@scenefile/scenes";
 import { type Diagnostic, error, hasErrors, warning } from "./diagnostics";
 import { nearest } from "./distance";
-import { type Scenefile, TOP_LEVEL_FIELDS, scenefileSchema } from "./scenefile";
+import { type Scenefile, TOP_LEVEL_FIELDS, VOICES as VOICE_NAMES, scenefileSchema } from "./scenefile";
 
 type Json = Record<string, unknown>;
 
@@ -75,9 +75,16 @@ function fixVoice(holder: Json, diagnostics: Diagnostic[]): void {
   if (typeof holder.voice === "string") holder.voice = { name: holder.voice };
   const voice = holder.voice;
   if (typeof voice !== "object" || voice === null) return;
+  // "gender" is a natural thing to write; it means the same as asking by name.
+  if ((voice as Json).name === undefined && typeof (voice as Json).gender === "string") {
+    (voice as Json).name = (voice as Json).gender;
+    delete (voice as Json).gender;
+  }
   const raw = (voice as Json).name;
-  if (typeof raw !== "string") return;
-  const known = VOICE_ALIASES[raw.trim().toLowerCase()];
+  if (typeof raw !== "string" || (VOICE_NAMES as readonly string[]).includes(raw)) return;
+  const asked = raw.trim().toLowerCase();
+  // "male" and "female", a voice's own name without its language ("George"), or its name in another letter case.
+  const known = VOICE_ALIASES[asked] ?? VOICE_NAMES.find((name) => name === asked || name.split("-")[1] === asked);
   if (known === undefined) return;
   (voice as Json).name = known;
   diagnostics.push(warning("AUTOFIXED", "voice.name", `Read "${raw}" as the voice "${known}".`, `Write "${known}".`));
