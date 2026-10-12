@@ -64,6 +64,23 @@ describe("resolve", () => {
     ]);
   });
 
+  it("lengthens a scene whose duration would end it before its animation finishes", () => {
+    // stat: enter 0.5 s, counts for 0.9 s, exit 0.4 s. 1.3 s would stop it mid-count.
+    const { video, diagnostics } = resolved({
+      version: 1,
+      scenes: [
+        { type: "stat", value: "94%", label: "valid on the first try", duration: 1.3 },
+        { type: "title", heading: "Hi", duration: 3 },
+      ],
+    });
+    const stat = video.scenes[0];
+    expect(stat?.durationFrames).toBeGreaterThanOrEqual(15 + 27 + 12);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({ code: "PACING_FAST", severity: "warning", path: "scenes[0].duration" }),
+    ]);
+    expect(diagnostics[0]?.message).toMatch(/lengthened/);
+  });
+
   it("never makes a scene shorter than its enter and exit", () => {
     const { video } = resolved({
       version: 1,

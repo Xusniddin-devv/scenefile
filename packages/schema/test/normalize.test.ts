@@ -185,6 +185,19 @@ describe("normalize", () => {
     ]);
   });
 
+  it("reads a bare number where a figure is expected", () => {
+    const { scenefile, diagnostics } = normalize({
+      version: 1,
+      scenes: [{ type: "stat", number: 94, label: "valid" }, { type: "stat", value: 3.5, label: "x" }],
+    });
+    expect(scenefile?.scenes).toMatchObject([{ value: "94" }, { value: "3.5" }]);
+    expect(diagnostics.map((d) => [d.code, d.path])).toEqual([
+      ["AUTOFIXED", "scenes[0].number"],
+      ["AUTOFIXED", "scenes[0].value"],
+      ["AUTOFIXED", "scenes[1].value"],
+    ]);
+  });
+
   it("keeps reporting other scenes when one is broken", () => {
     const { diagnostics } = normalize({
       version: 1,

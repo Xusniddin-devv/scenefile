@@ -49,7 +49,7 @@ error  TEXT_OVERFLOW  scenes[0].heading
 ```
 error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
   Unknown scene type "titel". Did you mean "title"?
-  fix: "type" must be one of: title, terminal.
+  fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, terminal.
 ```
 
 ## Development

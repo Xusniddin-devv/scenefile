@@ -10,6 +10,7 @@ export const statDefinition: SceneDefinition<StatProps> = {
   enterSeconds: 0.5,
   exitSeconds: 0.4,
   minHoldSeconds: 2,
+  revealSeconds: () => COUNT_SECONDS,
   holdSeconds: (props) => COUNT_SECONDS + readingSeconds(`${props.label} ${props.note ?? ""}`),
   summary: (props) => `${props.value} ${props.label}`,
   texts(props) {

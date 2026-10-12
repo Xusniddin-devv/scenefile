@@ -14,6 +14,8 @@ export const outroDefinition: SceneDefinition<OutroProps> = {
   enterSeconds: 0.6,
   exitSeconds: 0.5,
   minHoldSeconds: 2,
+  revealSeconds: (props) =>
+    props.command ? TYPE_DELAY_SECONDS + graphemes(props.command).length / CHARS_PER_SECOND : 0,
   holdSeconds(props) {
     const typing = props.command
       ? TYPE_DELAY_SECONDS + graphemes(props.command).length / CHARS_PER_SECOND + COMMAND_REST_SECONDS

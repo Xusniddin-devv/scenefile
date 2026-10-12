@@ -18,6 +18,89 @@ describe("every scene type, in a real browser", () => {
     for (const slot of report.slots) expect(slot.sizePx, slot.path).toBeGreaterThanOrEqual(3.4 * 10.8 - 0.01);
   });
 
+  it("fits a long quote in a square frame without touching the scene counter", async () => {
+    const quote = {
+      type: "quote",
+      text: "It rendered correctly on the first try, and we shipped the launch video that same afternoon.",
+      author: "Dilnoza Karimova",
+      role: "Staff engineer",
+    };
+    const result = check({ version: 1, format: "square-1080p", scenes: [quote, { ...quote, text: "Рендер получился с первого раза, и мы выпустили видео в тот же день после обеда." }] });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const report = await inspectComposition(result.composition);
+    expect(report.crowded).toEqual([]);
+    expect(verifyLayout(report)).toEqual([]);
+  });
+
+  it("shrinks a scene's text when the stack of it would climb into the scene counter", async () => {
+    // In a square frame the sub line sits under the heading; at full size the two are taller than the frame.
+    const result = check({
+      version: 1,
+      format: "square-1080p",
+      scenes: [
+        {
+          type: "title",
+          heading: "Video from JSON.",
+          sub: "Any model can write a scenefile, check it, fix what the check reports, and render it again until it passes.",
+        },
+        { type: "title", heading: "Fine" },
+      ],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const report = await inspectComposition(result.composition);
+    expect(report.crowded).toEqual([]);
+    expect(verifyLayout(report)).toEqual([]);
+    const heading = report.slots.find((slot) => slot.path === "scenes[0].heading");
+    expect(heading?.sizePx).toBeLessThan(22 * 10.8);
+    expect(heading?.sizePx).toBeGreaterThanOrEqual(8 * 10.8 - 0.01);
+    expect(report.slots.find((slot) => slot.path === "scenes[1].heading")?.sizePx).toBeCloseTo(22 * 10.8, 1);
+  });
+
+  it("keeps bullet numbers readable however small the items get", async () => {
+    const items = Array.from({ length: 5 }, (_, i) => `Point ${i + 1} is a fairly long sentence about something that matters a lot`);
+    const result = check({ version: 1, format: "square-1080p", scenes: [{ type: "bullets", items }] });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const session = await openComposition(result.composition);
+    try {
+      await captureFrame(session.page, 40);
+      const size = await session.page.evaluate(() => {
+        const ordinal = document.querySelector(".sf-bullets__item i");
+        return ordinal ? Number.parseFloat(getComputedStyle(ordinal).fontSize) : 0;
+      });
+      expect(size).toBeGreaterThanOrEqual(2.4 * 10.8 - 0.01);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it("ends a scene on its finished content even when its duration was set too short", async () => {
+    const result = check({
+      version: 1,
+      scenes: [
+        { type: "stat", value: "94%", label: "valid on the first try", duration: 1.3 },
+        { type: "outro", heading: "Try it.", command: "npx scenefile init", duration: 2 },
+        { type: "title", heading: "one two three four five six" },
+      ],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const session = await openComposition(result.composition);
+    try {
+      const shown: string[] = [];
+      for (const scene of result.composition.manifest.scenes.slice(0, 2)) {
+        await captureFrame(session.page, scene.startFrame + scene.durationFrames - scene.exitFrames - 1);
+        shown.push(
+          await session.page.evaluate(() => {
+            const visible = document.querySelector(".sf-scene:not([hidden])");
+            return visible?.querySelector("[data-sf-value], [data-sf-type]")?.textContent ?? "";
+          }),
+        );
+      }
+      expect(shown).toEqual(["94%", "npx scenefile init"]);
+    } finally {
+      await session.close();
+    }
+  });
+
   it("keeps the typing caret on the line it is typing, even when that line is full", async () => {
     // "$ npx scenefile init" exactly fills the outro's command column at its largest size.
     const result = check({
@@ -98,7 +181,7 @@ describe("every scene type, in a real browser", () => {
       version: 1,
       scenes: [
         { type: "statement", text: long },
-        { type: "code", lang: "ts", source: Array.from({ length: 16 }, (_, i) => `const value${i} = "${"x".repeat(100)}";`).join("\n") },
+        { type: "code", lang: "ts", source: Array.from({ length: 12 }, (_, i) => `const value${i} = "${"x".repeat(100)}";`).join("\n") },
         { type: "bullets", items: Array.from({ length: 5 }, () => `${"W".repeat(60)} item`) },
       ],
     });

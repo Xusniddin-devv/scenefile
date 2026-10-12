@@ -19,15 +19,17 @@ export const quoteDefinition: SceneDefinition<QuoteProps> = {
   },
   compile(props, ctx) {
     const by = props.author
-      ? `<figcaption class="sf-quote__by" data-sf-enter="2" data-sf-fit="3.4,4.4,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.author"><b>${escapeHtml(props.author)}</b>${props.role ? `, ${escapeHtml(props.role)}` : ""}</figcaption>`
+      ? `<figcaption class="sf-quote__by" data-sf-enter="2"><b>${escapeHtml(props.author)}</b>${props.role ? `, ${escapeHtml(props.role)}` : ""}</figcaption>`
       : "";
-    return `${sceneChrome(ctx)}<figure class="sf-quote"><span class="sf-quote__mark" data-sf-enter="0" aria-hidden="true">“</span><blockquote class="sf-quote__text" data-sf-enter="1" data-sf-fit="4.6,10,0.4" data-sf-lines="6" data-sf-path="${ctx.path}.text">${escapeHtml(props.text)}</blockquote>${by}</figure>`;
+    // The figure as a whole is the slot: mark, text and attribution scale
+    // together until all three fit the area below the scene counter.
+    return `${sceneChrome(ctx)}<figure class="sf-quote" data-sf-fit="4.6,10,0.4" data-sf-box data-sf-path="${ctx.path}.text"><span class="sf-quote__mark" data-sf-enter="0" aria-hidden="true">\u201C</span><blockquote class="sf-quote__text" data-sf-enter="1">${escapeHtml(props.text)}</blockquote>${by}</figure>`;
   },
   css: `
-.sf-quote{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*21);bottom:calc(var(--sf-unit)*10);display:flex;flex-direction:column;justify-content:flex-end}
-.sf-quote__mark{font:var(--sf-heading-weight) calc(var(--sf-unit)*22)/0.6 var(--sf-font-sans);color:var(--sf-accent);height:calc(var(--sf-unit)*9)}
-.sf-quote__text{font:800 calc(var(--sf-unit)*10)/1.05 var(--sf-font-sans);letter-spacing:-0.04em;color:var(--sf-text);text-wrap:balance}
-.sf-quote__by{margin-top:calc(var(--sf-unit)*4);font:400 calc(var(--sf-unit)*4.4)/1.3 var(--sf-font-sans);color:var(--sf-muted)}
+.sf-quote{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);top:calc(var(--sf-unit)*19);bottom:calc(var(--sf-unit)*10);display:flex;flex-direction:column;overflow:hidden;font-size:calc(var(--sf-unit)*10);font-family:var(--sf-font-sans)}
+.sf-quote__mark{margin-top:auto;height:0.9em;font-size:2.2em;line-height:0.6;font-weight:var(--sf-heading-weight);color:var(--sf-accent)}
+.sf-quote__text{font-weight:800;line-height:1.05;letter-spacing:-0.04em;color:var(--sf-text);text-wrap:balance}
+.sf-quote__by{margin-top:0.4em;font-size:max(0.44em,calc(var(--sf-unit)*3.4));font-weight:400;line-height:1.3;color:var(--sf-muted)}
 .sf-quote__by b{font-weight:600;color:var(--sf-text)}
 `,
 };

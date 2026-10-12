@@ -106,9 +106,22 @@ describe("stat", () => {
     ["3.20x", 1, "3.20x"],
     ["v2", 0.5, "v1"],
     ["10k+", 0.3, "3k+"],
-    ["007", 1, "007"],
+    ["007", 0.5, "007"],
     ["N/A", 0.3, "N/A"],
     ["-5%", 1, "-5%"],
+    ["-5%", 0.01, "0%"],
+    ["3,5x", 0.4, "1,4x"],
+    ["3,5x", 1, "3,5x"],
+    ["1 200", 0.5, "600"],
+    ["1.200,50", 0.5, "600,25"],
+    ["99.9%", 0.5, "50.0%"],
+    ["1.5M", 0.2, "0.3M"],
+    ["24/7", 0.5, "24/7"],
+    ["3 of 5", 0.5, "3 of 5"],
+    ["12:30", 0.5, "12:30"],
+    ["#1", 0.5, "#1"],
+    ["2026", 0.5, "2026"],
+    ["12000", 0.5, "6000"],
   ])("draws %s at progress %s as %s", (value, progress, expected) => {
     expect(statText(value, progress)).toBe(expected);
   });
@@ -165,13 +178,24 @@ describe("code", () => {
   });
 
   it("rejects more lines than a scene can show, and marks for lines that do not exist", () => {
-    const tooLong = sceneSchema.safeParse({ type: "code", source: Array.from({ length: 17 }, (_, i) => `l${i}`).join("\n") });
+    const lines = (count: number) => Array.from({ length: count }, (_, i) => `l${i}`).join("\n");
+    expect(sceneSchema.safeParse({ type: "code", source: lines(12) }).success).toBe(true);
+    const tooLong = sceneSchema.safeParse({ type: "code", source: lines(13) });
     expect(tooLong.success).toBe(false);
     expect(tooLong.error?.issues[0]?.path).toEqual(["source"]);
-    expect(tooLong.error?.issues[0]?.message).toContain("16");
+    expect(tooLong.error?.issues[0]?.message).toContain("12");
     const badMark = sceneSchema.safeParse({ type: "code", source: "a\nb", highlight: [3] });
     expect(badMark.success).toBe(false);
     expect(badMark.error?.issues[0]?.path).toEqual(["highlight"]);
+  });
+
+  it("ignores blank lines before and after the code, which models add by habit", () => {
+    const parsed = sceneSchema.parse({ type: "code", source: "\n\na\n\nb\n\n  \n" });
+    expect(parsed.type === "code" && parsed.source).toBe("a\n\nb");
+    const twelve = `${Array.from({ length: 12 }, (_, i) => `l${i}`).join("\n")}\n`;
+    expect(sceneSchema.safeParse({ type: "code", source: twelve }).success).toBe(true);
+    expect(sceneSchema.safeParse({ type: "code", source: "a\nb\n", highlight: [3] }).success).toBe(false);
+    expect(sceneSchema.safeParse({ type: "code", source: "\n \n" }).success).toBe(false);
   });
 
   it("numbers every line, keeps blank lines, and marks the highlighted ones", () => {
@@ -205,7 +229,9 @@ describe("code", () => {
 
   it("holds longer for more lines to read", () => {
     expect(codeHoldSeconds(6, 0, undefined)).toBeGreaterThan(codeHoldSeconds(2, 0, undefined));
-    expect(codeHoldSeconds(6, 1, undefined)).toBeLessThan(codeHoldSeconds(6, 0, undefined));
+    // With one line marked, there must still be time to take in the code around it.
+    expect(codeHoldSeconds(12, 1, undefined) - codeRevealSeconds(12)).toBeGreaterThan(3);
+    expect(codeHoldSeconds(12, 3, undefined)).toBeGreaterThan(codeHoldSeconds(12, 1, undefined));
     expect(codeRevealSeconds(1)).toBeCloseTo(0.3);
   });
 });

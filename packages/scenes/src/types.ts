@@ -24,6 +24,13 @@ export interface SceneDefinition<P> {
   readonly minHoldSeconds: number;
   /** Seconds the scene must stay fully visible for its content to be read. */
   holdSeconds(props: P): number;
+  /**
+   * Seconds, after the scene has entered, until its content has finished
+   * appearing (typing, counting, staggered reveals). A scene is never made
+   * shorter than this, so its last frame before the exit always shows the
+   * finished content. Omit for scenes that are complete once entered.
+   */
+  revealSeconds?(props: P): number;
   /** One line describing the scene, for the text storyboard. */
   summary(props: P): string;
   /** Every string the scene draws. */

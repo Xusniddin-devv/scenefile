@@ -48,6 +48,20 @@ describe("verifyLayout", () => {
   });
 });
 
+describe("crowded scenes", () => {
+  it("reports a scene whose content runs into the top of the frame", () => {
+    expect(verifyLayout({ slots: [slot({})], crowded: [0, 2] })).toEqual([
+      expect.objectContaining({ code: "SAFE_AREA", severity: "error", path: "scenes[0]" }),
+      expect.objectContaining({ code: "SAFE_AREA", severity: "error", path: "scenes[2]" }),
+    ]);
+  });
+
+  it("does not repeat itself for a scene that already has a layout error", () => {
+    const diagnostics = verifyLayout({ slots: [slot({ overflow: true, lines: 5 })], crowded: [0] });
+    expect(diagnostics.map((d) => d.code)).toEqual(["TEXT_OVERFLOW"]);
+  });
+});
+
 describe("applyLayout", () => {
   it("adds sizes and line counts to the storyboard", () => {
     const result = applyLayout(check(valid), {

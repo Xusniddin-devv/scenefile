@@ -9,8 +9,78 @@ export interface SlotReport {
   outside: boolean;
 }
 
+/**
+ * True when any text of a scene, other than the scene counter itself, starts
+ * above the bottom of the counter's hairline. Scenes anchor their content to
+ * the bottom of the frame, so too much of it climbs into the counter.
+ */
+export function isCrowded(scene: HTMLElement): boolean {
+  const chrome = scene.querySelector(".sf-chrome");
+  if (!chrome) return false;
+  const limit = chrome.getBoundingClientRect().bottom - 1;
+  const range = document.createRange();
+  const walker = document.createTreeWalker(scene, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (chrome.contains(node) || !node.textContent?.trim()) continue;
+    range.selectNodeContents(node);
+    // A text rectangle starts at the font's ascender line, well above where
+    // capital letters begin. Compare against where ink can actually be.
+    const fontSize = Number.parseFloat(getComputedStyle(node.parentElement ?? scene).fontSize);
+    const inkOffset = fontSize * ASCENDER_GAP;
+    for (const rect of range.getClientRects()) if (rect.height > 0 && rect.top + inkOffset < limit) return true;
+  }
+  return false;
+}
+
+/**
+ * When a scene is crowded, makes its largest line-fitted text one step smaller,
+ * and repeats until the scene fits or nothing can shrink further. Fitting text
+ * to its own line limit does not account for how tall the scene's stack of
+ * texts becomes; this does.
+ */
+export function relieveCrowding(
+  scene: HTMLElement,
+  unitPx: number,
+  frame: { width: number; height: number },
+  reports: SlotReport[],
+): void {
+  const slots = Array.from(scene.querySelectorAll<HTMLElement>("[data-sf-fit]:not([data-sf-box])"), (el) => {
+    const [min = 1, , step = 1] = (el.dataset.sfFit ?? "").split(",").map(Number);
+    return { el, min, step, report: reports.find((report) => report.path === el.dataset.sfPath) };
+  });
+  // Bounded: every pass shrinks one slot by one step, and each slot has a floor.
+  for (let pass = 0; pass < 200 && isCrowded(scene); pass++) {
+    let largest: (typeof slots)[number] | undefined;
+    let largestSize = 0;
+    for (const slot of slots) {
+      const size = Math.round((Number.parseFloat(slot.el.style.fontSize) / unitPx) * 100) / 100;
+      if (size - slot.step >= slot.min - 1e-9 && size > largestSize) {
+        largest = slot;
+        largestSize = size;
+      }
+    }
+    if (!largest) break;
+    const next = Math.round((largestSize - largest.step) * 100) / 100;
+    largest.el.style.fontSize = `${next * unitPx}px`;
+    if (largest.report) {
+      const maxLines = largest.el.dataset.sfLines ? Number(largest.el.dataset.sfLines) : null;
+      largest.report.sizePx = next * unitPx;
+      largest.report.lines = measure(largest.el, maxLines, false).lines;
+    }
+  }
+  // Shrinking one text moves the others; where each one ended up is measured last.
+  for (const slot of slots) if (slot.report) slot.report.outside = isOutside(slot.el, unitPx, frame);
+}
+
 /** Nothing may come closer to the edge of the frame than this, in units. */
 const SAFE_MARGIN_UNITS = 4;
+/**
+ * Share of the font size between the top of a text rectangle and the top of
+ * capital letters. Deliberately on the low side of real fonts (Onest is about
+ * 0.27), so real collisions are still caught.
+ */
+const ASCENDER_GAP = 0.15;
 
 function measure(el: HTMLElement, maxLines: number | null, boxed: boolean): { lines: number; fits: boolean } {
   const style = getComputedStyle(el);
@@ -20,6 +90,17 @@ function measure(el: HTMLElement, maxLines: number | null, boxed: boolean): { li
   const tooWide = el.scrollWidth > el.clientWidth + 1;
   const tooTall = boxed && el.scrollHeight > el.clientHeight + 1;
   return { lines, fits: !tooWide && !tooTall && (maxLines === null || lines <= maxLines) };
+}
+
+function isOutside(el: HTMLElement, unitPx: number, frame: { width: number; height: number }): boolean {
+  const rect = el.getBoundingClientRect();
+  const margin = SAFE_MARGIN_UNITS * unitPx - 1;
+  return (
+    rect.left < margin ||
+    rect.top < margin ||
+    rect.right > frame.width - margin ||
+    rect.bottom > frame.height - margin
+  );
 }
 
 /**
@@ -71,8 +152,6 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       fits = result.fits;
     }
 
-    const rect = el.getBoundingClientRect();
-    const margin = SAFE_MARGIN_UNITS * unitPx - 1;
     reports.push({
       path: el.dataset.sfPath ?? "",
       sizePx: size * unitPx,
@@ -80,11 +159,7 @@ export function fitSlots(root: HTMLElement, unitPx: number, frame: { width: numb
       maxLines,
       chars: Array.from(el.textContent ?? "").length,
       overflow: !fits,
-      outside:
-        rect.left < margin ||
-        rect.top < margin ||
-        rect.right > frame.width - margin ||
-        rect.bottom > frame.height - margin,
+      outside: isOutside(el, unitPx, frame),
     });
   }
   return reports;

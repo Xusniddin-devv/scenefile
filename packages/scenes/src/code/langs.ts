@@ -7,8 +7,11 @@ export const CODE_LANGS = [
 
 export type CodeLang = (typeof CODE_LANGS)[number];
 
-/** A scene shows at most this many lines; more cannot be read at the smallest size. */
-export const MAX_CODE_LINES = 16;
+/**
+ * A scene shows at most this many lines. It is what fits in a landscape or
+ * square frame at the smallest readable size, measured, not estimated.
+ */
+export const MAX_CODE_LINES = 12;
 
 /** Names people and models use for the languages above. */
 export const LANG_ALIASES: Readonly<Record<string, CodeLang>> = {

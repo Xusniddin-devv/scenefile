@@ -27,7 +27,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   quote: { type: "quote", text: NASTY, author: NASTY, role: NASTY },
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
-  code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, caption: NASTY },
+  code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, highlight: [1], caption: NASTY },
   outro: { type: "outro", heading: NASTY, highlight: "<u>x</u>", command: NASTY, url: NASTY },
   terminal: { type: "terminal", steps: [{ run: NASTY, output: NASTY }] },
 };

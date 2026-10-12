@@ -1,5 +1,5 @@
 import { type SceneHandle, mounts } from "@scenefile/scenes/browser";
-import { type SlotReport, fitSlots } from "./fit";
+import { type SlotReport, fitSlots, isCrowded, relieveCrowding } from "./fit";
 
 interface ManifestScene {
   index: number;
@@ -27,7 +27,7 @@ interface Mounted {
 interface Api {
   seek(frame: number): void;
   totalFrames: number;
-  report: { slots: SlotReport[] };
+  report: { slots: SlotReport[]; crowded: number[] };
 }
 
 function init(): Api {
@@ -54,10 +54,14 @@ function init(): Api {
   // typed or staggered in over time is measured at full length.
   const unitPx = Math.min(manifest.width, manifest.height) / 100;
   const slots: SlotReport[] = [];
+  const crowded: number[] = [];
   for (const { scene, el, handle } of mounted) {
     el.hidden = false;
     handle.seek(Math.max(0, scene.durationFrames - scene.exitFrames - 1));
-    slots.push(...fitSlots(el, unitPx, manifest));
+    const fitted = fitSlots(el, unitPx, manifest);
+    relieveCrowding(el, unitPx, manifest, fitted);
+    slots.push(...fitted);
+    if (isCrowded(el)) crowded.push(scene.index);
     el.hidden = true;
   }
 
@@ -65,7 +69,7 @@ function init(): Api {
 
   return {
     totalFrames: manifest.totalFrames,
-    report: { slots },
+    report: { slots, crowded },
     seek(frame) {
       // Chromium carries paint and compositing state from one frame to the next,
       // so identical DOM can differ by one level on anti-aliased edges depending

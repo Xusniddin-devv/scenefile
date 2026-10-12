@@ -16,7 +16,12 @@ export const codeSchema = z
   .strictObject({
     type: z.literal("code"),
     lang: langSchema.default("text"),
-    source: z.string().min(1).max(2000),
+    // Blank lines around the code are habit, not content; a trailing newline
+    // would otherwise be drawn as an empty numbered line and count toward the limit.
+    source: z.preprocess(
+      (value) => (typeof value === "string" ? value.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "") : value),
+      z.string().min(1).max(2000),
+    ),
     /** Line numbers, from 1, to draw attention to. */
     highlight: z.array(z.number().int().min(1)).min(1).max(MAX_CODE_LINES).optional(),
     caption: z.string().min(1).max(80).optional(),

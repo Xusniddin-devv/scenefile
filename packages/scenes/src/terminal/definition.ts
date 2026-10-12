@@ -10,6 +10,7 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
   enterSeconds: 0.5,
   exitSeconds: 0.4,
   minHoldSeconds: 1.5,
+  revealSeconds: (props) => terminalSchedule(props.steps).at(-1)?.outputAt ?? 0,
   holdSeconds(props) {
     const last = terminalSchedule(props.steps).at(-1);
     return (last ? last.end : 0) + TAIL_SECONDS;

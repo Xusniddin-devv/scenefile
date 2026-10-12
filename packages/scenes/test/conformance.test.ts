@@ -47,6 +47,25 @@ describe.each(SCENE_TYPES)("scene type %s", (type) => {
     expect(el.querySelector(".sf-chrome__index")?.textContent).toBe("03 / 08");
   });
 
+  it("has a hostile fixture that exercises every field", () => {
+    const fields = getScene(type).fields.filter((field) => field !== "type" && field !== "duration");
+    for (const field of fields) expect(Object.keys(HOSTILE[type]), field).toContain(field);
+  });
+
+  it("draws every string it declares inside a text slot that is fitted", () => {
+    const { props, definition, el } = build(type, FIXTURES[type]);
+    const fitted = Array.from(el.querySelectorAll<HTMLElement>("[data-sf-fit]"), (slot) => {
+      const inner = [slot, ...Array.from(slot.querySelectorAll<HTMLElement>("*"))];
+      const attributes = inner.flatMap((node) => [node.dataset.sfType ?? "", node.dataset.sfValue ?? ""]);
+      return [slot.textContent ?? "", ...attributes].join("\n").replace(/\s+/g, " ");
+    });
+    for (const entry of definition.texts(props)) {
+      for (const line of entry.text.split("\n").map((part) => part.trim()).filter(Boolean)) {
+        expect(fitted.some((text) => text.includes(line.replace(/\s+/g, " "))), `${entry.path}: ${line}`).toBe(true);
+      }
+    }
+  });
+
   it("turns none of its text into markup", () => {
     const { el } = build(type, HOSTILE[type]);
     expect(el.querySelector("u, img, script")).toBeNull();

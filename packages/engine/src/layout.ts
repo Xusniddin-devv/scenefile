@@ -19,6 +19,8 @@ export interface SlotReport {
 
 export interface InspectReport {
   slots: SlotReport[];
+  /** Indexes of scenes whose content reaches up into the scene counter at the top of the frame. */
+  crowded?: number[];
 }
 
 /** Share of the computed character budget to recommend, leaving room for wide letters. */
@@ -54,7 +56,7 @@ export function verifyLayout(report: InspectReport): Diagnostic[] {
           "TEXT_OVERFLOW",
           slot.path,
           "This content is taller than the scene, even at its smallest size.",
-          "Use fewer or shorter items, or split them across two scenes.",
+          "Use fewer or shorter lines or items, or split them across two scenes.",
         ),
       );
     } else if (slot.outside) {
@@ -67,6 +69,19 @@ export function verifyLayout(report: InspectReport): Diagnostic[] {
         ),
       );
     }
+  }
+  for (const index of report.crowded ?? []) {
+    const path = `scenes[${index}]`;
+    // One error per scene is enough; an overflow in it already says to shorten.
+    if (diagnostics.some((d) => d.path === path || d.path.startsWith(`${path}.`))) continue;
+    diagnostics.push(
+      error(
+        "SAFE_AREA",
+        path,
+        "This scene has more content than fits: it runs into the top of the frame.",
+        "Shorten the text in this scene, or move part of it to another scene.",
+      ),
+    );
   }
   return diagnostics;
 }

@@ -3,7 +3,7 @@ import { escapeHtml } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { highlightLines } from "./highlight";
 import { type CodeProps, codeSchema } from "./schema";
-import { codeHoldSeconds } from "./timing";
+import { codeHoldSeconds, codeSettledSeconds } from "./timing";
 
 function sourceLines(source: string): string[] {
   return source.split(/\r\n?|\n/);
@@ -15,6 +15,7 @@ export const codeDefinition: SceneDefinition<CodeProps> = {
   enterSeconds: 0.3,
   exitSeconds: 0.4,
   minHoldSeconds: 2,
+  revealSeconds: (props) => codeSettledSeconds(sourceLines(props.source).length, new Set(props.highlight ?? []).size),
   holdSeconds: (props) =>
     codeHoldSeconds(sourceLines(props.source).length, new Set(props.highlight ?? []).size, props.caption),
   summary(props) {

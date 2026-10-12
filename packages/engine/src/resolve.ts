@@ -30,6 +30,8 @@ const FAST_RATIO = 0.75;
 const SLOW_RATIO = 3;
 /** WCAG's minimum for large text, which is what the accent is used for. */
 const MIN_ACCENT_CONTRAST = 3;
+/** Seconds the finished content stays up, at the least, before the scene exits. */
+const MIN_REST_SECONDS = 0.3;
 
 function toFrames(seconds: number, fps: number): number {
   return Math.round(seconds * fps);
@@ -64,10 +66,29 @@ export function resolve(scenefile: Scenefile): { video: ResolvedVideo; diagnosti
       Math.max(definition.minHoldSeconds, definition.holdSeconds(props)) +
       definition.exitSeconds;
 
+    // A scene must last long enough for its content to finish appearing; cut
+    // shorter, it would end on a half-typed command or a number still counting.
+    const reveal = definition.revealSeconds?.(props) ?? 0;
+    const minFrames = Math.max(
+      enterFrames + exitFrames + 1,
+      reveal > 0 ? enterFrames + Math.ceil((reveal + MIN_REST_SECONDS) * fps) + exitFrames : 0,
+    );
+    const lengthened = props.duration !== "auto" && reveal > 0 && toFrames(props.duration, fps) < minFrames;
+
     if (props.duration !== "auto") {
       const path = `scenes[${index}].duration`;
       const needed = autoSeconds.toFixed(1);
-      if (props.duration < autoSeconds * FAST_RATIO) {
+      if (lengthened) {
+        const minimum = (minFrames / fps).toFixed(1);
+        diagnostics.push(
+          warning(
+            "PACING_FAST",
+            path,
+            `${props.duration}s would end this scene before its animation finishes, so it was lengthened to ${minimum}s.`,
+            `Set "duration" to "auto" or to at least ${minimum}.`,
+          ),
+        );
+      } else if (props.duration < autoSeconds * FAST_RATIO) {
         diagnostics.push(
           warning(
             "PACING_FAST",
@@ -89,7 +110,7 @@ export function resolve(scenefile: Scenefile): { video: ResolvedVideo; diagnosti
     }
 
     const requested = toFrames(props.duration === "auto" ? autoSeconds : props.duration, fps);
-    const durationFrames = Math.max(requested, enterFrames + exitFrames + 1);
+    const durationFrames = Math.max(requested, minFrames);
     const scene = { index, type: props.type, props, startFrame: cursor, durationFrames, enterFrames, exitFrames };
     cursor += durationFrames;
     return scene;

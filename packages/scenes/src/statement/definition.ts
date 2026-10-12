@@ -27,6 +27,7 @@ export const statementDefinition: SceneDefinition<StatementProps> = {
   enterSeconds: 0.2,
   exitSeconds: 0.4,
   minHoldSeconds: 1.5,
+  revealSeconds: (props) => statementRevealSeconds(words(props.text).length),
   holdSeconds: (props) => statementRevealSeconds(words(props.text).length) + readingSeconds(props.text),
   summary: (props) => props.text,
   texts: (props) => [{ path: "text", text: props.text, font: "sans" }],

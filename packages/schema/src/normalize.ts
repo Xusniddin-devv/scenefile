@@ -190,6 +190,13 @@ function normalizeScene(scene: unknown, path: string, diagnostics: Diagnostic[])
   }
   fixKeys(scene, getScene(type).fields, path, diagnostics);
   coerceDuration(scene, path, diagnostics);
+  // A stat's value is text ("94%", "3.5x"), but a bare number is an obvious thing to write.
+  if (type === "stat" && typeof scene.value === "number" && Number.isFinite(scene.value)) {
+    scene.value = String(scene.value);
+    diagnostics.push(
+      warning("AUTOFIXED", `${path}.value`, `Read the number ${scene.value} as the text "${scene.value}".`, `Write it in quotes, with its unit if it has one: "value": "${scene.value}%".`),
+    );
+  }
   return false;
 }
 

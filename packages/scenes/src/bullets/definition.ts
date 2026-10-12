@@ -2,7 +2,7 @@ import { sceneChrome } from "../chrome";
 import { escapeHtml, readingSeconds } from "../text";
 import type { SceneDefinition, SceneText } from "../types";
 import { type BulletsProps, bulletsSchema } from "./schema";
-import { bulletsHoldSeconds } from "./timing";
+import { ITEM_FADE_SECONDS, bulletSchedule, bulletsHoldSeconds } from "./timing";
 
 export const bulletsDefinition: SceneDefinition<BulletsProps> = {
   type: "bullets",
@@ -10,6 +10,7 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
   enterSeconds: 0.5,
   exitSeconds: 0.4,
   minHoldSeconds: 2,
+  revealSeconds: (props) => (bulletSchedule(props.items).at(-1) ?? 0) + ITEM_FADE_SECONDS,
   holdSeconds: (props) => bulletsHoldSeconds(props.items) + readingSeconds(props.heading ?? ""),
   summary: (props) => `${props.heading ?? props.items[0] ?? ""} (${props.items.length} items)`,
   texts(props) {
@@ -34,7 +35,7 @@ export const bulletsDefinition: SceneDefinition<BulletsProps> = {
 .sf-bullets__heading{font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
 .sf-bullets__list{flex:1;min-height:0;overflow:hidden;list-style:none;display:flex;flex-direction:column;font-size:calc(var(--sf-unit)*9.6);color:var(--sf-text)}
 .sf-bullets__item{display:flex;align-items:baseline;padding:0.42em 0;border-top:1px solid var(--sf-line)}
-.sf-bullets__item i{flex:none;width:6em;font:500 0.3em/1 var(--sf-font-mono);font-variant-ligatures:none;color:var(--sf-accent)}
+.sf-bullets__item i{flex:none;width:calc(var(--sf-unit)*17);font:500 0.3em/1 var(--sf-font-mono);font-size:max(0.3em,calc(var(--sf-unit)*2.4));font-variant-ligatures:none;color:var(--sf-accent)}
 .sf-bullets__item span{min-width:0;font:800 1em/1.05 var(--sf-font-sans);letter-spacing:-0.045em;text-wrap:balance}
 `,
 };
