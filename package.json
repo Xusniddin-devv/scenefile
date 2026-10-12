@@ -10,7 +10,8 @@
     "build": "pnpm -r build",
     "test": "vitest run",
     "typecheck": "pnpm build && pnpm -r exec tsc --noEmit",
-    "bench": "pnpm build && node scripts/bench.mjs"
+    "bench": "pnpm build && node scripts/bench.mjs",
+    "generate": "pnpm build && node scripts/docs.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

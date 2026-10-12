@@ -4,12 +4,20 @@
   "description": "Turn a JSON scenefile into a professional video. Built for language models.",
   "type": "module",
   "license": "MIT",
-  "bin": { "scenefile": "./dist/main.js" },
-  "files": ["dist"],
-  "scripts": { "build": "tsup" },
+  "bin": {
+    "scenefile": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup"
+  },
   "dependencies": {
     "@scenefile/engine": "workspace:*",
+    "@scenefile/mcp": "workspace:*",
     "@scenefile/render": "workspace:*",
+    "@scenefile/scenes": "workspace:*",
     "@scenefile/schema": "workspace:*"
   }
 }

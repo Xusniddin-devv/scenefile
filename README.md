@@ -52,6 +52,40 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
   fix: "type" must be one of: title, statement, quote, bullets, stat, code, outro, screenshot, compare, terminal.
 ```
 
+## Use from an AI agent
+
+**With a shell** (Claude Code, Codex, and similar): `skills/scenefile/SKILL.md` is a
+skill file that teaches the format and the two commands. `scenefile guide` prints the
+same guide; `scenefile scenes <type>` one scene type in full; `scenefile schema` a JSON
+Schema for tools that can enforce one on a model's output.
+
+**Through MCP** (any client that speaks the Model Context Protocol, with any model):
+
+```json
+{
+  "mcpServers": {
+    "scenefile": {
+      "command": "node",
+      "args": ["/path/to/scenefile/packages/cli/dist/main.js", "mcp", "--root", "/path/to/your/project"]
+    }
+  }
+}
+```
+
+The server offers five tools: `guide` (how to write a scenefile, under 2,000 tokens),
+`scene_docs`, `check`, `render` (returns a job id at once) and `job` (progress, then the
+finished file). A scenefile can be passed inline or as a path.
+
+What the server can touch:
+
+- It reads and writes only inside `--root` (the folder it was started in, if not given).
+  Paths that leave it, or links that lead out of it, are refused.
+- It does not download images unless started with `--allow-remote-images`.
+- It renders one video at a time.
+
+The guide, the skill file and the tool descriptions are generated from the scene types
+themselves (`pnpm generate`), and a test fails if they fall out of step.
+
 ## Transitions
 
 Scenes give way to one another by `cut`, `fade`, `crossfade`, `push`, `wipe` or `zoom`.

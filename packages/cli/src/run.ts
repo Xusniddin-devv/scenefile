@@ -1,7 +1,15 @@
-import { readFile } from "node:fs/promises";
-import { dirname, extname, resolve as resolvePath } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, extname, join, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
-import { type CheckResult, type Composition, type InspectReport, formatDiagnostics } from "@scenefile/engine";
+import {
+  type CheckResult,
+  type Composition,
+  type InspectReport,
+  authoringGuide,
+  exampleScenefile,
+  formatDiagnostics,
+  sceneGuide,
+} from "@scenefile/engine";
 import {
   EnvironmentError,
   MAX_WORKERS,
@@ -12,7 +20,8 @@ import {
   type RenderReport,
   renderVideo,
 } from "@scenefile/render";
-import { type Diagnostic, error, parseScenefileText } from "@scenefile/schema";
+import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
+import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
 
 export interface Io {
   out(text: string): void;
@@ -30,6 +39,12 @@ type ExitCode = 0 | 1 | 2;
 const USAGE = `Usage:
   scenefile check <file> [--json]
   scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--workers <n>] [--json]
+  scenefile guide                  how to write a scenefile
+  scenefile scenes [type]          the scene types, or one in full
+  scenefile schema                 the scenefile as a JSON Schema
+  scenefile init [folder]          write an example scenefile.json
+  scenefile mcp [--root <folder>] [--allow-remote-images]
+                                   serve these as tools to an MCP client
 
 Exit codes: 0 success, 1 the scenefile has errors, 2 usage or environment problem.`;
 
@@ -88,7 +103,47 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     }
 
     const [command, file] = positionals;
-    if (command !== "check" && command !== "render") throw new UsageError("Expected a command: check or render.");
+    if (command === "guide") {
+      io.out(authoringGuide());
+      return 0;
+    }
+    if (command === "schema") {
+      io.out(JSON.stringify(scenefileJsonSchema(), null, 2));
+      return 0;
+    }
+    if (command === "scenes") {
+      if (!file) {
+        const width = Math.max(...SCENE_TYPES.map((type) => type.length));
+        io.out(SCENE_TYPES.map((type) => `${type.padEnd(width)}  ${getScene(type).doc.purpose}`).join("\n"));
+        return 0;
+      }
+      const name = file.trim().toLowerCase();
+      if (!isSceneType(name)) {
+        const guess = nearest(name, SCENE_TYPES);
+        throw new UsageError(
+          `There is no scene type "${file}".${guess ? ` Did you mean "${guess}"?` : ""} The types are: ${SCENE_TYPES.join(", ")}.`,
+        );
+      }
+      io.out(sceneGuide(name));
+      return 0;
+    }
+    if (command === "init") {
+      const target = join(resolvePath(file ?? "."), "scenefile.json");
+      try {
+        await mkdir(dirname(target), { recursive: true });
+        // "wx": fail rather than replace a file that is already there.
+        await writeFile(target, `${JSON.stringify(exampleScenefile(), null, 2)}\n`, { flag: "wx" });
+      } catch (cause) {
+        if ((cause as NodeJS.ErrnoException).code !== "EEXIST") throw cause;
+        io.err(`${target} already exists; it was left as it is.`);
+        return 1;
+      }
+      io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);
+      return 0;
+    }
+    if (command !== "check" && command !== "render") {
+      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init or mcp.");
+    }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
     if (command === "check") {

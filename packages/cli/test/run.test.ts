@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EnvironmentError, type RenderReport } from "@scenefile/render";
@@ -229,11 +229,67 @@ describe("scenefile render", () => {
   });
 });
 
+describe("commands that explain", () => {
+  it("guide prints the authoring guide", async () => {
+    const c = capture();
+    expect(await run(["guide"], c.io)).toBe(0);
+    expect(c.out()).toContain("# Making a video with scenefile");
+    expect(c.out()).toContain("### terminal");
+  });
+
+  it("scenes lists every scene type with what it is for, and one type in full", async () => {
+    const list = capture();
+    expect(await run(["scenes"], list.io)).toBe(0);
+    for (const type of ["title", "statement", "quote", "bullets", "stat", "code", "screenshot", "compare", "outro", "terminal"]) {
+      expect(list.out(), type).toMatch(new RegExp(`^${type}\\s+\\S`, "m"));
+    }
+    const one = capture();
+    expect(await run(["scenes", "stat"], one.io)).toBe(0);
+    expect(one.out()).toContain("`value`");
+    const wrong = capture();
+    expect(await run(["scenes", "stats"], wrong.io)).toBe(2);
+    expect(wrong.err()).toContain('Did you mean "stat"?');
+  });
+
+  it("schema prints a JSON Schema of the scenefile", async () => {
+    const c = capture();
+    expect(await run(["schema"], c.io)).toBe(0);
+    const schema = JSON.parse(c.out()) as { type: string; properties: Record<string, unknown>; required: string[] };
+    expect(schema.type).toBe("object");
+    expect(Object.keys(schema.properties)).toEqual(expect.arrayContaining(["version", "scenes", "theme", "transition", "audio"]));
+    expect(schema.required).toEqual(expect.arrayContaining(["version", "scenes"]));
+    expect(JSON.stringify(schema)).toContain('"statement"');
+  });
+
+  it("init writes a scenefile that passes its own check, and never overwrites one", async () => {
+    const folder = mkdtempSync(join(tmpdir(), "scenefile-init-"));
+    try {
+      const first = capture();
+      expect(await run(["init", folder], first.io)).toBe(0);
+      const written = join(folder, "scenefile.json");
+      expect(first.out()).toContain(written);
+      expect(first.out()).toContain("scenefile check");
+      const checked = capture();
+      expect(await run(["check", written], checked.io)).toBe(0);
+      expect(checked.out()).toContain("No problems found.");
+
+      writeFileSync(written, "mine");
+      const second = capture();
+      expect(await run(["init", folder], second.io)).toBe(1);
+      expect(second.err()).toMatch(/already/);
+      expect(readFileSync(written, "utf8")).toBe("mine");
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("scenefile usage", () => {
   it("prints help and exits 0", async () => {
     const c = capture();
     expect(await run(["--help"], c.io)).toBe(0);
     expect(c.out()).toContain("scenefile check <file>");
+    for (const command of ["guide", "scenes", "schema", "init", "mcp"]) expect(c.out()).toContain(`scenefile ${command}`);
   });
 
   it.each([[[]], [["frobnicate"]], [["check"]], [["check", "a.json", "--bogus"]]])(

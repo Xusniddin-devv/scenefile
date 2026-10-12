@@ -31,3 +31,12 @@ export type Format = (typeof FORMATS)[number];
 export type ThemeName = (typeof THEMES)[number];
 
 export const TOP_LEVEL_FIELDS: readonly string[] = Object.keys(scenefileSchema.shape);
+
+/**
+ * The scenefile as a JSON Schema, for tools that can enforce one on a model's
+ * output. It describes what may be written; rules that span fields (a
+ * highlight must appear in its text) are checked by `normalize`, not here.
+ */
+export function scenefileJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(scenefileSchema, { io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+}

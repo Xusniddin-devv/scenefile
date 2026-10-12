@@ -75,13 +75,27 @@ describe("built CLI", () => {
     );
     const child = spawn(process.execPath, [cli, "render", input, "-o", output, "--workers", "2"], { stdio: "ignore" });
     const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
-    // Long enough for browsers to start and segments to be under way.
-    await new Promise((resolve) => setTimeout(resolve, 4000));
-    expect(readdirSync(dir).some((name) => name.startsWith(".interrupted.mp4.partial-"))).toBe(true);
+    // Wait until rendering is really under way, however busy the machine is, then a little longer.
+    const underWay = (): boolean => readdirSync(dir).some((name) => name.startsWith(".interrupted.mp4.partial-"));
+    for (let waited = 0; waited < 30_000 && !underWay(); waited += 100) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(underWay()).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     child.kill("SIGINT");
     await exited;
     expect(existsSync(output)).toBe(false);
     expect(readdirSync(dir).filter((name) => name.includes("partial"))).toEqual([]);
+  });
+
+  it("refuses to serve the whole disk, plainly", async () => {
+    const result = await scenefile(["mcp", "--root", "/"]);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("filesystem root");
+    expect(result.stderr).not.toMatch(/\bat .+:\d+:\d+/);
+    const unknown = await scenefile(["mcp", "--bogus"]);
+    expect(unknown.code).toBe(2);
+    expect(unknown.stderr).toContain("Usage: scenefile mcp");
   });
 
   it("exits 1 and prints diagnostics for a broken scenefile", async () => {

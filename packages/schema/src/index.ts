@@ -9,5 +9,6 @@ export {
   THEMES,
   TOP_LEVEL_FIELDS,
   type ThemeName,
+  scenefileJsonSchema,
   scenefileSchema,
 } from "./scenefile";

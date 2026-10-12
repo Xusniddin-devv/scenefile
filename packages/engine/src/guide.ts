@@ -23,6 +23,11 @@ const EXAMPLE = {
   ],
 };
 
+/** A small, complete scenefile: the guide's example, and what `scenefile init` writes. */
+export function exampleScenefile(): Record<string, unknown> {
+  return structuredClone(EXAMPLE);
+}
+
 function fieldLines(fields: Readonly<Record<string, string>>): string {
   return Object.entries(fields)
     .map(([name, text]) => `- \`${name}\`: ${text}`)
@@ -92,4 +97,31 @@ export function formatDiagnostics(diagnostics: readonly Diagnostic[]): string {
   const warnings = diagnostics.length - errors;
   lines.push(`${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${warnings === 1 ? "warning" : "warnings"}`);
   return lines.join("\n");
+}
+
+/**
+ * The guide as an agent skill: front matter that tells an agent when to load
+ * it, the two commands, then the guide itself. Written to
+ * skills/scenefile/SKILL.md by `pnpm generate`; a test fails if that file is stale.
+ */
+export function skillFile(): string {
+  return [
+    "---",
+    "name: scenefile",
+    "description: Make a video (MP4) from a JSON description of its scenes - product launch videos, explainers, short clips for social media. Use when asked to create a video, a product demo, or an animated summary of a project. Needs the scenefile command.",
+    "---",
+    "",
+    "## Commands",
+    "",
+    "```",
+    "scenefile check video.json                 # problems, each with a fix, and a text storyboard",
+    "scenefile render video.json -o video.mp4   # the video; takes about as long as the video lasts",
+    "scenefile scenes <type>                    # one scene type in full",
+    "```",
+    "",
+    "Write the scenefile to a file, run `check`, fix what it reports, repeat until there are no errors, then `render`.",
+    "",
+    authoringGuide(),
+    "",
+  ].join("\n");
 }
