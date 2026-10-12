@@ -10,6 +10,11 @@ bed work today. Fonts are bundled, so Latin and
 Cyrillic text is drawn the same on every machine; emoji use the machine's own emoji
 font. Not yet published to npm.
 
+![The opening of a video made from examples/tour.json](docs/media/tour.gif)
+
+Every frame above came from [`examples/tour.json`](examples/tour.json): 53 lines of JSON,
+no drawing, narrated and captioned on the machine that rendered it.
+
 ## Requirements
 
 - Node 20 or newer, pnpm
@@ -21,9 +26,12 @@ font. Not yet published to npm.
 pnpm install
 pnpm --filter @scenefile/render exec playwright-core install chromium --only-shell
 pnpm build
-node packages/cli/dist/main.js check examples/launch.json
-node packages/cli/dist/main.js render examples/launch.json -o out/launch.mp4
+node packages/cli/dist/main.js doctor
+node packages/cli/dist/main.js render examples/tour.json -o out/tour.mp4
 ```
+
+`doctor` says what, if anything, is still missing. The first narrated render downloads
+a voice (67 MB, once). `examples/launch.json` is a silent example.
 
 ## A scenefile
 
@@ -140,6 +148,8 @@ What it is not:
 
 ## Themes
 
+![The same scene in each of the five themes](docs/media/themes.png)
+
 `signal` (black, lime), `midnight` (black, orange), `paper` (white, red), `cobalt`
 (blue, yellow), `solar` (yellow, blue). Set `"theme"`, and optionally your own `"accent"`.
 
@@ -197,10 +207,9 @@ load them, which means reading files and, for `https` addresses, making requests
 
 ## Development
 
-```bash
-pnpm test        # builds, then runs every test, including real renders
-pnpm typecheck
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and how the code is laid out,
+and [SECURITY.md](SECURITY.md) for what is treated as untrusted and how to report a
+problem.
 
 ## License
 

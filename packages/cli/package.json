@@ -1,6 +1,6 @@
 {
   "name": "scenefile",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Turn a JSON scenefile into a professional video. Built for language models.",
   "type": "module",
   "license": "MIT",
@@ -8,10 +8,13 @@
     "scenefile": "./dist/main.js"
   },
   "files": [
+    "LICENSE",
+    "README.md",
     "dist"
   ],
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
     "@scenefile/engine": "workspace:*",
@@ -19,5 +22,19 @@
     "@scenefile/render": "workspace:*",
     "@scenefile/scenes": "workspace:*",
     "@scenefile/schema": "workspace:*"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov"
 }

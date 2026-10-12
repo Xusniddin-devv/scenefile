@@ -1,12 +1,38 @@
 {
   "name": "@scenefile/runtime",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "exports": {
     "./bundle": "./dist/index.global.js"
   },
-  "files": ["dist"],
-  "scripts": { "build": "tsup" },
-  "devDependencies": { "@scenefile/scenes": "workspace:*" }
+  "files": [
+    "LICENSE",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepack": "node ../../scripts/prepack.mjs"
+  },
+  "devDependencies": {
+    "@scenefile/scenes": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "The in-page runtime that draws a scenefile frame by frame."
 }

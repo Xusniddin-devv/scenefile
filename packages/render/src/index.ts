@@ -1,4 +1,5 @@
 export { captureFrame } from "./capture";
+export { type Finding, diagnose } from "./doctor";
 export { type Encoder, runFfmpeg, startEncoder } from "./encode";
 export { EnvironmentError } from "./errors";
 export { inspectComposition } from "./inspect";

@@ -306,3 +306,30 @@ describe("scenefile usage", () => {
     },
   );
 });
+
+describe("doctor", () => {
+  const found = [
+    { name: "Node", ok: true, required: true, detail: "22.1.0" },
+    { name: "ffmpeg", ok: true, required: true, detail: "7.1" },
+    { name: "Chromium", ok: true, required: true, detail: "ready" },
+    { name: "Voice en-kristin", ok: false, required: false, detail: "not installed", fix: "scenefile voices install en-kristin" },
+  ];
+
+  it("lists what is in place, and passes when only optional things are missing", async () => {
+    const { io, out } = capture();
+    expect(await run(["doctor"], { ...io, diagnose: async () => found })).toBe(0);
+    expect(out()).toMatch(/ok\s+Node\s+22\.1\.0/);
+    expect(out()).toMatch(/optional\s+Voice en-kristin\s+not installed/);
+    expect(out()).toContain("scenefile voices install en-kristin");
+    expect(out()).toContain("Ready to make videos.");
+  });
+
+  it("exits 2 and says how to fix it when something required is missing", async () => {
+    const { io, out } = capture();
+    const broken = [...found.slice(0, 1), { name: "ffmpeg", ok: false, required: true, detail: "not found", fix: "Install ffmpeg." }];
+    expect(await run(["doctor"], { ...io, diagnose: async () => broken })).toBe(2);
+    expect(out()).toMatch(/missing\s+ffmpeg\s+not found/);
+    expect(out()).toContain("Install ffmpeg.");
+    expect(out()).not.toContain("Ready to make videos.");
+  });
+});

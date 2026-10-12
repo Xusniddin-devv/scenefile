@@ -3,3 +3,5 @@ dist
 out
 *.tsbuildinfo
 .DS_Store
+packages/*/LICENSE
+packages/*/README.md

@@ -1,6 +1,6 @@
 {
   "name": "@scenefile/render",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -10,10 +10,12 @@
     }
   },
   "files": [
+    "LICENSE",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json"
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
     "@scenefile/engine": "workspace:*",
@@ -23,5 +25,23 @@
   },
   "optionalDependencies": {
     "sherpa-onnx-node": "1.13.8"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Chromium frame capture, ffmpeg encoding and local narration for scenefile."
 }

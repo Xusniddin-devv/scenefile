@@ -88,6 +88,13 @@ describe("built CLI", () => {
     expect(readdirSync(dir).filter((name) => name.includes("partial"))).toEqual([]);
   });
 
+  it("doctor finds this machine ready", async () => {
+    const result = await scenefile(["doctor"]);
+    expect(result.stdout).toMatch(/ok\s+ffmpeg/);
+    expect(result.stdout).toMatch(/ok\s+Chromium/);
+    expect(result.code).toBe(0);
+  });
+
   it("refuses to serve the whole disk, plainly", async () => {
     const result = await scenefile(["mcp", "--root", "/"]);
     expect(result.code).toBe(2);

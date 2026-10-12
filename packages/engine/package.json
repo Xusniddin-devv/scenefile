@@ -1,6 +1,6 @@
 {
   "name": "@scenefile/engine",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -10,15 +10,35 @@
     }
   },
   "files": [
+    "LICENSE",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json"
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
     "@fontsource-variable/cascadia-code": "5.3.0",
     "@fontsource-variable/onest": "5.3.1",
     "@scenefile/scenes": "workspace:*",
     "@scenefile/schema": "workspace:*"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Timing, layout checks and HTML compilation for scenefile."
 }

@@ -1,6 +1,6 @@
 {
   "name": "@scenefile/scenes",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -14,13 +14,33 @@
     }
   },
   "files": [
+    "LICENSE",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json"
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
     "shiki": "4.5.0",
     "zod": "^4"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "The scene types of scenefile."
 }

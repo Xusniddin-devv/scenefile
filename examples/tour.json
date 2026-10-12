@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "voice": { "name": "en-kristin", "captions": true },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Video from JSON.",
+      "highlight": "JSON.",
+      "sub": "Describe the scenes. The engine draws, times and checks them.",
+      "say": "This video was made from a short JSON file. Nobody drew a frame of it."
+    },
+    {
+      "type": "code",
+      "lang": "json",
+      "source": "{\n  \"version\": 1,\n  \"scenes\": [\n    { \"type\": \"title\", \"heading\": \"Ship faster\" },\n    { \"type\": \"terminal\", \"steps\": [{ \"run\": \"npm test\" }] }\n  ]\n}",
+      "highlight": [4, 5],
+      "say": "You list the scenes. Each one has a type and a few words."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        { "run": "scenefile check tour.json", "output": "No problems found." },
+        { "run": "scenefile render tour.json -o tour.mp4" }
+      ],
+      "say": "Check reads the layout in a real browser and reports problems as text. Render writes the video."
+    },
+    {
+      "type": "chart",
+      "heading": "Seconds to render a 52 second video, by workers",
+      "unit": "s",
+      "bars": [
+        { "label": "1 worker", "value": 62 },
+        { "label": "2 workers", "value": 36 },
+        { "label": "4 workers", "value": 30 }
+      ],
+      "highlight": "4 workers",
+      "say": "Rendering runs in several browsers at once. These are measured on an eight core laptop."
+    },
+    {
+      "type": "bullets",
+      "heading": "Made for language models",
+      "items": ["Eleven scene types", "Errors that say how to fix them", "A voice made on your machine"],
+      "say": "It is built for language models. Every error comes with its fix, and the voice you hear is made on this machine."
+    },
+    {
+      "type": "outro",
+      "heading": "Write JSON. Get a video.",
+      "highlight": "Get a video.",
+      "command": "scenefile init",
+      "say": "Write JSON, and get a video."
+    }
+  ]
+}

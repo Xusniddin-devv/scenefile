@@ -1,6 +1,6 @@
 {
   "name": "@scenefile/mcp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Model Context Protocol server for scenefile: check and render videos from any MCP client.",
   "type": "module",
   "license": "MIT",
@@ -11,10 +11,12 @@
     }
   },
   "files": [
+    "LICENSE",
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json"
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/prepack.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
@@ -23,5 +25,22 @@
     "@scenefile/scenes": "workspace:*",
     "@scenefile/schema": "workspace:*",
     "zod": "^4.6.6"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "video",
+    "mp4",
+    "llm",
+    "agents",
+    "mcp",
+    "json",
+    "ffmpeg",
+    "scenefile"
+  ],
+  "author": "Xusniddin Qalandarov",
+  "publishConfig": {
+    "access": "public"
   }
 }

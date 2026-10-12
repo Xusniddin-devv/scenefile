@@ -26,6 +26,8 @@ import {
   isVoice,
   voiceHome,
   voiceInstalled,
+  type Finding,
+  diagnose,
 } from "@scenefile/render";
 import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -41,6 +43,8 @@ export interface Io {
   hasSound?: (file: string) => Promise<boolean>;
   /** Test seam. Defaults to the speech engine on this machine, downloading a voice the first time it is used. */
   speak?: Speak;
+  /** Test seam. Defaults to looking at this machine. */
+  diagnose?: () => Promise<Finding[]>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -52,6 +56,7 @@ const USAGE = `Usage:
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
   scenefile init [folder]          write an example scenefile.json
+  scenefile doctor                 check that this machine has what is needed
   scenefile voices                 the narrator voices
   scenefile voices install <name>  download a voice (about 67 MB, once)
   scenefile mcp [--root <folder>] [--allow-remote-images]
@@ -165,6 +170,18 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);
       return 0;
     }
+    if (command === "doctor") {
+      const findings = await (io.diagnose ?? diagnose)();
+      const width = Math.max(...findings.map((finding) => finding.name.length));
+      for (const finding of findings) {
+        const state = finding.ok ? "ok" : finding.required ? "missing" : "optional";
+        io.out(`${state.padEnd(8)} ${finding.name.padEnd(width)}  ${finding.detail}`);
+        if (!finding.ok && finding.fix) io.out(`${" ".repeat(9)}${finding.fix}`);
+      }
+      const ready = findings.every((finding) => finding.ok || !finding.required);
+      if (ready) io.out("Ready to make videos.");
+      return ready ? 0 : 2;
+    }
     if (command === "voices") {
       const voicesDir = join(voiceHome(), "voices");
       if (!file) {
@@ -189,7 +206,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
