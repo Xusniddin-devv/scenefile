@@ -395,10 +395,10 @@ describe("renderVideo", () => {
 describe("when the browser will not start", () => {
   it("tells a missing browser from missing system libraries, and leaves other failures alone", async () => {
     const { browserProblem } = await import("../src/index");
-    expect(browserProblem("browserType.launch: Executable doesn't exist at /x/chrome")?.remedy).toContain("install chromium");
+    expect(browserProblem("browserType.launch: Executable doesn't exist at /x/chrome")?.remedy).toContain("scenefile setup");
     const libraries = browserProblem("chrome-headless-shell: error while loading shared libraries: libnspr4.so: cannot open shared object file");
     expect(libraries?.message).toMatch(/system libraries/);
-    expect(libraries?.remedy).toContain("install-deps chromium");
+    expect(libraries?.remedy).toContain("scenefile setup --with-deps");
     expect(browserProblem("Target closed")).toBeNull();
   });
 });

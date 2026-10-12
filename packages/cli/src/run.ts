@@ -29,6 +29,7 @@ import {
   voiceInstalled,
   type Finding,
   diagnose,
+  installBrowser,
 } from "@scenefile/render";
 import { type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -46,6 +47,8 @@ export interface Io {
   speak?: Speak;
   /** Test seam. Defaults to looking at this machine. */
   diagnose?: () => Promise<Finding[]>;
+  /** Test seam. Defaults to downloading Chromium. */
+  installBrowser?: (withDeps: boolean) => Promise<number>;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -57,6 +60,7 @@ const USAGE = `Usage:
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
   scenefile init [folder]          write an example scenefile.json
+  scenefile setup [--with-deps]    download the browser scenefile draws with
   scenefile doctor                 check that this machine has what is needed
   scenefile voices                 the narrator voices
   scenefile voices install <name>  download a voice (about 67 MB, once)
@@ -177,6 +181,15 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Wrote ${target}\nNext: scenefile check ${target}\nThen: scenefile render ${target} -o video.mp4`);
       return 0;
     }
+    if (command === "setup") {
+      const code = await (io.installBrowser ?? installBrowser)(values["with-deps"]);
+      if (code !== 0) {
+        io.err("The browser could not be installed. On Linux, try: scenefile setup --with-deps");
+        return 2;
+      }
+      io.out("The browser is installed. Run `scenefile doctor` to check everything else.");
+      return 0;
+    }
     if (command === "doctor") {
       const findings = await (io.diagnose ?? diagnose)();
       const width = Math.max(...findings.map((finding) => finding.name.length));
@@ -213,7 +226,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -285,6 +298,7 @@ function parse(argv: readonly string[]) {
       workers: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", short: "v", default: false },
+      "with-deps": { type: "boolean", default: false },
     },
   });
 }

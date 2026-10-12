@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (12 October 2026)
 
 First version.
 
@@ -14,4 +14,4 @@ First version.
 - Parallel rendering; the same scenefile gives the same video on the same machine.
 - For agents: `guide`, `scenes`, `schema`, a generated skill file, and an MCP server
   confined to one folder.
-- `doctor`, `init`, `voices`.
+- `setup`, `doctor`, `init`, `voices`.

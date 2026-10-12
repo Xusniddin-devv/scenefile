@@ -1,5 +1,8 @@
 # scenefile
 
+[![CI](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml/badge.svg)](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/scenefile)](https://www.npmjs.com/package/scenefile)
+
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
@@ -8,36 +11,38 @@ ones that cannot see images, can produce a correct video and fix its own mistake
 themes, narration in English and Russian made on your own machine, captions and a music
 bed work today. Fonts are bundled, so Latin and
 Cyrillic text is set in the same typefaces and layout on every machine (edges differ
-slightly between operating systems); emoji use the machine's own emoji font. Not yet published to npm.
+slightly between operating systems); emoji use the machine's own emoji font.
 
 ![The opening of a video made from examples/tour.json](docs/media/tour.gif)
 
 Every frame above came from [`examples/tour.json`](examples/tour.json): 53 lines of JSON,
 no drawing, narrated and captioned on the machine that rendered it.
 
-## Requirements
+## Install
 
-- Node 22 or newer, pnpm
-- `ffmpeg` on your `PATH`
-- macOS or Linux. Tested on macOS (Apple silicon) and Linux (arm64); Windows is untested.
+You need Node 22 or newer and `ffmpeg` on your `PATH`. macOS and Linux are tested (CI
+runs on Linux x64; development is on Apple silicon); Windows is untested.
+
+```bash
+npm install -g scenefile
+scenefile setup      # downloads the browser it draws with (about 200 MB, once)
+scenefile doctor     # says what, if anything, is still missing
+```
+
+On Linux, `scenefile setup --with-deps` also installs the system libraries the browser
+needs.
 
 ## Try it
 
 ```bash
-git clone https://github.com/Xusniddin-devv/scenefile.git
-cd scenefile
-pnpm install
-pnpm --filter @scenefile/render exec playwright-core install chromium --only-shell
-pnpm build
-node packages/cli/dist/main.js doctor
-node packages/cli/dist/main.js render examples/tour.json -o out/tour.mp4
+scenefile init                 # writes an example scenefile.json
+scenefile check scenefile.json
+scenefile render scenefile.json -o video.mp4
 ```
 
-Until scenefile is on npm, `scenefile` in the rest of this page means
-`node packages/cli/dist/main.js`. On Linux, Chromium also needs system libraries: add
-`--with-deps` to the browser install command. `doctor` says what, if anything, is still
-missing. The first narrated render downloads
-a voice (67 MB, once). `examples/launch.json` is a silent example.
+The video at the top of this page is [`examples/tour.json`](examples/tour.json). A
+narrated render downloads its voice the first time (67 MB, once). To work on scenefile
+itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## A scenefile
 
@@ -80,8 +85,8 @@ Schema for tools that can enforce one on a model's output.
 {
   "mcpServers": {
     "scenefile": {
-      "command": "node",
-      "args": ["/path/to/scenefile/packages/cli/dist/main.js", "mcp", "--root", "/path/to/your/project"]
+      "command": "scenefile",
+      "args": ["mcp", "--root", "/path/to/your/project"]
     }
   }
 }

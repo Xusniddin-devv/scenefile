@@ -341,3 +341,19 @@ describe("version", () => {
     expect(out()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
+
+describe("setup", () => {
+  it("installs the browser scenefile was built against, and passes --with-deps through", async () => {
+    const asked: boolean[] = [];
+    const { io, out } = capture();
+    const installBrowser = async (withDeps: boolean) => {
+      asked.push(withDeps);
+      return 0;
+    };
+    expect(await run(["setup"], { ...io, installBrowser })).toBe(0);
+    expect(await run(["setup", "--with-deps"], { ...io, installBrowser })).toBe(0);
+    expect(asked).toEqual([false, true]);
+    expect(out()).toContain("scenefile doctor");
+    expect(await run(["setup"], { ...io, installBrowser: async () => 1 })).toBe(2);
+  });
+});

@@ -23,6 +23,8 @@ try {
   run("npm", ["install", "--no-audit", "--no-fund", ...files], { cwd: app });
   const bin = join(app, "node_modules", ".bin", "scenefile");
   // The browser is shared with the repository's own install; a new user runs the command the README gives.
+  // The installed command can install its own browser (a no-op when it is already there).
+  run(bin, ["setup"], { cwd: app });
   run(bin, ["init", "."], { cwd: app });
   console.log(run(bin, ["check", "scenefile.json"], { cwd: app }).trim().split("\n").slice(-1)[0]);
   console.log(run(bin, ["render", "scenefile.json", "-o", "video.mp4", "--quality", "draft"], { cwd: app }).trim().split("\n").slice(-1)[0]);

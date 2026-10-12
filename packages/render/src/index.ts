@@ -1,3 +1,4 @@
+export { installBrowser } from "./browser";
 export { captureFrame } from "./capture";
 export { type Finding, diagnose } from "./doctor";
 export { type Encoder, runFfmpeg, startEncoder } from "./encode";
