@@ -57,6 +57,6 @@ describe("compile", () => {
   it("includes CSS only for the scene types used", () => {
     const titleOnly = compiled({ version: 1, scenes: [{ type: "title", heading: "Hi" }] });
     expect(titleOnly.html).toContain(".sf-title__heading");
-    expect(titleOnly.html).not.toContain(".sf-terminal__window");
+    expect(titleOnly.html).not.toContain(".sf-terminal__body");
   });
 });

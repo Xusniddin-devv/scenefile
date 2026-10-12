@@ -3,6 +3,8 @@ import { terminalDefinition } from "../src/terminal/definition";
 import { terminalSchema } from "../src/terminal/schema";
 import { graphemes, terminalSchedule, typedLength } from "../src/terminal/timing";
 
+const ctx = { index: 1, total: 3, path: "scenes[1]" };
+
 describe("terminal timing", () => {
   it("types 20 characters per second, then pauses, then shows output", () => {
     const [first, second] = terminalSchedule([
@@ -47,7 +49,14 @@ describe("terminal scene", () => {
       type: "terminal",
       steps: [{ run: 'echo "<hi>"', output: "<hi>" }, { run: "ls" }],
     });
-    const html = terminalDefinition.compile(props);
+    const html = terminalDefinition.compile(props, ctx);
+    expect(html).toContain('data-sf-fit=');
+    expect(html).toContain('data-sf-path="scenes[1].steps"');
+    expect(terminalDefinition.texts(props)).toEqual([
+      { path: "steps[0].run", text: 'echo "<hi>"', font: "mono" },
+      { path: "steps[0].output", text: "<hi>", font: "mono" },
+      { path: "steps[1].run", text: "ls", font: "mono" },
+    ]);
     expect(html).toContain('data-sf-type="echo &quot;&lt;hi&gt;&quot;"');
     expect(html).toContain('<pre class="sf-terminal__out" data-sf-out>&lt;hi&gt;</pre>');
     expect(html.match(/sf-terminal__step/g)).toHaveLength(2);

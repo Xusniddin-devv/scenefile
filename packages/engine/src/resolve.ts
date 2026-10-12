@@ -1,6 +1,7 @@
 import { type Diagnostic, type Scenefile, type ThemeName, error, warning } from "@scenefile/schema";
 import { type Scene, getScene } from "@scenefile/scenes";
 import { FORMAT_SIZES } from "./formats";
+import { contrastRatio, getTheme } from "./themes";
 
 export interface ResolvedScene {
   index: number;
@@ -27,6 +28,8 @@ const MAX_TOTAL_SECONDS = 600;
 /** An explicit duration below this share of the automatic one is too fast to read. */
 const FAST_RATIO = 0.75;
 const SLOW_RATIO = 3;
+/** WCAG's minimum for large text, which is what the accent is used for. */
+const MIN_ACCENT_CONTRAST = 3;
 
 function toFrames(seconds: number, fps: number): number {
   return Math.round(seconds * fps);
@@ -37,6 +40,20 @@ export function resolve(scenefile: Scenefile): { video: ResolvedVideo; diagnosti
   const { fps } = scenefile;
   const diagnostics: Diagnostic[] = [];
   let cursor = 0;
+
+  if (scenefile.accent !== undefined) {
+    const ratio = contrastRatio(scenefile.accent, getTheme(scenefile.theme).background);
+    if (ratio < MIN_ACCENT_CONTRAST) {
+      diagnostics.push(
+        error(
+          "CONTRAST_LOW",
+          "accent",
+          `Accent ${scenefile.accent} has a contrast of ${ratio.toFixed(1)}:1 against the "${scenefile.theme}" background; text in it cannot be read.`,
+          `Choose a color with at least ${MIN_ACCENT_CONTRAST}:1 contrast, or remove "accent" to use the theme's own.`,
+        ),
+      );
+    }
+  }
 
   const scenes = scenefile.scenes.map((props, index): ResolvedScene => {
     const definition = getScene(props.type);

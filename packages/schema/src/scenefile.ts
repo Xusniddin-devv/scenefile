@@ -2,13 +2,13 @@ import { sceneSchema } from "@scenefile/scenes";
 import { z } from "zod";
 
 export const FORMATS = ["landscape-1080p", "portrait-1080p", "square-1080p"] as const;
-export const THEMES = ["midnight"] as const;
+export const THEMES = ["signal", "midnight"] as const;
 
 export const scenefileSchema = z.strictObject({
   version: z.literal(1),
   format: z.enum(FORMATS).default("landscape-1080p"),
   fps: z.literal([30, 60]).default(30),
-  theme: z.enum(THEMES).default("midnight"),
+  theme: z.enum(THEMES).default("signal"),
   accent: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be a six-digit hex color like #FF5722.")

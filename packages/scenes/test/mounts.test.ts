@@ -18,11 +18,14 @@ function mountScene(type: string, html: string): { el: HTMLElement; handle: Scen
   return { el, handle: mount(el, ctx) };
 }
 
+const at = { index: 0, total: 2, path: "scenes[0]" };
 const titleHtml = titleDefinition.compile(
   titleSchema.parse({ type: "title", heading: "Ship faster", sub: "A CLI" }),
+  at,
 );
 const terminalHtml = terminalDefinition.compile(
   terminalSchema.parse({ type: "terminal", steps: [{ run: "npm i", output: "done" }, { run: "🚀 go" }] }),
+  at,
 );
 
 function must<T extends Element>(root: Element, selector: string): T {
@@ -82,6 +85,7 @@ describe("terminal mount", () => {
   it("never shows part of a flag or of a joined emoji", () => {
     const html = terminalDefinition.compile(
       terminalSchema.parse({ type: "terminal", steps: [{ run: "🇺🇿👨‍👩‍👧 ok" }] }),
+      at,
     );
     const { el, handle } = mountScene("terminal", html);
     const typed = must<HTMLElement>(el, "[data-sf-type]");

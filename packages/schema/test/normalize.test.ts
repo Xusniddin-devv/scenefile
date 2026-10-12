@@ -11,7 +11,7 @@ describe("normalize", () => {
       version: 1,
       format: "landscape-1080p",
       fps: 30,
-      theme: "midnight",
+      theme: "signal",
       scenes: [{ type: "title", heading: "Hi", duration: "auto" }],
     });
   });

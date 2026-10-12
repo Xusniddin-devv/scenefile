@@ -33,6 +33,14 @@ export function getScene(type: SceneType): SceneDefinition<Scene> {
   return registry[type];
 }
 
+export { SHARED_CSS, sceneChrome } from "./chrome";
 export { durationSchema, type Duration } from "./common";
 export { escapeHtml, readingSeconds } from "./text";
-export type { MountContext, SceneDefinition, SceneHandle, SceneMount } from "./types";
+export type {
+  CompileContext,
+  MountContext,
+  SceneDefinition,
+  SceneHandle,
+  SceneMount,
+  SceneText,
+} from "./types";

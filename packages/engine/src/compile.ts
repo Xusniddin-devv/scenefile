@@ -1,4 +1,4 @@
-import { getScene } from "@scenefile/scenes";
+import { SHARED_CSS, getScene } from "@scenefile/scenes";
 import type { ResolvedVideo } from "./resolve";
 import { themeCss } from "./themes";
 
@@ -35,7 +35,7 @@ function baseCss(width: number, height: number): string {
   ].join("");
 }
 
-/** Builds the single HTML document Chromium renders. Pure: no I/O, no clock. */
+/** Builds the single HTML document Chromium renders. Deterministic: no clock, no network. */
 export function compile(video: ResolvedVideo): Composition {
   const manifest: Manifest = {
     fps: video.fps,
@@ -49,11 +49,16 @@ export function compile(video: ResolvedVideo): Composition {
 
   const usedTypes = [...new Set(video.scenes.map((scene) => scene.type))];
   const sceneCss = usedTypes.map((type) => getScene(type).css.trim()).join("\n");
+  const total = video.scenes.length;
   const sections = video.scenes
-    .map(
-      (scene) =>
-        `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${getScene(scene.type).compile(scene.props)}</section>`,
-    )
+    .map((scene) => {
+      const inner = getScene(scene.type).compile(scene.props, {
+        index: scene.index,
+        total,
+        path: `scenes[${scene.index}]`,
+      });
+      return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
+    })
     .join("\n");
   // "<" is escaped so nothing in the JSON can end the script element.
   const manifestJson = JSON.stringify(manifest).replace(/</g, "\\u003c");
@@ -63,6 +68,7 @@ export function compile(video: ResolvedVideo): Composition {
 <head>
 <meta charset="utf-8">
 <style>${themeCss(video.theme, video.accent, video.width, video.height)}${baseCss(video.width, video.height)}
+${SHARED_CSS.trim()}
 ${sceneCss}</style>
 </head>
 <body>
