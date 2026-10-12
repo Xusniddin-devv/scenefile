@@ -108,7 +108,7 @@ describe("building the video from the facts", () => {
     const long: RepoFacts = { ...facts, name: "a-very-long-repository-name-".repeat(5), description: "word ".repeat(120) };
     const scenefile = buildScenefile(long, { theme: "ink", narrate: true, screenshot: "home.png" });
     expect(scenefile.theme).toBe("ink");
-    expect(scenefile.voice).toEqual({ name: "en-kristin", captions: true });
+    expect(scenefile.voice).toEqual({ name: "en-emma", captions: true });
     const scenes = scenefile.scenes as { type: string; say?: string; src?: string }[];
     expect(scenes.every((scene) => typeof scene.say === "string")).toBe(true);
     expect(scenes.find((scene) => scene.type === "screenshot")?.src).toBe("home.png");

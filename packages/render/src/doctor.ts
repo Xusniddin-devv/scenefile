@@ -67,7 +67,7 @@ export async function diagnose(): Promise<Finding[]> {
           ok: false,
           required: false,
           detail: "none installed; needed only for narration",
-          fix: "They download on first use, or ahead of time: scenefile voices install en-kristin",
+          fix: "They download on first use, or ahead of time: scenefile voices install en-emma",
         },
   ];
 }

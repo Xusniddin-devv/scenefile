@@ -68,7 +68,7 @@ A scenefile is a JSON object that says what each scene of a video shows. You nev
 - `theme`: The look. Black: "signal" (default, lime), "midnight" (orange), "terminal" (monospace, green), "ink" (wide type, red). White: "paper" (red), "studio" (blue). Color: "cobalt" (blue), "solar" (yellow), "mint" (green), "forest" (dark green).
 - `accent`: The accent color as "#RRGGBB". Leave it out to use the theme's.
 - `audio`: Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile's folder.
-- `voice`: Who reads the `say` lines aloud: { "name": "en-kristin", "captions": true }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". No other languages. `captions` also shows the words on screen.
+- `voice`: Who reads the `say` lines aloud: { "name": "en-emma", "captions": true }. English: "en-emma" (woman, default) or "en-george" (man). Russian: "ru-denis". No other languages. `captions` also shows the words on screen.
 - `transition`: How scenes change: "auto" (default), "cut", "fade", "crossfade", "push", "wipe" or "zoom".
 - `scenes`: The scenes, in order. Required: 1 to 60.
 

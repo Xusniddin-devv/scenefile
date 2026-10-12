@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "voice": {
+    "name": "en-emma",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "How scenefile times a scene",
+      "highlight": "times",
+      "sub": "A walk through resolve.ts",
+      "say": "This is how scenefile decides how long each scene stays on screen."
+    },
+    {
+      "type": "statement",
+      "text": "Nobody sets durations. They come from the text.",
+      "highlight": "They come from the text.",
+      "say": "You never set a duration. Scenefile works it out from how long the text takes to read."
+    },
+    {
+      "type": "code",
+      "lang": "ts",
+      "source": "const autoSeconds =\n  definition.enterSeconds +\n  Math.max(definition.minHoldSeconds,\n    definition.holdSeconds(props)) +\n  definition.exitSeconds;",
+      "highlight": [
+        3,
+        4
+      ],
+      "caption": "packages/engine/src/resolve.ts",
+      "say": "Each scene type says how long its content needs. The engine adds the time to arrive and the time to leave."
+    },
+    {
+      "type": "compare",
+      "before": {
+        "label": "With narration",
+        "text": "The scene waits for the voice to finish."
+      },
+      "after": {
+        "label": "Without",
+        "text": "The scene lasts as long as it takes to read."
+      },
+      "say": "If a scene is narrated, it also waits until the line has been said."
+    },
+    {
+      "type": "outro",
+      "heading": "Read it in resolve.ts.",
+      "highlight": "resolve.ts.",
+      "say": "The whole rule is in one file, resolve dot t s."
+    }
+  ]
+}

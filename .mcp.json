@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "scenefile": {
+      "command": "npx",
+      "args": ["-y", "scenefile", "mcp"]
+    }
+  }
+}

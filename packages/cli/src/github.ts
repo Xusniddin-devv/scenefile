@@ -190,7 +190,7 @@ export function buildScenefile(facts: RepoFacts, options: BuildOptions): Record<
   return {
     version: 1,
     ...(options.theme ? { theme: options.theme } : {}),
-    ...(options.narrate ? { voice: { name: "en-kristin", captions: true } } : {}),
+    ...(options.narrate ? { voice: { name: "en-emma", captions: true } } : {}),
     scenes,
   };
 }

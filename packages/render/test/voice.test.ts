@@ -135,6 +135,41 @@ describe("making the voice", () => {
     expect(lines.map((line) => existsSync(line.file))).toEqual([false, true, true]);
   });
 
+  it("offers a natural English voice of each sex from one shared model, and tells them apart", async () => {
+    const emma = VOICE_CATALOG["en-emma"];
+    const george = VOICE_CATALOG["en-george"];
+    expect([emma.describes, george.describes]).toEqual(["woman, British", "man, British"]);
+    expect(emma.folder).toBe(george.folder);
+    expect(emma.speaker).not.toBe(george.speaker);
+    // One download serves both.
+    const home = mkdtempSync(join(dir, "home-"));
+    for (const part of ["model.onnx", "voices.bin", "tokens.txt", "espeak-ng-data/phontab"]) {
+      mkdirSync(join(home, "voices", emma.folder ?? "", part, ".."), { recursive: true });
+      writeFileSync(join(home, "voices", emma.folder ?? "", part), "");
+    }
+    expect(voiceInstalled(join(home, "voices"), "en-emma")).toBe(true);
+    expect(voiceInstalled(join(home, "voices"), "en-george")).toBe(true);
+    const asked: (number | undefined)[] = [];
+    const speak = createSpeaker({
+      home,
+      download: false,
+      synthesize: (_folder, _model, text, info) => {
+        asked.push(info?.speaker);
+        return fakeVoice()(_folder, _model, text);
+      },
+    });
+    const a = await speak("The same words.", "en-emma");
+    const b = await speak("The same words.", "en-george");
+    expect(a.file).not.toBe(b.file);
+    expect(asked).toEqual([emma.speaker, george.speaker]);
+  });
+
+  it.skipIf(!voiceInstalled(join(voiceHome(), "voices"), "en-emma"))("speaks in the natural voice for real when it is installed", async () => {
+    const line = await createSpeaker({ download: false })("Scenefile turns a short script into a finished video.", "en-george");
+    expect(line.seconds).toBeGreaterThan(1.5);
+    expect(line.seconds).toBeLessThan(8);
+  });
+
   it("says where each voice comes from, and the catalog matches what a scenefile can name", () => {
     expect(Object.keys(VOICE_CATALOG).sort()).toEqual([...VOICES].sort());
     expect(VOICE_CATALOG["en-kristin"].basis).toMatch(/public-domain/);

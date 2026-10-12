@@ -41,7 +41,7 @@ scenefile render scenefile.json -o video.mp4
 ```
 
 The video at the top of this page is [`examples/tour.json`](examples/tour.json). A
-narrated render downloads its voice the first time (67 MB, once). To work on scenefile
+narrated render downloads its voice the first time (320 MB for the default voice, once). To work on scenefile
 itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## A scenefile
@@ -74,10 +74,37 @@ error  SCHEMA_UNKNOWN_SCENE  scenes[0].type
 
 ## Use from an AI agent
 
-**With a shell** (Claude Code, Codex, and similar): `skills/scenefile/SKILL.md` is a
-skill file that teaches the format and the commands. `scenefile guide` prints the
-same guide; `scenefile scenes <type>` one scene type in full; `scenefile schema` a JSON
-Schema for tools that can enforce one on a model's output.
+Scenefile has no model of its own and needs none: the model in your coding terminal
+reads your code and writes the scenefile, and scenefile checks and renders it. Nothing
+is sent to a service and nothing costs money.
+
+**Claude Code**, as a plugin (the skills and the MCP server in one step):
+
+```
+/plugin install scenefile --marketplace Xusniddin-devv/scenefile
+```
+
+Then ask for what you want: "make a video explaining how auth works in this repo",
+"make a walkthrough video of the app on localhost:3000", "make a release video for
+v2.1". The plugin's recipes cover five kinds of video:
+
+| Recipe | For |
+|---|---|
+| `scenefile-explain-code` | How a function, module or project works, with the real code on screen. |
+| `scenefile-app-walkthrough` | A tour of a running web app, from real captures of its screens. |
+| `scenefile-launch-video` | A short announcement of a project or feature. |
+| `scenefile-changelog-video` | What changed in a release, from the changelog and commits. |
+| `scenefile-repo-tour` | A video about a GitHub repository, starting from its public facts. |
+
+Each recipe holds the model to the same rule: use only facts from the code, the
+history, the running app or you, and leave out what it does not know. Each ships an
+example scenefile, and a test fails if an example stops passing `check`.
+
+**opencode, Codex and other agents with a shell:** install scenefile, then point the
+agent at a recipe (`skills/<name>/SKILL.md` in this repository) or simply tell it to run
+`scenefile guide` first. `skills/scenefile/SKILL.md` teaches the format and the
+commands; `scenefile scenes <type>` prints one scene type in full; `scenefile schema`
+prints a JSON Schema for tools that can enforce one on a model's output.
 
 **Through MCP** (any client that speaks the Model Context Protocol, with any model):
 
@@ -134,24 +161,29 @@ line has been said, and music turns itself down under the voice.
 
 The voice is made on your machine by an open speech model. There is no account, no key
 and no charge, and the text is not sent anywhere. A voice is downloaded once (about
-67 MB), from a fixed address, and checked against a known checksum. `scenefile voices`
+67 to 320 MB), from a fixed address, and checked against a known checksum. `scenefile voices`
 lists them; `scenefile voices install <name>` downloads one ahead of time. The MCP
 server never downloads: it uses voices that are already installed.
 
 | Voice | Language | Where it comes from |
 |---|---|---|
-| `en-kristin` (default) | English | Trained only on public-domain recordings (LibriVox). |
-| `en-bryce` | English | Public-domain recordings, fine-tuned from a voice whose own basis is not published. |
-| `en-joe` | English | Its own recordings are CC0, but it was fine-tuned from a voice trained on recordings licensed for research only. |
-| `ru-denis`, `ru-dmitri` | Russian | The same as `en-joe`. No Russian voice here is free of that. |
+| `en-emma` (default), `en-george` | English, a woman's and a man's voice | [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), Apache-2.0. Its makers say it was trained on permissively licensed and public-domain audio and on synthetic audio from other speech systems. |
+| `en-kristin` | English | Piper. Trained only on public-domain recordings (LibriVox). |
+| `en-bryce` | English | Piper. Public-domain recordings, fine-tuned from a voice whose own basis is not published. |
+| `en-joe` | English | Piper. Its own recordings are CC0, but it was fine-tuned from a voice trained on recordings licensed for research only. |
+| `ru-denis`, `ru-dmitri` | Russian | Piper. The same as `en-joe`. No Russian voice here is free of that. |
+
+`"voice": "female"` and `"voice": "male"` pick `en-emma` and `en-george`. The two Kokoro
+voices share one download of 320 MB and take about as long to make as they do to play;
+the Piper voices are 67 MB each, several times faster, and sound plainly synthetic.
 
 **Licences, plainly.** scenefile's own code is MIT. Narration uses parts that are
 not scenefile's own code: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 (installed with scenefile as an optional dependency; Apache-2.0, with espeak-ng,
-GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voices (downloaded on
-first use), each with the history in the table. The bundled fonts (Onest, Cascadia
-Code, Unbounded, Geologica) are OFL-1.1. For commercial work, use `en-kristin` or check the
-voice's model card first.
+GPL-3.0, built in), the Kokoro model and [Piper](https://github.com/rhasspy/piper)
+voices (downloaded on first use), each with the history in the table. The bundled fonts
+(Onest, Cascadia Code, Unbounded, Geologica) are OFL-1.1. For commercial work, read the
+model card of the voice you use.
 
 **Captions.** Add `"captions": true` to `voice` and the words appear in a band at the
 foot of the frame as they are spoken, a phrase at a time; scenes are laid out in the
@@ -159,7 +191,7 @@ space above it. The voice gives no word timings, so a phrase is timed by its len
 
 What it is not:
 
-- The voices are clear but plainly synthetic.
+- The Kokoro voices are natural but still a machine; the Piper voices are plainly synthetic.
 - English and Russian only. There is no Uzbek voice: the Piper collection has
   none. A line in a language the voice does not speak is refused by `check`.
 - Narration is made fresh on each machine and differs slightly each time. A rerun on the

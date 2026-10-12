@@ -9,8 +9,8 @@ export interface Speech {
 /** Turns a line into speech in the named voice. Rejects with a plain message when it cannot. */
 export type Speak = (text: string, voice: VoiceName) => Promise<Speech>;
 
-/** The one voice trained only on public-domain recordings. */
-export const DEFAULT_VOICE: VoiceName = "en-kristin";
+/** The natural English voice. */
+export const DEFAULT_VOICE: VoiceName = "en-emma";
 
 /** The most there may be to say in one video, in characters: about ten minutes of speech. */
 export const MAX_SPEECH_CHARACTERS = 10_000;

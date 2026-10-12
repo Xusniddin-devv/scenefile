@@ -70,7 +70,7 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
 
 const SCRIPT = { en: /\p{Script=Latin}/gu, ru: /\p{Script=Cyrillic}/gu } as const;
 const OTHER = { en: /\p{Script=Cyrillic}/gu, ru: /\p{Script=Latin}/gu } as const;
-const SPEAKER = { en: "en-kristin", ru: "ru-denis" } as const;
+const SPEAKER = { en: "en-emma", ru: "ru-denis" } as const;
 
 /** Problems with what the narrator is asked to say, found without making any sound. */
 function voiceDiagnostics(scenefile: Scenefile): Diagnostic[] {

@@ -122,7 +122,17 @@ describe("catching narration that would come out wrong", () => {
   });
 
   it("uses the voice trained only on public-domain recordings unless another is named", () => {
-    expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-kristin", captions: false });
+    expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-emma", captions: false });
+  });
+
+  it("lets the voice be asked for as a man's or a woman's", () => {
+    for (const [asked, name] of [["male", "en-george"], ["Man", "en-george"], ["female", "en-emma"], ["woman", "en-emma"]]) {
+      const { scenefile, diagnostics } = normalize({ ...narrated, voice: { name: asked } });
+      expect(scenefile?.voice?.name, asked).toBe(name);
+      expect(diagnostics).toEqual([expect.objectContaining({ code: "AUTOFIXED", severity: "warning", path: "voice.name" })]);
+    }
+    const plain = normalize({ ...narrated, voice: "male" });
+    expect(plain.scenefile?.voice?.name).toBe("en-george");
   });
 
   it("refuses text in a language the voice does not speak, and names a voice that does", () => {
@@ -132,7 +142,7 @@ describe("catching narration that would come out wrong", () => {
     expect(russian.diagnostics[0]?.fix).toContain("ru-denis");
     const english = check(one("Prepare for the exam every day.", "ru-denis"));
     expect(english.diagnostics[0]).toMatchObject({ code: "VOICE_LANGUAGE", path: "scenes[1].say" });
-    expect(english.diagnostics[0]?.fix).toContain("en-kristin");
+    expect(english.diagnostics[0]?.fix).toContain("en-emma");
     // A product name in another alphabet inside a sentence is fine.
     expect(check(one("Билим помогает сдать TOPIK.", "ru-denis")).ok).toBe(true);
   });

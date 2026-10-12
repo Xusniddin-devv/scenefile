@@ -24,9 +24,28 @@ export interface VoiceInfo {
   model: string;
   sha256: string;
   bytes: number;
+  /** The kind of model. Piper voices are one small model each; Kokoro is one larger model holding several voices. */
+  kind?: "kokoro";
+  /** The folder the archive unpacks to, when it is not named after a Piper model. */
+  folder?: string;
+  /** Which voice inside a model that holds several. */
+  speaker?: number;
 }
 
+const KOKORO = {
+  language: "English",
+  basis: "Kokoro, an Apache-2.0 model trained on permissively licensed and public-domain audio and on synthetic audio from other speech systems",
+  model: "kokoro-en-v0_19",
+  folder: "kokoro-en-v0_19",
+  kind: "kokoro",
+  sha256: "912804855a04745fa77a30be545b3f9a5d15c4d66db00b88cbcd4921df605ac7",
+  bytes: 319625534,
+} as const;
+
 export const VOICE_CATALOG: Readonly<Record<VoiceName, VoiceInfo>> = {
+  // The natural voices: larger and slower to make, and far easier to listen to.
+  "en-emma": { ...KOKORO, describes: "woman, British", speaker: 7 },
+  "en-george": { ...KOKORO, describes: "man, British", speaker: 9 },
   "en-joe": { language: "English", describes: "man, American", basis: "its own recordings are CC0, but it was fine-tuned from a voice trained on recordings licensed for research only", model: "en_US-joe-medium", sha256: "261b903a1fb2ce621e2b5b14233cd41223c3b9f9590f896c11daee4df22d9bd3", bytes: 67169394 },
   "en-kristin": { language: "English", describes: "woman, American", basis: "trained only on public-domain recordings (LibriVox)", model: "en_US-kristin-medium", sha256: "c2206f572df2956c50b1ae3367eebce3853c663e890cba8048cd62b1e4dbe6c7", bytes: 67259230 },
   "en-bryce": { language: "English", describes: "man, American, slower", basis: "public-domain recordings, fine-tuned from a voice whose own basis is not published", model: "en_US-bryce-medium", sha256: "f35bb77ddecdf229798e850d1c77ded839d4179879be8b90da5f82e7beb538f2", bytes: 67278133 },
@@ -45,17 +64,22 @@ export function voiceHome(env: NodeJS.ProcessEnv = process.env): string {
   return env.SCENEFILE_HOME || join(homedir(), ".cache", "scenefile");
 }
 
+function folderName(info: VoiceInfo): string {
+  return info.folder ?? `vits-piper-${info.model}`;
+}
+
 function folderOf(voicesDir: string, name: VoiceName): string {
-  return join(voicesDir, `vits-piper-${VOICE_CATALOG[name].model}`);
+  return join(voicesDir, folderName(VOICE_CATALOG[name]));
 }
 
 /** A voice needs all of these; one missing makes the speech engine fail or crash. */
-function wholeVoice(folder: string, model: string): boolean {
-  return [`${model}.onnx`, "tokens.txt", join("espeak-ng-data", "phontab")].every((part) => existsSync(join(folder, part)));
+function wholeVoice(folder: string, info: VoiceInfo): boolean {
+  const parts = info.kind === "kokoro" ? ["model.onnx", "voices.bin", "tokens.txt"] : [`${info.model}.onnx`, "tokens.txt"];
+  return [...parts, join("espeak-ng-data", "phontab")].every((part) => existsSync(join(folder, part)));
 }
 
 export function voiceInstalled(voicesDir: string, name: VoiceName): boolean {
-  return wholeVoice(folderOf(voicesDir, name), VOICE_CATALOG[name].model);
+  return wholeVoice(folderOf(voicesDir, name), VOICE_CATALOG[name]);
 }
 
 function run(command: string, args: string[]): Promise<void> {
@@ -88,9 +112,9 @@ const DOWNLOAD_MS = 10 * 60 * 1000;
 /** Downloads a voice, checks it is the file expected, and unpacks it. Does nothing if it is already there. */
 export async function installVoice(name: VoiceName, options: InstallOptions): Promise<void> {
   const info = options.info ?? VOICE_CATALOG[name];
-  const folder = `vits-piper-${info.model}`;
+  const folder = folderName(info);
   const target = join(options.voicesDir, folder);
-  if (wholeVoice(target, info.model)) return;
+  if (wholeVoice(target, info)) return;
   await mkdir(options.voicesDir, { recursive: true });
   // Everything happens in a folder of its own and is moved into place only when
   // whole, so a download or unpack that is cut short never looks like a voice.
@@ -117,9 +141,9 @@ export async function installVoice(name: VoiceName, options: InstallOptions): Pr
       throw new Error(`The download for the voice "${name}" is not the file that was expected, so it was not used.`);
     }
     await (options.unpack ?? ((file, into) => run("tar", ["-xjf", file, "-C", into])))(archive, work);
-    if (!wholeVoice(join(work, folder), info.model)) throw new Error(`The voice "${name}" was downloaded but could not be unpacked.`);
+    if (!wholeVoice(join(work, folder), info)) throw new Error(`The voice "${name}" was downloaded but could not be unpacked.`);
     // A half-made folder from an earlier version, or another process that finished first.
-    if (!wholeVoice(target, info.model)) {
+    if (!wholeVoice(target, info)) {
       await rm(target, { recursive: true, force: true });
       await rename(join(work, folder), target);
     }
@@ -133,7 +157,7 @@ export interface Samples {
   samples: Float32Array;
   sampleRate: number;
 }
-export type Synthesize = (voiceFolder: string, model: string, text: string) => Samples | Promise<Samples>;
+export type Synthesize = (voiceFolder: string, model: string, text: string, info?: VoiceInfo) => Samples | Promise<Samples>;
 
 interface SherpaTts {
   generate(request: { text: string; sid: number; speed: number }): Samples;
@@ -141,7 +165,7 @@ interface SherpaTts {
 const engines = new Map<string, SherpaTts>();
 
 /** The real speech engine. Loaded on first use: it is a large native library that silent videos never need. */
-const sherpa: Synthesize = (voiceFolder, model, text) => {
+const sherpa: Synthesize = (voiceFolder, model, text, info) => {
   let engine = engines.get(voiceFolder);
   if (!engine) {
     let library: { OfflineTts: new (config: unknown) => SherpaTts };
@@ -152,11 +176,26 @@ const sherpa: Synthesize = (voiceFolder, model, text) => {
     }
     try {
       engine = new library.OfflineTts({
-      model: {
-          vits: { model: join(voiceFolder, `${model}.onnx`), tokens: join(voiceFolder, "tokens.txt"), dataDir: join(voiceFolder, "espeak-ng-data") },
-        numThreads: 2,
-        provider: "cpu",
-      },
+        model: {
+          ...(info?.kind === "kokoro"
+            ? {
+                kokoro: {
+                  model: join(voiceFolder, "model.onnx"),
+                  voices: join(voiceFolder, "voices.bin"),
+                  tokens: join(voiceFolder, "tokens.txt"),
+                  dataDir: join(voiceFolder, "espeak-ng-data"),
+                },
+              }
+            : {
+                vits: {
+                  model: join(voiceFolder, `${model}.onnx`),
+                  tokens: join(voiceFolder, "tokens.txt"),
+                  dataDir: join(voiceFolder, "espeak-ng-data"),
+                },
+              }),
+          numThreads: 2,
+          provider: "cpu",
+        },
         maxNumSentences: 1,
       });
     } catch {
@@ -164,7 +203,7 @@ const sherpa: Synthesize = (voiceFolder, model, text) => {
     }
     engines.set(voiceFolder, engine);
   }
-  return engine.generate({ text, sid: 0, speed: 1 });
+  return engine.generate({ text, sid: info?.speaker ?? 0, speed: 1 });
 };
 
 function wave({ samples, sampleRate }: Samples): Buffer {
@@ -231,7 +270,7 @@ export function createSpeaker(options: SpeakerOptions): Speak {
   const linesDir = join(home, "lines");
   return async (text, voice): Promise<Speech> => {
     const info = VOICE_CATALOG[voice];
-    const id = createHash("sha256").update(JSON.stringify([info.sha256, text])).digest("hex").slice(0, 32);
+    const id = createHash("sha256").update(JSON.stringify([info.sha256, info.speaker ?? 0, text])).digest("hex").slice(0, 32);
     const file = join(linesDir, `${id}.wav`);
     const noted = `${file}.json`;
     try {
@@ -247,7 +286,7 @@ export function createSpeaker(options: SpeakerOptions): Speak {
       options.onDownload?.(voice, info);
       await installVoice(voice, { voicesDir, ...options.install });
     }
-    const sound = await (options.synthesize ?? sherpa)(folderOf(voicesDir, voice), info.model, text);
+    const sound = await (options.synthesize ?? sherpa)(folderOf(voicesDir, voice), info.model, text, info);
     if (sound.samples.length === 0) throw new Error("The voice produced no sound for this line. Check that it is written in the voice's language.");
     await mkdir(linesDir, { recursive: true });
     const partial = `${file}.${process.pid}.partial`;

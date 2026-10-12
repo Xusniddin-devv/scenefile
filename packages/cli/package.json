@@ -1,6 +1,6 @@
 {
   "name": "scenefile",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turn a JSON scenefile into a video. Built for language models.",
   "type": "module",
   "license": "MIT",

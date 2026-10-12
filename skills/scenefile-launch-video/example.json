@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "voice": {
+    "name": "en-george",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Video from JSON",
+      "highlight": "JSON",
+      "sub": "Describe the scenes. The engine draws and times them.",
+      "say": "Scenefile turns a short JSON file into a finished video."
+    },
+    {
+      "type": "statement",
+      "text": "Models can say what a video should show. Drawing it is the hard part.",
+      "highlight": "Drawing it is the hard part.",
+      "say": "A language model can say what a video should show. Drawing it correctly is the hard part."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "scenefile check video.json",
+          "output": "No problems found."
+        },
+        {
+          "run": "scenefile render video.json -o video.mp4"
+        }
+      ],
+      "say": "So scenefile does the drawing. Check finds problems and says how to fix them. Render writes the video."
+    },
+    {
+      "type": "bullets",
+      "heading": "What you get",
+      "items": [
+        "Eleven scene types",
+        "A voice made on your machine",
+        "Errors that say how to fix them"
+      ],
+      "say": "You get eleven kinds of scene, a voice made on your own machine, and errors that come with their fix."
+    },
+    {
+      "type": "outro",
+      "heading": "Write JSON. Get a video.",
+      "highlight": "Get a video.",
+      "command": "npm install -g scenefile",
+      "say": "Install it with npm, write some JSON, and get a video."
+    }
+  ]
+}

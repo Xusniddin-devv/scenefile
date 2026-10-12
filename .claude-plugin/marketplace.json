@@ -1,0 +1,14 @@
+{
+  "name": "scenefile",
+  "description": "scenefile: videos from a short JSON file, for coding agents.",
+  "owner": {
+    "name": "Xusniddin Qalandarov"
+  },
+  "plugins": [
+    {
+      "name": "scenefile",
+      "source": "./",
+      "description": "Make videos from a short JSON file, with recipes for explaining code, app walkthroughs, launches, releases and repository tours."
+    }
+  ]
+}

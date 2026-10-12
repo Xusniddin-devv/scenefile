@@ -60,6 +60,29 @@ const TRANSITION_ALIASES: Readonly<Record<string, string>> = {
 const TRANSITION_VALUES: readonly string[] = ["auto", ...TRANSITIONS];
 
 /** Repairs a `transition` written in other words or other case; reports one it cannot place, with the nearest real one. */
+/** Ways people ask for a voice without knowing its name. */
+const VOICE_ALIASES: Readonly<Record<string, string>> = {
+  male: "en-george",
+  man: "en-george",
+  m: "en-george",
+  female: "en-emma",
+  woman: "en-emma",
+  f: "en-emma",
+};
+
+/** Reads "voice": "en-george" as { "name": "en-george" }, and "male" or "female" as the voice of that sex. */
+function fixVoice(holder: Json, diagnostics: Diagnostic[]): void {
+  if (typeof holder.voice === "string") holder.voice = { name: holder.voice };
+  const voice = holder.voice;
+  if (typeof voice !== "object" || voice === null) return;
+  const raw = (voice as Json).name;
+  if (typeof raw !== "string") return;
+  const known = VOICE_ALIASES[raw.trim().toLowerCase()];
+  if (known === undefined) return;
+  (voice as Json).name = known;
+  diagnostics.push(warning("AUTOFIXED", "voice.name", `Read "${raw}" as the voice "${known}".`, `Write "${known}".`));
+}
+
 function fixTransition(holder: Json, path: string, diagnostics: Diagnostic[]): void {
   const raw = holder.transition;
   if (typeof raw !== "string" || TRANSITION_VALUES.includes(raw)) return;
@@ -278,6 +301,7 @@ export function normalize(input: unknown): { scenefile: Scenefile | null; diagno
   cleanStrings(draft, "", diagnostics);
   fixKeys(draft, TOP_LEVEL_FIELDS, "", diagnostics);
   fixTransition(draft, "", diagnostics);
+  fixVoice(draft, diagnostics);
 
   // Scenes whose type is unusable are already reported; hide the schema's echo of them.
   const blocked: string[] = [];

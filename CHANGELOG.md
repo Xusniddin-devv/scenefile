@@ -1,7 +1,14 @@
 # Changelog
 
-## 0.2.0 (13 October 2026)
+## 0.3.0 (13 October 2026)
 
+Version 0.2.0 was never fully published (only one of its seven packages reached npm),
+so this release carries everything listed here.
+
+- Two natural English voices, `en-emma` (now the default) and `en-george`, from the
+  Kokoro model. `"voice": "female"` or `"male"` picks one.
+- A Claude Code plugin, and five recipe skills for coding agents: explain code, walk
+  through an app, launch video, release video, repository tour.
 - `scenefile capture <url>` saves a picture of a web page, at desktop or phone size,
   for use in a `screenshot` scene. The MCP server offers it as a tool when started
   with `--allow-capture`.

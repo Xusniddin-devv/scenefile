@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "theme": "ink",
+  "voice": {
+    "name": "en-emma",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "scenefile",
+      "sub": "Turn a small JSON file into a video: scenes, narration and captions.",
+      "say": "This is scenefile. It turns a small JSON file into a video, with narration and captions."
+    },
+    {
+      "type": "statement",
+      "text": "Built so a model that cannot see can still get the video right.",
+      "highlight": "cannot see",
+      "say": "It is built so that a language model that cannot see images can still get the video right."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "npm install -g scenefile"
+        },
+        {
+          "run": "scenefile check scenefile.json"
+        },
+        {
+          "run": "scenefile render scenefile.json -o video.mp4"
+        }
+      ],
+      "say": "Install it with one command. Then check the file, and render it."
+    },
+    {
+      "type": "chart",
+      "heading": "Languages, by share of the code",
+      "unit": "%",
+      "bars": [
+        {
+          "label": "TypeScript",
+          "value": 98.7
+        },
+        {
+          "label": "JavaScript",
+          "value": 1.3
+        }
+      ],
+      "highlight": "TypeScript",
+      "say": "It is written almost entirely in TypeScript."
+    },
+    {
+      "type": "outro",
+      "heading": "Find it on GitHub.",
+      "highlight": "GitHub.",
+      "command": "npm install -g scenefile",
+      "url": "github.com/Xusniddin-devv/scenefile",
+      "say": "You can find it on GitHub."
+    }
+  ]
+}

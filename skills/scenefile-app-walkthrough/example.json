@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "theme": "studio",
+  "voice": {
+    "name": "en-emma",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "Jobs in Korea, in English",
+      "highlight": "in English",
+      "say": "This is a job board that shows every posting in Korea in English."
+    },
+    {
+      "type": "screenshot",
+      "src": "home.png",
+      "url": "jobhunterkr.xusniddin.dev",
+      "caption": "Every board in one feed.",
+      "say": "The home page is a single feed, collected from many Korean job boards."
+    },
+    {
+      "type": "screenshot",
+      "src": "home-phone.png",
+      "device": "phone",
+      "caption": "The same feed on a phone.",
+      "say": "It is the same feed on a phone."
+    },
+    {
+      "type": "outro",
+      "heading": "Find the job. Skip the tabs.",
+      "highlight": "Skip the tabs.",
+      "url": "jobhunterkr.xusniddin.dev",
+      "say": "Find the job, and skip the tabs."
+    }
+  ]
+}

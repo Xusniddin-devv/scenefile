@@ -1,0 +1,10 @@
+{
+  "name": "scenefile",
+  "description": "Make videos from a short JSON file: scenes, narration, captions, screenshots of your own app. Recipes for explaining code, walking through an app, launches, releases and repository tours.",
+  "version": "0.3.0",
+  "author": { "name": "Xusniddin Qalandarov" },
+  "homepage": "https://github.com/Xusniddin-devv/scenefile",
+  "repository": "https://github.com/Xusniddin-devv/scenefile",
+  "license": "MIT",
+  "keywords": ["video", "mp4", "screenshots", "narration", "captions"]
+}

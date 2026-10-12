@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "theme": "paper",
+  "voice": {
+    "name": "en-emma",
+    "captions": true
+  },
+  "scenes": [
+    {
+      "type": "title",
+      "heading": "scenefile 0.2",
+      "highlight": "0.2",
+      "sub": "Screenshots of your own app, a phone frame and ten themes.",
+      "say": "Scenefile zero point two is out. Here is what is new."
+    },
+    {
+      "type": "terminal",
+      "steps": [
+        {
+          "run": "scenefile capture http://localhost:3000 -o home.png",
+          "output": "Captured home.png: 2560x1600 (desktop)."
+        }
+      ],
+      "say": "The new capture command saves a picture of any web page, including an app running on your machine."
+    },
+    {
+      "type": "code",
+      "lang": "json",
+      "source": "{\n  \"type\": \"screenshot\",\n  \"src\": \"home-phone.png\",\n  \"device\": \"phone\"\n}",
+      "highlight": [
+        4
+      ],
+      "say": "A screenshot scene can now draw the picture inside a phone."
+    },
+    {
+      "type": "bullets",
+      "heading": "Also new",
+      "items": [
+        "Ten themes in four typefaces",
+        "A video from a GitHub repository",
+        "Captions that follow the voice"
+      ],
+      "say": "There are also ten themes, a command that makes a video from a GitHub repository, and captions that follow the voice."
+    },
+    {
+      "type": "outro",
+      "heading": "Upgrade today.",
+      "highlight": "today.",
+      "command": "npm install -g scenefile",
+      "say": "Upgrade with npm."
+    }
+  ]
+}

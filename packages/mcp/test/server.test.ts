@@ -434,7 +434,7 @@ describe("narration through the server", () => {
       const narrated = { ...valid, scenes: [{ ...valid.scenes[0], say: "This tool deploys your site." }, valid.scenes[1]] };
       const { text } = await call("check", { scenefile: narrated });
       expect(text).toContain("VOICE_FAILED");
-      expect(text).toContain("scenefile voices install en-kristin");
+      expect(text).toContain("scenefile voices install en-emma");
       await close();
     } finally {
       if (before === undefined) delete process.env.SCENEFILE_HOME;
