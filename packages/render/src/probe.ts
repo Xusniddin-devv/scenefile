@@ -7,10 +7,14 @@ export interface ProbeResult {
   fps: number;
   frames: number;
   durationSeconds: number;
+  /** The color matrix the stream declares, e.g. "bt709". Empty when untagged. */
+  colorSpace: string;
+  colorPrimaries: string;
+  colorTransfer: string;
 }
 
 interface ProbeJson {
-  streams?: { width?: number; height?: number; r_frame_rate?: string; nb_frames?: string }[];
+  streams?: { width?: number; height?: number; r_frame_rate?: string; nb_frames?: string; color_space?: string; color_primaries?: string; color_transfer?: string }[];
   format?: { duration?: string };
 }
 
@@ -29,7 +33,7 @@ function run(file: string, args: string[]): Promise<string> {
 export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise<ProbeResult> {
   const stdout = await run(ffprobePath, [
     "-v", "error", "-select_streams", "v:0",
-    "-show_entries", "stream=width,height,r_frame_rate,nb_frames:format=duration",
+    "-show_entries", "stream=width,height,r_frame_rate,nb_frames,color_space,color_primaries,color_transfer:format=duration",
     "-of", "json", file,
   ]);
   const json = JSON.parse(stdout) as ProbeJson;
@@ -41,5 +45,8 @@ export async function probeVideo(file: string, ffprobePath = "ffprobe"): Promise
     fps: (numerator ?? 0) / (denominator || 1),
     frames: Number(stream?.nb_frames ?? 0),
     durationSeconds: Number(json.format?.duration ?? 0),
+    colorSpace: stream?.color_space ?? "",
+    colorPrimaries: stream?.color_primaries ?? "",
+    colorTransfer: stream?.color_transfer ?? "",
   };
 }

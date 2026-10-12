@@ -123,6 +123,25 @@ describe("scenefile render", () => {
     expect(c.err()).toContain("brew install ffmpeg");
   });
 
+  it("refuses an output that is not an .mp4 or that is the scenefile itself", async () => {
+    let called = false;
+    const render: Io["render"] = async () => {
+      called = true;
+      return report;
+    };
+    const input = file("victim.json", valid);
+    const a = capture(render);
+    expect(await run(["render", input, "-o", input], a.io)).toBe(2);
+    expect(a.err()).toContain(".mp4");
+    const b = capture(render);
+    expect(await run(["render", input, "-o", "out.mov"], b.io)).toBe(2);
+    const same = file("same.mp4", valid);
+    const c = capture(render);
+    expect(await run(["render", same, "-o", same], c.io)).toBe(2);
+    expect(c.err()).toContain("same file");
+    expect(called).toBe(false);
+  });
+
   it("requires an output path and a known quality", async () => {
     const a = capture();
     expect(await run(["render", file("r3.json", valid)], a.io)).toBe(2);

@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { extname, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import { type CheckResult, type Composition, check } from "@scenefile/engine";
 import {
@@ -96,6 +97,12 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     }
 
     if (!values.output) throw new UsageError('"render" needs an output path: -o out.mp4');
+    if (extname(values.output).toLowerCase() !== ".mp4") {
+      throw new UsageError(`The output must be an .mp4 file; got "${values.output}".`);
+    }
+    if (resolvePath(values.output) === resolvePath(file)) {
+      throw new UsageError("The output path is the same file as the scenefile. Choose a different output.");
+    }
     if (!isQuality(values.quality)) {
       throw new UsageError(`Unknown quality "${values.quality}". Use one of: ${QUALITIES.join(", ")}.`);
     }

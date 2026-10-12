@@ -18,7 +18,7 @@ export const titleDefinition: SceneDefinition<TitleProps> = {
   },
   css: `
 .sf-title{display:flex;flex-direction:column;justify-content:center;gap:calc(var(--sf-unit)*3);width:100%;height:100%;padding:calc(var(--sf-unit)*12)}
-.sf-title__heading{font:700 calc(var(--sf-unit)*14)/1.02 var(--sf-font-sans);letter-spacing:-0.03em;color:var(--sf-text);max-width:18ch;text-wrap:balance}
-.sf-title__sub{font:400 calc(var(--sf-unit)*5)/1.25 var(--sf-font-sans);color:var(--sf-muted);max-width:40ch;text-wrap:balance}
+.sf-title__heading{font:700 calc(var(--sf-unit)*14)/1.02 var(--sf-font-sans);letter-spacing:-0.03em;color:var(--sf-text);max-width:18ch;text-wrap:balance;overflow-wrap:anywhere}
+.sf-title__sub{font:400 calc(var(--sf-unit)*5)/1.25 var(--sf-font-sans);color:var(--sf-muted);max-width:40ch;text-wrap:balance;overflow-wrap:anywhere}
 `,
 };

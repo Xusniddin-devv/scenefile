@@ -7,7 +7,7 @@ export const THEMES = ["midnight"] as const;
 export const scenefileSchema = z.strictObject({
   version: z.literal(1),
   format: z.enum(FORMATS).default("landscape-1080p"),
-  fps: z.union([z.literal(30), z.literal(60)]).default(30),
+  fps: z.literal([30, 60]).default(30),
   theme: z.enum(THEMES).default("midnight"),
   accent: z
     .string()

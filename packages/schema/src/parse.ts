@@ -16,12 +16,14 @@ function tryParse(text: string): { ok: true; value: unknown } | { ok: false; rea
  * code fence with prose around it; that is unwrapped and reported, not rejected.
  */
 export function parseScenefileText(text: string): { value: unknown; diagnostics: Diagnostic[] } {
+  // Editors on Windows prepend a byte-order mark; it is not part of the JSON.
+  text = text.replace(/^\uFEFF/, "");
   const direct = tryParse(text);
   if (direct.ok) return { value: direct.value, diagnostics: [] };
 
-  const fenced = /```(?:json)?\s*\n([\s\S]*?)\n\s*```/i.exec(text);
-  if (fenced?.[1] !== undefined) {
-    const inner = tryParse(fenced[1]);
+  // A reply may hold several fences (a shell command, then the JSON); take the first that parses.
+  for (const fenced of text.matchAll(/```[\w-]*[ \t]*\n([\s\S]*?)\n[ \t]*```/g)) {
+    const inner = tryParse(fenced[1] ?? "");
     if (inner.ok) {
       return {
         value: inner.value,

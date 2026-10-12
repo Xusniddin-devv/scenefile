@@ -35,9 +35,9 @@ export const terminalDefinition: SceneDefinition<TerminalProps> = {
 .sf-terminal__bar{display:flex;gap:calc(var(--sf-unit)*0.8);padding:calc(var(--sf-unit)*1.6) calc(var(--sf-unit)*2);border-bottom:1px solid var(--sf-line)}
 .sf-terminal__bar i{width:calc(var(--sf-unit)*1.2);height:calc(var(--sf-unit)*1.2);border-radius:50%;background:var(--sf-line)}
 .sf-terminal__body{display:flex;flex-direction:column;gap:calc(var(--sf-unit)*1.6);padding:calc(var(--sf-unit)*3.5);font:400 calc(var(--sf-unit)*4)/1.45 var(--sf-font-mono);color:var(--sf-text)}
-.sf-terminal__cmd{display:flex;align-items:center;white-space:pre}
+.sf-terminal__cmd{white-space:pre-wrap;overflow-wrap:anywhere}
 .sf-terminal__prompt{color:var(--sf-accent);margin-right:1ch}
-.sf-terminal__caret{width:0.6em;height:1.1em;margin-left:2px;background:var(--sf-accent)}
-.sf-terminal__out{font:inherit;color:var(--sf-muted);white-space:pre-wrap}
+.sf-terminal__caret{display:inline-block;width:0.6em;height:1.1em;margin-left:2px;vertical-align:text-bottom;background:var(--sf-accent)}
+.sf-terminal__out{font:inherit;color:var(--sf-muted);white-space:pre-wrap;overflow-wrap:anywhere}
 `,
 };

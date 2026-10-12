@@ -123,6 +123,27 @@ describe("normalize", () => {
     expect(normalize({ ...minimal, accent: "#FF5722" }).scenefile?.accent).toBe("#FF5722");
   });
 
+  it("writes each fix from the violation itself, never pointing at a command", () => {
+    const title = { type: "title", heading: "x" };
+    const fps = normalize({ version: 1, fps: 24, scenes: [title] }).diagnostics;
+    const nested = normalize({ version: 1, scenes: [{ type: "terminal", steps: [{ run: "ls", cwd: "/" }] }] }).diagnostics;
+    const missing = normalize({ version: 1, scenes: [{ type: "title" }] }).diagnostics;
+    const duration = normalize({ version: 1, scenes: [{ ...title, duration: true }] }).diagnostics;
+    const tooLong = normalize({ version: 1, scenes: [{ type: "title", heading: "x".repeat(81) }] }).diagnostics;
+
+    expect(fps[0]).toMatchObject({ code: "SCHEMA_INVALID", path: "fps" });
+    expect(fps[0]?.fix).toContain("30, 60");
+    expect(nested[0]?.fix).toContain("cwd");
+    expect(missing[0]).toMatchObject({ path: "scenes[0].heading" });
+    expect(missing[0]?.fix).toMatch(/required/i);
+    expect(`${duration[0]?.message} ${duration[0]?.fix}`).toContain('"auto"');
+    expect(tooLong[0]?.fix).toContain("80");
+    for (const d of [...fps, ...nested, ...missing, ...duration, ...tooLong]) {
+      expect(d.fix).not.toContain("scenefile scenes");
+      expect(d.fix.length).toBeGreaterThan(10);
+    }
+  });
+
   it("keeps reporting other scenes when one is broken", () => {
     const { diagnostics } = normalize({
       version: 1,

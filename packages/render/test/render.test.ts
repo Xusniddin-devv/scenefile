@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,6 +26,17 @@ beforeAll(() => {
 afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
+
+/** A stand-in for ffmpeg that behaves as the given shell script. */
+function fakeFfmpeg(name: string, script: string): string {
+  const path = join(dir, name);
+  writeFileSync(path, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+  return path;
+}
+
+function partialFiles(folder: string): string[] {
+  return readdirSync(folder).filter((name) => name.includes("partial"));
+}
 
 describe("runtime bundle", () => {
   it("is small, which proves zod was not bundled into the page", () => {
@@ -113,6 +124,38 @@ describe("openComposition", () => {
     }
   });
 
+  it("wraps long commands and long words instead of clipping them", async () => {
+    const result = check({
+      version: 1,
+      scenes: [
+        { type: "title", heading: "Supercalifragilisticexpialidocious".repeat(2), sub: "x" },
+        { type: "terminal", steps: [{ run: "x".repeat(120), output: "y".repeat(200) }] },
+      ],
+    });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const session = await openComposition(result.composition);
+    try {
+      for (const scene of result.composition.manifest.scenes) {
+        await captureFrame(session.page, scene.startFrame + scene.durationFrames - scene.exitFrames - 1);
+        const overflow = await session.page.evaluate(() => {
+          const visible = document.querySelector(".sf-scene:not([hidden])");
+          if (!visible) return Number.POSITIVE_INFINITY;
+          let worst = 0;
+          for (const el of visible.querySelectorAll(".sf-title__heading, [data-sf-type], [data-sf-out]")) {
+            const frame = el.closest(".sf-terminal__window") ?? document.documentElement;
+            const limit = frame.getBoundingClientRect();
+            const box = el.getBoundingClientRect();
+            worst = Math.max(worst, box.right - limit.right, box.bottom - limit.bottom);
+          }
+          return worst;
+        });
+        expect(overflow, `scene ${scene.index} (${scene.type})`).toBeLessThanOrEqual(0.5);
+      }
+    } finally {
+      await session.close();
+    }
+  });
+
   it("draws something: an early frame and a mid frame differ", async () => {
     const session = await openComposition(fixture());
     try {
@@ -149,13 +192,36 @@ describe("renderVideo", () => {
 
     const probed = await probeVideo(output);
     expect(probed.frames).toBe(composition.manifest.totalFrames);
+    expect(probed).toMatchObject({ colorSpace: "bt709", colorPrimaries: "bt709", colorTransfer: "bt709" });
+    expect(partialFiles(join(dir, "nested", "deeper"))).toEqual([]);
   });
 
-  it("fails with an EnvironmentError and leaves no file when ffmpeg is missing", async () => {
+  it("keeps an existing file at the output path when encoding fails, and reports why", async () => {
+    const output = join(dir, "keep.mp4");
+    writeFileSync(output, "KEEP");
+    const ffmpegPath = fakeFfmpeg("ffmpeg-dies", 'head -c 2000 >/dev/null; echo "boom from encoder" >&2; exit 3');
+    const attempt = renderVideo(fixture(), { output, ffmpegPath });
+    await expect(attempt).rejects.toBeInstanceOf(EnvironmentError);
+    await expect(attempt).rejects.toThrow(/boom from encoder/);
+    expect(readFileSync(output, "utf8")).toBe("KEEP");
+    expect(partialFiles(dir)).toEqual([]);
+  });
+
+  it("reports an unwritable output location as an environment problem", async () => {
+    const blocker = join(dir, "blocker");
+    writeFileSync(blocker, "x");
+    const attempt = renderVideo(fixture(), { output: join(blocker, "sub", "out.mp4") });
+    await expect(attempt).rejects.toBeInstanceOf(EnvironmentError);
+    await expect(attempt).rejects.toThrow(/Cannot write/);
+  });
+
+  it("fails with an EnvironmentError and leaves the output path untouched when ffmpeg is missing", async () => {
     const output = join(dir, "missing-ffmpeg.mp4");
+    writeFileSync(output, "KEEP");
     const attempt = renderVideo(fixture(), { output, ffmpegPath: "/nonexistent/ffmpeg" });
     await expect(attempt).rejects.toBeInstanceOf(EnvironmentError);
     await expect(attempt).rejects.toMatchObject({ remedy: expect.stringContaining("ffmpeg") });
-    expect(existsSync(output)).toBe(false);
+    expect(readFileSync(output, "utf8")).toBe("KEEP");
+    expect(partialFiles(dir)).toEqual([]);
   });
 });

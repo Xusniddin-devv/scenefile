@@ -29,6 +29,37 @@ function formatPath(path: readonly PropertyKey[]): string {
   return out;
 }
 
+function quoteList(values: unknown): string {
+  return Array.isArray(values) ? values.map((value) => JSON.stringify(value)).join(", ") : "";
+}
+
+/**
+ * An instruction built from the schema violation itself. The reader may be a
+ * model with nothing else to go on, so it must say what to write, not where
+ * to look.
+ */
+function fixForIssue(issue: Readonly<Record<string, unknown>>): string {
+  const { code, origin, minimum, maximum } = issue;
+  const message = typeof issue.message === "string" ? issue.message : "";
+  const unit = origin === "string" ? "characters" : origin === "array" ? "items" : "";
+  switch (code) {
+    case "unrecognized_keys":
+      return `Remove the unsupported field(s): ${quoteList(issue.keys)}.`;
+    case "invalid_value":
+      return `Use one of: ${quoteList(issue.values)}.`;
+    case "invalid_type":
+      return message.includes("received undefined")
+        ? `This field is required. Add it with a ${String(issue.expected)} value.`
+        : `Replace the value with a ${String(issue.expected)}.`;
+    case "too_small":
+      return unit ? `Use at least ${String(minimum)} ${unit}.` : `Use a value of at least ${String(minimum)}.`;
+    case "too_big":
+      return unit ? `Use at most ${String(maximum)} ${unit}.` : `Use a value of at most ${String(maximum)}.`;
+    default:
+      return "Change the value so it meets the requirement stated in the message.";
+  }
+}
+
 /** Renames aliases and case variants; reports and removes fields that match nothing. */
 function fixKeys(obj: Json, known: readonly string[], path: string, diagnostics: Diagnostic[]): void {
   for (const key of Object.keys(obj)) {
@@ -151,12 +182,7 @@ export function normalize(input: unknown): { scenefile: Scenefile | null; diagno
       const path = formatPath(issue.path);
       if (blocked.some((prefix) => path === prefix || path.startsWith(`${prefix}.`))) continue;
       diagnostics.push(
-        error(
-          "SCHEMA_INVALID",
-          path,
-          issue.message,
-          "Run `scenefile scenes` for the allowed fields and values.",
-        ),
+        error("SCHEMA_INVALID", path, issue.message, fixForIssue(issue as unknown as Record<string, unknown>)),
       );
     }
   }

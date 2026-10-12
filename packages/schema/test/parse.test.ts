@@ -13,6 +13,17 @@ describe("parseScenefileText", () => {
     expect(result.diagnostics[0]).toMatchObject({ code: "AUTOFIXED", severity: "warning", path: "" });
   });
 
+  it("ignores a byte-order mark", () => {
+    expect(parseScenefileText('\uFEFF{"version":1}')).toEqual({ value: { version: 1 }, diagnostics: [] });
+  });
+
+  it("finds the JSON fence when another fence comes first", () => {
+    const text = 'Run this:\n```bash\nscenefile render a.json\n```\nwith:\n```json\n{"version":1}\n```';
+    const result = parseScenefileText(text);
+    expect(result.value).toEqual({ version: 1 });
+    expect(result.diagnostics.map((d) => d.code)).toEqual(["AUTOFIXED"]);
+  });
+
   it.each(["", "   ", "not json", '{"version": 1,}', "{'version': 1}"])(
     "reports %j as SCHEMA_JSON",
     (text) => {

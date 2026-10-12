@@ -79,6 +79,20 @@ describe("terminal mount", () => {
     }
   });
 
+  it("never shows part of a flag or of a joined emoji", () => {
+    const html = terminalDefinition.compile(
+      terminalSchema.parse({ type: "terminal", steps: [{ run: "🇺🇿👨‍👩‍👧 ok" }] }),
+    );
+    const { el, handle } = mountScene("terminal", html);
+    const typed = must<HTMLElement>(el, "[data-sf-type]");
+    const seen = new Set<string>();
+    for (let frame = 0; frame < ctx.durationFrames; frame++) {
+      handle.seek(frame);
+      seen.add(typed.textContent ?? "");
+    }
+    expect([...seen]).toEqual(["", "🇺🇿", "🇺🇿👨‍👩‍👧", "🇺🇿👨‍👩‍👧 ", "🇺🇿👨‍👩‍👧 o", "🇺🇿👨‍👩‍👧 ok"]);
+  });
+
   it("shows the caret only on the step being typed", () => {
     const { el, handle } = mountScene("terminal", terminalHtml);
     const carets = el.querySelectorAll<HTMLElement>(".sf-terminal__caret");

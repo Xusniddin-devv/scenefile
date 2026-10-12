@@ -1,6 +1,6 @@
 import { fadeExit, staggerEnter } from "../motion";
 import type { SceneMount } from "../types";
-import { terminalSchedule, typedLength } from "./timing";
+import { graphemes, terminalSchedule, typedLength } from "./timing";
 
 export const mountTerminal: SceneMount = (el, ctx) => {
   const steps = Array.from(el.querySelectorAll<HTMLElement>(".sf-terminal__step")).map((stepEl) => {
@@ -13,8 +13,8 @@ export const mountTerminal: SceneMount = (el, ctx) => {
       typed,
       caret,
       out,
-      // Code points, so slicing never cuts a surrogate pair in half.
-      chars: Array.from(typed.dataset.sfType ?? ""),
+      // Whole graphemes, so slicing never shows part of an emoji.
+      chars: graphemes(typed.dataset.sfType ?? ""),
       output: out?.textContent ?? undefined,
     };
   });

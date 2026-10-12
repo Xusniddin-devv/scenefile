@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { terminalDefinition } from "../src/terminal/definition";
 import { terminalSchema } from "../src/terminal/schema";
-import { terminalSchedule, typedLength } from "../src/terminal/timing";
+import { graphemes, terminalSchedule, typedLength } from "../src/terminal/timing";
 
 describe("terminal timing", () => {
   it("types 20 characters per second, then pauses, then shows output", () => {
@@ -16,6 +16,12 @@ describe("terminal timing", () => {
 
   it("counts characters by code point, not UTF-16 unit", () => {
     const [timing] = terminalSchedule([{ run: "🚀🚀" }]);
+    expect(timing?.typeEnd).toBeCloseTo(0.1);
+  });
+
+  it("treats a flag or a joined emoji as one character", () => {
+    expect(graphemes("🇺🇿👨‍👩‍👧a")).toEqual(["🇺🇿", "👨‍👩‍👧", "a"]);
+    const [timing] = terminalSchedule([{ run: "🇺🇿👨‍👩‍👧" }]);
     expect(timing?.typeEnd).toBeCloseTo(0.1);
   });
 
