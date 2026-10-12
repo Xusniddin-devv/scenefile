@@ -1,4 +1,5 @@
 import { mountBullets } from "./bullets/mount";
+import { mountChart } from "./chart/mount";
 import { mountCode } from "./code/mount";
 import { mountCompare } from "./compare/mount";
 import { mountOutro } from "./outro/mount";
@@ -21,6 +22,7 @@ export const mounts: Record<string, SceneMount> = {
   outro: mountOutro,
   screenshot: mountScreenshot,
   compare: mountCompare,
+  chart: mountChart,
   terminal: mountTerminal,
 };
 

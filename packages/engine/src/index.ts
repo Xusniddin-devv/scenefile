@@ -26,6 +26,7 @@ export {
   type SlotReport,
   verifyLayout,
 } from "./layout";
+export { CAPTION_CHARACTERS, type Cue, captionCues } from "./captions";
 export { type Composition, type Manifest, type ManifestScene, compile } from "./compile";
 export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnostics, loadFont, videoTexts } from "./fonts";
 export { FORMAT_SIZES } from "./formats";

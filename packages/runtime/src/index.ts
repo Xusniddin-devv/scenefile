@@ -115,6 +115,11 @@ function init(broken: string[]): Api {
   const first = mounted[0];
   const last = mounted[mounted.length - 1];
 
+  const cues = Array.from(document.querySelectorAll<HTMLElement>("[data-sf-cue]")).map((el) => {
+    const [from, to] = (el.dataset.sfCue ?? "").split(",").map(Number);
+    return { el, from: from ?? 0, to: to ?? 0 };
+  });
+
   return {
     totalFrames: manifest.totalFrames,
     report: { slots, crowded, images, broken, labels, conflicts },
@@ -143,6 +148,7 @@ function init(broken: string[]): Api {
         const arrived = scene.overlapFrames === 0 || (local + 1) * 2 >= scene.overlapFrames + 1;
         if (local >= 0 && arrived) current = scene.index;
       }
+      for (const cue of cues) cue.el.hidden = frame < cue.from || frame >= cue.to;
       if (wipe) wipe.hidden = true;
       for (let i = 1; i < mounted.length; i++) {
         const arriving = mounted[i];

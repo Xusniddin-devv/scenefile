@@ -32,6 +32,8 @@ export interface ResolvedVideo {
   scenes: ResolvedScene[];
   /** Loaded images, by the `src` the scenefile gave. */
   assets: AssetMap;
+  /** Whether spoken lines are also shown as captions. */
+  captions: boolean;
 }
 
 const MIN_TOTAL_SECONDS = 3;
@@ -182,6 +184,7 @@ export function resolve(
       totalFrames: cursor,
       scenes,
       assets,
+      captions: scenefile.voice?.captions === true && scenes.some((scene) => scene.speech),
     },
     diagnostics,
   };

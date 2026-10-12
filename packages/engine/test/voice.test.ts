@@ -29,7 +29,7 @@ describe("narration in the scenefile", () => {
   });
 
   it("names the voice, and refuses one that does not exist", () => {
-    expect(parsed({ ...narrated, voice: { name: "en-kristin" } }).voice).toEqual({ name: "en-kristin" });
+    expect(parsed({ ...narrated, voice: { name: "en-joe" } }).voice).toEqual({ name: "en-joe", captions: false });
     const { diagnostics } = normalize({ ...narrated, voice: { name: "morgan" } });
     expect(diagnostics[0]).toMatchObject({ severity: "error", path: "voice.name" });
     expect(diagnostics[0]?.fix).toContain("en-joe");
@@ -122,7 +122,7 @@ describe("catching narration that would come out wrong", () => {
   });
 
   it("uses the voice trained only on public-domain recordings unless another is named", () => {
-    expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-kristin" });
+    expect(parsed({ ...narrated, voice: {} }).voice).toEqual({ name: "en-kristin", captions: false });
   });
 
   it("refuses text in a language the voice does not speak, and names a voice that does", () => {
@@ -195,6 +195,6 @@ describe("the guide", () => {
     const guide = authoringGuide();
     expect(guide).toContain("`say`");
     expect(guide).toContain("voice");
-    expect(guide.length).toBeLessThan(8000);
+    expect(guide).toContain("captions");
   });
 });

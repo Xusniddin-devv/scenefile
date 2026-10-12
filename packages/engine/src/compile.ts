@@ -1,4 +1,5 @@
-import { SHARED_CSS, getScene, sceneChrome } from "@scenefile/scenes";
+import { SHARED_CSS, escapeHtml, getScene, sceneChrome } from "@scenefile/scenes";
+import { captionCues } from "./captions";
 import { fontFaceCss, videoTexts } from "./fonts";
 import type { ResolvedVideo } from "./resolve";
 import { getTheme, themeCss } from "./themes";
@@ -45,6 +46,11 @@ function baseCss(width: number, height: number): string {
     ".sf-wipe{z-index:2;position:absolute;top:0;bottom:0;width:calc(var(--sf-unit)*0.4);margin-left:calc(var(--sf-unit)*-0.2);background:var(--sf-accent)}",
     ".sf-wipe[hidden]{display:none}",
     ".sf-scene[hidden]{display:none}",
+    // Captions take a band at the foot of the frame; scenes are laid out in what is left above it.
+    ".sf-captioned .sf-scene,.sf-captioned .sf-wipe{bottom:calc(var(--sf-unit)*17)}",
+    ".sf-captions{z-index:3;position:absolute;left:0;right:0;bottom:0;height:calc(var(--sf-unit)*17);padding:0 calc(var(--sf-unit)*9);display:flex;align-items:center;background:var(--sf-bg);border-top:1px solid var(--sf-line)}",
+    ".sf-captions p{font:600 calc(var(--sf-unit)*4.4)/1.22 var(--sf-font-sans);letter-spacing:-0.02em;color:var(--sf-text);text-wrap:balance;max-height:2.44em;overflow:hidden}",
+    ".sf-captions p[hidden]{display:none}",
   ].join("");
 }
 
@@ -77,6 +83,17 @@ export function compile(video: ResolvedVideo): Composition {
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
     })
     .join("\n");
+  const cues = video.captions
+    ? video.scenes.flatMap((scene) =>
+        scene.speech && scene.props.say !== undefined
+          ? captionCues(scene.props.say, scene.speech.startFrame, scene.speech.seconds, video.fps)
+          : [],
+      )
+    : [];
+  const captions =
+    cues.length > 0
+      ? `\n<div class="sf-captions">${cues.map((cue) => `<p data-sf-cue="${cue.from},${cue.to}" hidden>${escapeHtml(cue.text)}</p>`).join("")}</div>`
+      : "";
   const theme = getTheme(video.theme);
   const texts = videoTexts(video);
   const textIn = (font: "sans" | "mono"): string =>
@@ -101,10 +118,10 @@ ${SHARED_CSS.trim()}
 ${sceneCss}</style>
 </head>
 <body>
-<div id="sf-stage">
+<div id="sf-stage"${captions ? ' class="sf-captioned"' : ""}>
 ${sections}
 <div class="sf-wipe" hidden></div>
-${sceneChrome(total)}
+${sceneChrome(total)}${captions}
 </div>
 <script id="sf-manifest" type="application/json">${manifestJson}</script>${assetsScript}
 </body>

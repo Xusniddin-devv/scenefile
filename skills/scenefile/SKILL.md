@@ -68,7 +68,7 @@ A scenefile is a JSON object that says what each scene of a video shows. You nev
 - `theme`: "signal" (default: black, lime accent), "midnight" (black, orange), "paper" (white, red), "cobalt" (blue, yellow) or "solar" (yellow, blue).
 - `accent`: The accent color as "#RRGGBB". Leave it out to use the theme's.
 - `audio`: Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile's folder.
-- `voice`: Who reads the `say` lines aloud: { "name": "en-kristin" }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.
+- `voice`: Who reads the `say` lines aloud: { "name": "en-kristin", "captions": true }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". No other languages. `captions` also shows the words on screen.
 - `transition`: How scenes change: "auto" (default), "cut", "fade", "crossfade", "push", "wipe" or "zoom".
 - `scenes`: The scenes, in order. Required: 1 to 60.
 
@@ -138,6 +138,14 @@ Before and after, side by side.
 - `before`: The old way: { "label": "up to 24 characters, optional", "text": "up to 160 characters" } or { "src": "image file" }. Required.
 - `after`: The new way, in the same form. Required.
 Example: `{"type":"compare","before":{"label":"Before","text":"An hour of manual steps."},"after":{"label":"With shipit","text":"One command."}}`
+
+### chart
+Two to six numbers compared as bars that grow, such as speeds, sizes or prices.
+- `heading`: What is being measured, up to 60 characters.
+- `bars`: The bars: a list of 2 to 6 of { "label": up to 28 characters, "value": a number, 0 or more }. Required.
+- `unit`: Written after each value, up to 6 characters: "ms", "%", "x".
+- `highlight`: The label of the one bar to draw in the accent color, copied exactly.
+Example: `{"type":"chart","heading":"Build time","unit":"s","bars":[{"label":"Before","value":48},{"label":"After","value":3}],"highlight":"After"}`
 
 ### terminal
 Commands typed into a terminal, each followed by what it prints.

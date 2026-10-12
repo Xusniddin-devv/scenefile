@@ -9,7 +9,7 @@ export const TOP_LEVEL_DOCS: Readonly<Record<string, string>> = {
   theme: '"signal" (default: black, lime accent), "midnight" (black, orange), "paper" (white, red), "cobalt" (blue, yellow) or "solar" (yellow, blue).',
   accent: 'The accent color as "#RRGGBB". Leave it out to use the theme\'s.',
   audio: 'Music under the whole video: { "src": "music.mp3", "volume": 0.4 }. A file in the scenefile\'s folder.',
-  voice: 'Who reads the `say` lines aloud: { "name": "en-kristin" }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". Other languages have no voice yet.',
+  voice: 'Who reads the `say` lines aloud: { "name": "en-kristin", "captions": true }. English: "en-kristin" (default), "en-joe", "en-bryce". Russian: "ru-denis", "ru-dmitri". No other languages. `captions` also shows the words on screen.',
   transition: 'How scenes change: "auto" (default), "cut", "fade", "crossfade", "push", "wipe" or "zoom".',
   scenes: "The scenes, in order. Required: 1 to 60.",
 };
@@ -48,7 +48,7 @@ const EVERY_SCENE =
   'Every scene needs `type`. Any scene may also set `duration` (seconds on screen, up to 120; leave it out and the scene is timed by how long it takes to read) `transition` (how it arrives, if not the scenefile\'s) and `say` (a sentence for the narrator to speak, up to 500 characters; the scene stays until it has been said).';
 
 /**
- * Everything a model needs to write a scenefile, in under 2,000 tokens. It is
+ * Everything a model needs to write a scenefile, in about 2,100 tokens. It is
  * assembled from the scenes' own documentation, so adding a scene or a field
  * changes the guide, and tests fail if anything is left undocumented.
  */

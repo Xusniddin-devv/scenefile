@@ -23,6 +23,7 @@ const PREFERRED: Record<SceneType, readonly TransitionKind[]> = {
   // A dissolve would lay the quotation over the text before it; a push keeps them apart.
   quote: ["push", "crossfade"],
   bullets: ["push", "wipe"],
+  chart: ["push", "wipe"],
   stat: ["zoom", "crossfade"],
   code: ["wipe", "push"],
   terminal: ["wipe", "push"],

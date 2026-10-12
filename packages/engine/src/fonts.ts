@@ -108,11 +108,15 @@ export function fontFaceCss(key: FontKey, text: string): string {
 
 /** Every string the video draws, with its full scenefile path. */
 export function videoTexts(video: ResolvedVideo): { path: string; text: string; font: "sans" | "mono" }[] {
-  return video.scenes.flatMap((scene) =>
-    getScene(scene.type)
+  return video.scenes.flatMap((scene) => [
+    ...getScene(scene.type)
       .texts(scene.props)
       .map((entry) => ({ ...entry, path: `scenes[${scene.index}].${entry.path}` })),
-  );
+    // Captions put the narration on screen, so it has to be drawable too.
+    ...(video.captions && scene.props.say !== undefined
+      ? [{ path: `scenes[${scene.index}].say`, text: scene.props.say, font: "sans" as const }]
+      : []),
+  ]);
 }
 
 function codePointName(char: string): string {

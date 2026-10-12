@@ -3,9 +3,10 @@
 Turn a small JSON file into a video. Built so that any language model, including
 ones that cannot see images, can produce a correct video and fix its own mistakes.
 
-**Status: early development.** Ten scene types (`title`, `statement`, `quote`,
-`bullets`, `stat`, `code`, `screenshot`, `compare`, `outro`, `terminal`) and two themes
-(`signal`, the default, and `midnight`) work today. Fonts are bundled, so Latin and
+**Status: early development.** Eleven scene types (`title`, `statement`, `quote`,
+`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `outro`, `terminal`), five
+themes, narration in English and Russian made on your own machine, captions and a music
+bed work today. Fonts are bundled, so Latin and
 Cyrillic text is drawn the same on every machine; emoji use the machine's own emoji
 font. Not yet published to npm.
 
@@ -72,7 +73,7 @@ Schema for tools that can enforce one on a model's output.
 }
 ```
 
-The server offers five tools: `guide` (how to write a scenefile, in about 2,000 tokens),
+The server offers five tools: `guide` (how to write a scenefile, in about 2,100 tokens),
 `scene_docs`, `check`, `render` (returns a job id at once) and `job` (progress, then the
 finished file; it can also cancel). A scenefile can be passed inline or as a path.
 
@@ -124,12 +125,15 @@ espeak-ng, GPL-3.0, built in) and [Piper](https://github.com/rhasspy/piper) voic
 each with the history in the table. For commercial work, use `en-kristin` or check the
 voice's model card first.
 
+**Captions.** Add `"captions": true` to `voice` and the words appear in a band at the
+foot of the frame as they are spoken, a phrase at a time; scenes are laid out in the
+space above it. The voice gives no word timings, so a phrase is timed by its length.
+
 What it is not:
 
 - The voices are clear but plainly synthetic.
 - English and Russian only. There is no Uzbek voice: none with a usable licence exists
   in this family. A line in a language the voice does not speak is refused by `check`.
-- No captions yet.
 - Narration is made fresh on each machine and differs slightly each time. A rerun on the
   same machine reuses the saved lines and gives the same video; saved lines live in
   `~/.cache/scenefile` (or `$SCENEFILE_HOME`), capped at 500 MB.

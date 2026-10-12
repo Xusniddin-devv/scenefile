@@ -24,7 +24,13 @@ export const scenefileSchema = z.strictObject({
     })
     .optional(),
   /** Who reads the scenes' `say` text aloud. */
-  voice: z.strictObject({ name: z.enum(VOICES).default("en-kristin") }).optional(),
+  voice: z
+    .strictObject({
+      name: z.enum(VOICES).default("en-kristin"),
+      /** Show the words at the foot of the frame as they are spoken. */
+      captions: z.boolean().default(false),
+    })
+    .optional(),
   /** How scenes give way to one another, unless a scene says otherwise. */
   transition: transitionSchema.default("auto"),
   scenes: z.array(sceneSchema).min(1).max(60),

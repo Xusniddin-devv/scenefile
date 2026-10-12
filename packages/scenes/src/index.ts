@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { bulletsDefinition } from "./bullets/definition";
+import { chartDefinition } from "./chart/definition";
+import { chartSchema } from "./chart/schema";
 import { bulletsSchema } from "./bullets/schema";
 import { compareDefinition } from "./compare/definition";
 import { compareSchema } from "./compare/schema";
@@ -31,6 +33,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   outroSchema,
   screenshotSchema,
   compareSchema,
+  chartSchema,
   terminalSchema,
 ]);
 export type Scene = z.infer<typeof sceneSchema>;
@@ -55,6 +58,7 @@ const registry: Record<SceneType, SceneDefinition<Scene>> = {
   outro: widen(outroDefinition),
   screenshot: widen(screenshotDefinition),
   compare: widen(compareDefinition),
+  chart: widen(chartDefinition),
   terminal: widen(terminalDefinition),
 };
 

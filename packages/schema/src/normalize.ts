@@ -14,6 +14,7 @@ const FIELD_ALIASES: Readonly<Record<string, string>> = {
   commands: "steps",
   points: "items",
   bullets: "items",
+  data: "bars",
   list: "items",
   code: "source",
   snippet: "source",
