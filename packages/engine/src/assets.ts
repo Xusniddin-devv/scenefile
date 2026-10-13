@@ -55,7 +55,12 @@ export interface ClipInfo {
   seconds: number;
   /** Whether it has a sound track. */
   audio: boolean;
+  /** Whether it is HDR footage, which is drawn as it is rather than converted. */
+  hdr?: boolean;
 }
+
+/** The largest picture a clip may have, on a side: footage beyond this takes gigabytes to decode. */
+export const MAX_CLIP_SIDE = 8192;
 
 /** The largest video file used as a clip. */
 export const MAX_CLIP_BYTES = 4 * 1024 * 1024 * 1024;
@@ -612,7 +617,13 @@ export async function loadClips(
         if (typeof located !== "string") failure = located;
         else {
           const info = await sources.probeClip(located);
-          if (info) clips.set(ref.src, info);
+          if (info && Math.max(info.width, info.height) > MAX_CLIP_SIDE) {
+            failure = {
+              code: "ASSET_TOO_LARGE",
+              message: `"${ref.src}" is ${info.width}x${info.height}; a clip may be at most ${MAX_CLIP_SIDE} pixels on a side.`,
+              fix: "Make a smaller copy of the video and use that.",
+            };
+          } else if (info) clips.set(ref.src, info);
           else {
             failure = {
               code: "ASSET_UNSUPPORTED",

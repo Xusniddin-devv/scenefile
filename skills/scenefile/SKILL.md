@@ -152,7 +152,7 @@ Example: `{"type":"chart","heading":"Seconds to render a 52 second video","unit"
 One of the person's own video files, or a part of it. Put several in a row to join them.
 - `src`: The video: an MP4, MOV or WebM file in the scenefile's folder. Required.
 - `from`: Seconds into the file to start at. Leave out to start at the beginning.
-- `to`: Seconds into the file to stop at. Leave out to play to the end.
+- `to`: Seconds into the file to stop at. Leave out to play to the end. The scene lasts exactly as long as what is shown, and is cut to and from.
 - `fit`: "contain" (default) shows the whole picture inside the frame; "cover" fills the frame and crops.
 - `volume`: The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.
 - `caption`: A line under the clip, up to 80 characters. Not shown with "cover".

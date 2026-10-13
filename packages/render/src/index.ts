@@ -6,7 +6,7 @@ export { type Encoder, runFfmpeg, startEncoder } from "./encode";
 export { EnvironmentError, browserProblem } from "./errors";
 export { inspectComposition } from "./inspect";
 export { type PrepareOptions, prepareScenefile } from "./prepare";
-export { type ProbeResult, hasSound, probeClip, probeVideo } from "./probe";
+export { type ProbeResult, CLIP_FORMATS, hasSound, probeClip, probeVideo } from "./probe";
 export {
   MAX_WORKERS,
   QUALITIES,

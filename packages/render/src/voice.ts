@@ -158,7 +158,10 @@ export async function installVoice(name: VoiceName, options: InstallOptions): Pr
         throw stalled.signal.aborted ? new Error(`The download for the voice "${name}" did not start. Check the connection and try again.`) : cause;
       },
     );
-    if (!response.ok || !response.body) throw new Error(`The voice "${name}" could not be downloaded (${response.status}).`);
+    if (!response.ok || !response.body) {
+      clearTimeout(quiet);
+      throw new Error(`The voice "${name}" could not be downloaded (${response.status}).`);
+    }
     const hash = createHash("sha256");
     let received = 0;
     const body = Readable.fromWeb(response.body as import("node:stream/web").ReadableStream<Uint8Array>);

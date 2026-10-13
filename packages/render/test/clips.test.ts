@@ -1,9 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { prepareScenefile, probeClip, probeVideo, renderVideo } from "../src/index";
+import { prepareScenefile, probeClip, probeVideo, renderVideo, runFfmpeg } from "../src/index";
 
 let dir: string;
 const make = (name: string, source: string, seconds: number, sound: boolean): void => {
@@ -51,7 +51,104 @@ describe("reading a clip", () => {
   });
 });
 
+/** Where the file's sound track starts and how long it lasts, as the file itself says. */
+function soundTrack(file: string): { start: number; seconds: number } {
+  const { stdout } = spawnSync("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=start_time,duration", "-of", "csv=p=0", file], { encoding: "utf8" });
+  const [start = "NaN", seconds = "NaN"] = stdout.trim().split(",");
+  return { start: Number(start), seconds: Number(seconds) };
+}
+
+describe("files that only look like video", () => {
+  it("does not follow a playlist to files outside the folder", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "scenefile-outside-"));
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=green:s=320x180:d=2", "-f", "mpegts", join(outside, "secret.ts")]);
+    writeFileSync(join(dir, "list.m3u8"), `#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXTINF:2,\n${join(outside, "secret.ts")}\n#EXT-X-ENDLIST\n`);
+    writeFileSync(join(dir, "list.mp4"), `#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXTINF:2,\n${join(outside, "secret.ts")}\n#EXT-X-ENDLIST\n`);
+    expect(await probeClip(join(dir, "list.m3u8"))).toBeNull();
+    expect(await probeClip(join(dir, "list.mp4"))).toBeNull();
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  it("reads the length of a recording that does not state one, and says when footage is HDR or oddly shaped", async () => {
+    // What a browser's recorder writes: WebM with no length in its header.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=320x180:d=3:r=25", "-c:v", "libvpx", "-b:v", "200k", "-f", "webm", "-live", "1", join(dir, "live.webm")]);
+    expect((await probeClip(join(dir, "live.webm")))?.seconds).toBeCloseTo(3, 0);
+    // Pixels that are not square: 4:3 pixels make a 720-wide picture 960 wide when shown.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=720x540:d=1:r=25", "-vf", "setsar=4/3", "-pix_fmt", "yuv420p", join(dir, "wide-pixels.mp4")]);
+    expect(await probeClip(join(dir, "wide-pixels.mp4"))).toMatchObject({ width: 960, height: 540 });
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=320x180:d=1:r=25", "-vf", "setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc", "-pix_fmt", "yuv420p", join(dir, "hdr.mp4")]);
+    expect((await probeClip(join(dir, "hdr.mp4")))?.hdr).toBe(true);
+    expect((await probeClip(join(dir, "red.mp4")))?.hdr).toBe(false);
+  });
+});
+
+describe("running ffmpeg with a time limit", () => {
+  it("accepts a limit that is not a whole number of milliseconds", async () => {
+    // A video 25.37 seconds long gives a limit like 1014666.67; that must not be an error.
+    await expect(runFfmpeg(["-version"], "ffmpeg", { timeoutMs: 1014666.6666666667 })).resolves.toBeUndefined();
+  });
+});
+
 describe("rendering clips", () => {
+  it("keeps the sound whole and in place when clips are cut from the middle of their files", async () => {
+    make("low.mp4", "color=c=red:s=640x360", 5, true);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=blue:s=640x360:d=4:r=25", "-f", "lavfi", "-i", "sine=frequency=1760:duration=4", "-pix_fmt", "yuv420p", "-shortest", join(dir, "high.mp4")]);
+    const { output, composition } = await render("two-cuts.mp4", [
+      { type: "title", heading: "Before", duration: 2 },
+      { type: "clip", src: "low.mp4", from: 2, to: 4 },
+      { type: "clip", src: "high.mp4", from: 1, to: 3 },
+      { type: "title", heading: "After", duration: 2 },
+    ]);
+    const track = soundTrack(output);
+    expect(Math.abs(track.start)).toBeLessThan(0.05);
+    expect(track.seconds).toBeCloseTo(composition.manifest.totalFrames / 30, 1);
+    const tone = (hertz: number, from: number): number => {
+      const { stderr } = spawnSync("ffmpeg", ["-hide_banner", "-ss", String(from), "-t", "1", "-i", output, "-af", `bandpass=f=${hertz}:width_type=h:w=${hertz / 8},volumedetect`, "-vn", "-f", "null", "-"], { encoding: "utf8" });
+      const found = /mean_volume: (-?[\d.]+|-inf) dB/.exec(stderr)?.[1];
+      return found === undefined || found === "-inf" ? -200 : Number(found);
+    };
+    const [first, second] = composition.clips ?? [];
+    // Each clip's own tone is heard during that clip and not during the other, nor before either.
+    expect(tone(440, (first?.atSeconds ?? 0) + 0.5)).toBeGreaterThan(-40);
+    expect(tone(1760, (second?.atSeconds ?? 0) + 0.5)).toBeGreaterThan(-40);
+    // A narrow filter still lets a little of a loud neighbouring tone through.
+    expect(tone(1760, (first?.atSeconds ?? 0) + 0.5)).toBeLessThan(-50);
+    expect(tone(440, (second?.atSeconds ?? 0) + 0.5)).toBeLessThan(-50);
+    expect(loudness(output, 0.3, 1)).toBeLessThan(-60);
+  });
+
+  it("never lets the sound added together go past full scale", async () => {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=320x180:d=3:r=25", "-f", "lavfi", "-i", "sine=frequency=300:duration=3", "-af", "volume=18dB", "-pix_fmt", "yuv420p", "-shortest", join(dir, "shout.mp4")]);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=500:duration=10", "-af", "volume=18dB", join(dir, "loud-bed.wav")]);
+    const result = await prepareScenefile({ version: 1, audio: { src: "loud-bed.wav", volume: 1 }, scenes: [{ type: "clip", src: "shout.mp4" }] }, { baseDir: dir });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const output = join(dir, "loud.mp4");
+    await renderVideo(result.composition, { output, quality: "draft" });
+    const { stderr } = spawnSync("ffmpeg", ["-hide_banner", "-i", output, "-af", "volumedetect", "-vn", "-f", "null", "-"], { encoding: "utf8" });
+    expect(Number(/max_volume: (-?[\d.]+) dB/.exec(stderr)?.[1])).toBeLessThanOrEqual(-0.2);
+  });
+
+  it("stops when told to while footage is being laid in, and writes nothing", async () => {
+    make("long.mp4", "testsrc2=s=1280x720", 12, false);
+    const result = await prepareScenefile({ version: 1, scenes: [{ type: "clip", src: "long.mp4" }] }, { baseDir: dir });
+    if (!result.composition) throw new Error(JSON.stringify(result.diagnostics));
+    const output = join(dir, "stopped.mp4");
+    const stopper = new AbortController();
+    const total = result.composition.manifest.totalFrames;
+    const attempt = renderVideo(result.composition, {
+      output,
+      quality: "draft",
+      signal: stopper.signal,
+      // Every frame of the page is drawn; what remains is laying in the footage.
+      onProgress: (done) => {
+        if (done === total) setTimeout(() => stopper.abort(), 400);
+      },
+    });
+    await expect(attempt).rejects.toThrow(/cancelled/);
+    expect(existsSync(output)).toBe(false);
+  });
+
+
   it("shows the chosen part of the clip in its place, with its sound, between other scenes", async () => {
     const { output, report, composition } = await render("mixed.mp4", [
       { type: "title", heading: "Before", duration: 2 },

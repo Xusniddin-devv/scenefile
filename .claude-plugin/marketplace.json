@@ -8,7 +8,7 @@
     {
       "name": "scenefile",
       "source": "./",
-      "description": "Make videos from a short JSON file, with recipes for explaining code, app walkthroughs, launches, releases and repository tours."
+      "description": "Make videos from a short JSON file, with recipes for explaining code, app walkthroughs, editing your own clips, launches, releases and repository tours."
     }
   ]
 }

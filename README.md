@@ -233,7 +233,9 @@ and they are joined; put other scenes around them for titles and endings.
 
 What it is not: an editor with a timeline. Clips are joined with cuts; there are no
 transitions through footage, no speed changes, no colour work, and it does not transcribe
-what is said in a clip. Clips must be in the scenefile's folder, like images. Rendering
+what is said in a clip. HDR footage (what recent phones record by default) is not
+converted and looks flat, and interlaced footage is not deinterlaced; `check` warns about
+HDR. Clips are MP4, MOV, MKV or WebM files of at most 8192 pixels on a side. Clips must be in the scenefile's folder, like images. Rendering
 re-encodes the whole video once more when it contains clips, so it takes longer.
 
 ## Screenshots of your app

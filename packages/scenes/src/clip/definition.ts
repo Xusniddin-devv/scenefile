@@ -37,7 +37,9 @@ export function clipPlacement(
   const size = containSize(clip, box);
   const width = even(size.width);
   // In the middle of the width it could have used, so a tall clip in a wide frame does not hug one edge.
-  return { x: Math.round((frame.width - width) / 2), y: Math.round(TOP * frame.unit), width, height: even(size.height), cover: false };
+  // Even positions as well as even sizes: color in video is stored every other pixel, and footage placed
+  // on an odd one lands a pixel off, leaving a line of the page beside it.
+  return { x: even((frame.width - width) / 2), y: even(TOP * frame.unit), width, height: even(size.height), cover: false };
 }
 
 function span(props: ClipProps): string {
@@ -54,7 +56,7 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
   minHoldSeconds: 0,
   // Its real length comes from the file; this stands in only where the file is not known.
   holdSeconds: () => 3,
-  summary: (props) => `video ${props.src}${span(props)}${props.caption ? `: ${props.caption}` : ""}`,
+  summary: (props) => `video ${props.src}${span(props)}`,
   texts(props) {
     const texts: SceneText[] = [];
     if (props.caption && props.fit !== "cover") texts.push({ path: "caption", text: props.caption, font: "sans" });
@@ -66,7 +68,7 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
     const placed = clipPlacement(props, ctx.frame, ctx.clip?.(props.src) ?? { width: 16, height: 9 });
     const caption =
       props.caption && !placed.cover
-        ? `<p class="sf-clip__caption" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
+        ? `<p class="sf-clip__caption" style="left:${placed.x}px;top:${placed.y + placed.height + Math.round(2 * ctx.frame.unit)}px" data-sf-fit="3.4,4.6,0.2" data-sf-lines="2" data-sf-path="${ctx.path}.caption">${escapeHtml(props.caption)}</p>`
         : "";
     return `<div class="sf-clip"><div class="sf-clip__box" style="left:${placed.x}px;top:${placed.y}px;width:${placed.width}px;height:${placed.height}px"></div>${caption}</div>`;
   },
@@ -75,7 +77,7 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
     fields: {
       "src": "The video: an MP4, MOV or WebM file in the scenefile's folder. Required.",
       "from": "Seconds into the file to start at. Leave out to start at the beginning.",
-      "to": "Seconds into the file to stop at. Leave out to play to the end.",
+      "to": "Seconds into the file to stop at. Leave out to play to the end. The scene lasts exactly as long as what is shown, and is cut to and from.",
       "fit": '"contain" (default) shows the whole picture inside the frame; "cover" fills the frame and crops.',
       "volume": "The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.",
       "caption": 'A line under the clip, up to 80 characters. Not shown with "cover".',
@@ -90,6 +92,6 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
   },
   css: `
 .sf-clip__box{position:absolute;background:var(--sf-surface)}
-.sf-clip__caption{position:absolute;left:calc(var(--sf-unit)*9);right:calc(var(--sf-unit)*9);bottom:calc(var(--sf-unit)*8);font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
+.sf-clip__caption{position:absolute;right:calc(var(--sf-unit)*9);font:500 calc(var(--sf-unit)*4.6)/1.25 var(--sf-font-sans);color:var(--sf-muted)}
 `,
 };

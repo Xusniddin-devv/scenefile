@@ -3,12 +3,22 @@ import { once } from "node:events";
 import { ENCODE_REMEDY, EnvironmentError, FFMPEG_REMEDY } from "./errors";
 
 /** Runs ffmpeg to completion. A missing binary or a non-zero exit is an environment problem, with ffmpeg's own words. */
-export function runFfmpeg(args: string[], ffmpegPath = "ffmpeg"): Promise<void> {
+export function runFfmpeg(
+  args: string[],
+  ffmpegPath = "ffmpeg",
+  /** Stops ffmpeg when aborted, or when it has run longer than it should. */
+  limits: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    execFile(ffmpegPath, ["-y", "-loglevel", "error", ...args], (cause, _stdout, stderr) => {
+    const options = { ...(limits.signal ? { signal: limits.signal } : {}), ...(limits.timeoutMs ? { timeout: Math.ceil(limits.timeoutMs) } : {}) };
+    execFile(ffmpegPath, ["-y", "-loglevel", "error", ...args], options, (cause, _stdout, stderr) => {
       if (!cause) resolve();
       else if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
         reject(new EnvironmentError("ffmpeg was not found.", FFMPEG_REMEDY));
+      } else if (limits.signal?.aborted) {
+        reject(new EnvironmentError("The render was cancelled.", "Start it again if you still want the video."));
+      } else if ((cause as { killed?: boolean }).killed) {
+        reject(new EnvironmentError("ffmpeg ran far longer than this video should take and was stopped.", "Check the clips: one of them may be damaged or far larger than it looks."));
       } else {
         reject(new EnvironmentError(`ffmpeg failed: ${stderr.trim().slice(-2000) || cause.message}`, ENCODE_REMEDY));
       }

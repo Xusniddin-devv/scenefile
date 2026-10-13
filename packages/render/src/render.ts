@@ -6,7 +6,7 @@ import type { Composition } from "@scenefile/engine";
 import { captureFrame } from "./capture";
 import { runFfmpeg, startEncoder } from "./encode";
 import { EnvironmentError, WRITE_REMEDY } from "./errors";
-import { type ProbeResult, hasSound, probeVideo } from "./probe";
+import { CLIP_FORMATS, type ProbeResult, hasSound, probeSound, probeVideo } from "./probe";
 import { openComposition } from "./session";
 
 export const QUALITIES = ["draft", "standard", "high"] as const;
@@ -233,18 +233,20 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       // The person's footage is laid over the places the page kept for it. Each clip is brought to
       // the video's frame rate and colour, sized to its rectangle, and shown for exactly its scene.
       finished = join(scratch, "with-clips.mp4");
+      // A clip is read as a file of one of the kinds a clip may be, and nothing it names is followed.
+      const footage = ["-protocol_whitelist", "file", "-format_whitelist", CLIP_FORMATS];
       const inputs: string[] = [];
       const filters: string[] = [];
       let base = "0:v";
       for (const [index, clip] of clips.entries()) {
-        inputs.push("-protocol_whitelist", "file", "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
+        inputs.push(...footage, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
         const size = clip.cover
           ? `scale=${clip.width}:${clip.height}:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv,crop=${clip.width}:${clip.height}`
           : `scale=${clip.width}:${clip.height}:out_color_matrix=bt709:out_range=tv`;
         const until = clip.atSeconds + clip.seconds - 0.5 / fps;
         filters.push(
           `[${index + 1}:v]fps=${fps},${size},setsar=1,format=yuv420p,setpts=PTS-STARTPTS+${clip.atSeconds.toFixed(6)}/TB[clip${index}]`,
-          `[${base}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=pass:enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'[over${index}]`,
+          `[${base}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=repeat:enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'[over${index}]`,
         );
         base = `over${index}`;
       }
@@ -260,6 +262,8 @@ export async function renderVideo(composition: Composition, options: RenderOptio
           finished,
         ],
         options.ffmpegPath,
+        // Generous, but not for ever: a damaged or enormous clip must not hold the queue.
+        { ...(options.signal ? { signal: options.signal } : {}), timeoutMs: Math.max(120, seconds * 40) * 1000 },
       );
       const laid = await probeVideo(finished, options.ffprobePath);
       if (laid.frames !== totalFrames || laid.width !== width || laid.height !== height) {
@@ -277,6 +281,10 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       /** The tracks added together at the end. */
       const tracks: string[] = [];
       const SHAPE = "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo";
+      // A sound is put at its time by numbering its samples from there and filling what comes before with
+      // silence. Delaying it instead loses the timestamps of sound cut from the middle of a file, and the
+      // track that results cannot be played.
+      const placedAt = (at: number): string => `asetpts=N/SR/TB+${at.toFixed(6)}/TB,aresample=async=1:first_pts=0`;
       let next = 1;
       if (composition.audio) {
         const fadeOut = Math.min(MUSIC_FADE_OUT_SECONDS, seconds / 3);
@@ -292,7 +300,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       for (const [index, line] of lines.entries()) {
         inputs.push("-protocol_whitelist", "file", "-i", line.file);
         filters.push(
-          `[${next}:a]${SHAPE},volume=10dB,alimiter=limit=0.8:level=disabled,adelay=${Math.round(line.atSeconds * 1000)}:all=1[line${index}]`,
+          `[${next}:a]${SHAPE},volume=10dB,alimiter=limit=0.8:level=disabled,${placedAt(line.atSeconds)}[line${index}]`,
         );
         next += 1;
       }
@@ -309,16 +317,15 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       else if (lines.length > 0) tracks.push("[voice]");
       for (const [index, clip] of heard.entries()) {
         // The clip's own sound, for the part of it that is shown, starting when it does.
-        inputs.push("-protocol_whitelist", "file", "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
-        // Sound cut from the middle of a file keeps the file's clock; it is restarted from zero before being placed.
-        filters.push(`[${next}:a]asetpts=PTS-STARTPTS,${SHAPE},volume=${clip.volume},adelay=${Math.round(clip.atSeconds * 1000)}:all=1[heard${index}]`);
+        inputs.push("-protocol_whitelist", "file", "-format_whitelist", CLIP_FORMATS, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
+        filters.push(`[${next}:a]${SHAPE},volume=${clip.volume},${placedAt(clip.atSeconds)}[heard${index}]`);
         tracks.push(`[heard${index}]`);
         next += 1;
       }
       // Added together as they are, then padded with silence to the picture's length.
-      // A single track is used as it is: the mixer misorders one that starts late on its own.
       const together = tracks.length === 1 ? `${tracks[0]}anull` : `${tracks.join("")}amix=inputs=${tracks.length}:normalize=0:dropout_transition=0`;
-      filters.push(`${together},apad[sound]`);
+      // Sounds added together can pass full scale; the sum is held just under it.
+      filters.push(`${together},alimiter=limit=0.95:level=disabled,apad[sound]`);
       await runFfmpeg(
         [
           "-i", silent,
@@ -332,6 +339,7 @@ export async function renderVideo(composition: Composition, options: RenderOptio
           finished,
         ],
         options.ffmpegPath,
+        { ...(options.signal ? { signal: options.signal } : {}), timeoutMs: Math.max(120, seconds * 20) * 1000 },
       );
       const mixed = await probeVideo(finished, options.ffprobePath);
       if (!mixed.audio || mixed.frames !== totalFrames) {
@@ -340,6 +348,14 @@ export async function renderVideo(composition: Composition, options: RenderOptio
             `got ${mixed.frames}${mixed.audio ? "" : " without sound"}.`,
         );
       }
+      // A track that exists is not enough: it must start with the picture and last as long.
+      const track = await probeSound(finished, options.ffprobePath);
+      if (!(Math.abs(track.start) < 0.1) || !(Math.abs(track.seconds - seconds) < 0.25)) {
+        throw new Error(`The sound track is not whole: it starts at ${track.start}s and lasts ${track.seconds}s, where ${seconds.toFixed(2)}s from 0 was expected.`);
+      }
+    }
+    if (options.signal?.aborted) {
+      throw new EnvironmentError("The render was cancelled.", "Start it again if you still want the video.");
     }
     try {
       await rename(finished, output);

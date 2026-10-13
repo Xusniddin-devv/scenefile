@@ -1,6 +1,6 @@
 {
   "name": "scenefile",
-  "description": "Make videos from a short JSON file: scenes, narration, captions, screenshots of your own app. Recipes for explaining code, walking through an app, launches, releases and repository tours.",
+  "description": "Make videos from a short JSON file: scenes, narration, captions, screenshots of your own app. Recipes for explaining code, walking through an app, editing your own clips, launches, releases and repository tours.",
   "version": "0.3.0",
   "author": {
     "name": "Xusniddin Qalandarov"

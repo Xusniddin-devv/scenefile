@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
-import { type AssetSources, type ClipInfo, type LoadedAssets, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
+import { type AssetSources, type ClipInfo, type LoadedAssets, MAX_CLIP_SIDE, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
 import { type Composition, compile } from "./compile";
 import { displayFace, glyphDiagnostics } from "./fonts";
 import { FONT_FAMILIES, getTheme } from "./themes";
@@ -154,6 +154,12 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
   }
 
   for (const ref of clipRefs(normalized.scenefile)) {
+    const picture = loaded?.clips?.get(ref.src);
+    if (picture && Math.max(picture.width, picture.height) > MAX_CLIP_SIDE) {
+      assetDiagnostics.push(
+        error("ASSET_TOO_LARGE", ref.path, `"${ref.src}" is ${picture.width}x${picture.height}; a clip may be at most ${MAX_CLIP_SIDE} pixels on a side.`, "Make a smaller copy of the video and use that."),
+      );
+    }
     const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === ref.path);
     if (!reported && !loaded?.clips?.has(ref.src)) {
       assetDiagnostics.push(
@@ -189,6 +195,23 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
   for (const [index, scene] of normalized.scenefile.scenes.entries()) {
+    const footage = scene.type === "clip" ? loaded?.clips?.get(scene.src) : undefined;
+    if (scene.type === "clip" && footage) {
+      const at = `scenes[${index}]`;
+      if (footage.hdr) {
+        notes.push(warning("CLIP_HDR", `${at}.src`, "This footage is HDR. It is drawn without being converted, so its colors will look flat and pale.", "Convert it to ordinary (SDR) video first, for example by exporting it from the phone or editor as SDR."));
+      }
+      if (scene.say !== undefined && footage.audio && scene.volume > 0.3) {
+        notes.push(warning("VOICE_OVER_SOUND", `${at}.volume`, "This clip is narrated and also plays its own sound at full level, so the two will be heard on top of each other.", 'Set "volume" to 0 to hear only the narration, or to about 0.2 to keep the clip\'s sound underneath.'));
+      }
+      if (scene.transition !== "auto" && scene.transition !== "cut") {
+        notes.push(warning("FIELD_IGNORED", `${at}.transition`, "Footage is cut to and cut from, so this transition is not used.", 'Remove "transition" from the clip.'));
+      }
+      const shown = Math.min(scene.to ?? footage.seconds, footage.seconds) - (scene.from ?? 0);
+      if (scene.duration !== "auto" && scene.duration > shown + 0.05) {
+        notes.push(warning("FIELD_IGNORED", `${at}.duration`, `A clip lasts as long as the footage it shows, ${shown.toFixed(1)}s here; "duration" can only shorten it.`, 'Remove "duration", or show more of the clip with "from" and "to".'));
+      }
+    }
     if (scene.type === "clip" && scene.fit === "cover" && scene.caption !== undefined) {
       notes.push(warning("FIELD_IGNORED", `scenes[${index}].caption`, "A clip that fills the frame leaves no room for a caption, so it is not shown.", 'Remove "caption", or remove "fit" to show the clip inside the frame with its caption.'));
     }
