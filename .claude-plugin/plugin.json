@@ -1,7 +1,7 @@
 {
   "name": "scenefile",
   "description": "Make videos from a short JSON file: scenes, narration, captions, screenshots of your own app. Recipes for explaining code, walking through an app, editing your own clips, launches, releases and repository tours.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Xusniddin Qalandarov"
   },
@@ -20,7 +20,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "scenefile@0.3.0",
+        "scenefile@0.3.1",
         "mcp"
       ]
     }

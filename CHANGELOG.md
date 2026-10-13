@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 (13 October 2026)
+
+- Fixed: on Linux with the ffmpeg that Ubuntu ships, a clip after the first scene played
+  at the wrong moment and was not shown in its own scene. Footage is now placed in a
+  way that does not depend on the ffmpeg version, and CI renders clips on Linux.
+
 ## 0.3.0 (13 October 2026)
 
 Version 0.2.0 was never fully published (only one of its seven packages reached npm),
