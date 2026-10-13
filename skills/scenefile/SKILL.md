@@ -160,7 +160,7 @@ One of the person's own video files, or a part of it. Put several in a row to jo
 - `backdrop`: "blur" fills the frame behind a clip that does not fill it (a tall clip in a wide video) with a blurred copy of itself.
 - `volume`: The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.
 - `captions`: Set true to caption what is said in the clip: the words are heard from its sound, you do not write them. Give the language instead ("en", "ru") if it is heard wrongly. Not used on a clip with `say`.
-- `caption`: A line under the clip, up to 80 characters. Not shown with "cover".
+- `caption`: A line under the clip, up to 80 characters. Not shown with "cover" or a backdrop.
 Example: `{"type":"clip","src":"demo.mp4","from":3,"to":9,"caption":"Signing in"}`
 
 ### terminal

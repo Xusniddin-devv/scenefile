@@ -312,6 +312,15 @@ describe("effects on a clip", () => {
     expect(result.composition?.html).toContain(`<p data-sf-cue="${(clip?.startFrame ?? 0) + 30},`);
   });
 
+  it("tells the renderer the exact frames a clip occupies", () => {
+    const clip = made({}).video?.scenes[1];
+    expect(made({}).composition?.clips?.[0]).toMatchObject({ startFrame: clip?.startFrame, frames: clip?.durationFrames });
+  });
+
+  it("needs no backdrop behind a clip that already fills the frame", () => {
+    expect(made({ backdrop: "blur" }).composition?.clips?.[0]).toMatchObject({ backdrop: false, width: 1920, height: 1080 });
+  });
+
   it("carries the looks to the renderer", () => {
     expect(made({ mono: true, zoom: "in" }).composition?.clips?.[0]).toMatchObject({ mono: true, zoom: "in", backdrop: false });
     expect(made({}).composition?.clips?.[0]).toMatchObject({ mono: false, zoom: "none", backdrop: false, speed: 1 });

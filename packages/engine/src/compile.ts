@@ -55,6 +55,9 @@ export interface PlacedClip {
   stage: { width: number; height: number };
   /** When it starts in the video. */
   atSeconds: number;
+  /** The same in whole frames, which is what the footage is placed by: seconds do not divide evenly into frames. */
+  startFrame: number;
+  frames: number;
   x: number;
   y: number;
   width: number;
@@ -185,6 +188,8 @@ ${sceneChrome(total)}${captions}
   const clips = video.scenes.flatMap((scene): PlacedClip[] => {
     const size = scene.props.type === "clip" ? video.clips.get(scene.props.src) : undefined;
     if (scene.props.type !== "clip" || !scene.clip?.file || !size) return [];
+    const placed = clipPlacement(scene.props, frame, size);
+    const stage = { width: video.width, height: Math.floor(stageHeight / 2) * 2 };
     return [
       {
         file: scene.clip.file,
@@ -194,10 +199,14 @@ ${sceneChrome(total)}${captions}
         speed: scene.props.speed,
         mono: scene.props.mono,
         zoom: scene.props.zoom,
-        backdrop: scene.props.backdrop === "blur" && scene.props.fit !== "cover",
-        stage: { width: video.width, height: Math.floor(stageHeight / 2) * 2 },
+        // Nothing shows behind a clip that fills the stage, so no backdrop is made for one.
+        backdrop:
+          scene.props.backdrop === "blur" && scene.props.fit !== "cover" && (placed.width < stage.width || placed.height < stage.height),
+        stage,
         atSeconds: scene.startFrame / video.fps,
-        ...clipPlacement(scene.props, frame, size),
+        startFrame: scene.startFrame,
+        frames: scene.durationFrames,
+        ...placed,
         volume: scene.clip.audio ? scene.props.volume : 0,
       },
     ];

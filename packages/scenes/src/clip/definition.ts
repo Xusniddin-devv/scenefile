@@ -55,6 +55,10 @@ function span(props: ClipProps): string {
   return `, ${(props.from ?? 0).toFixed(2)}s to ${props.to === undefined ? "its end" : `${props.to.toFixed(2)}s`}`;
 }
 
+function pace(props: ClipProps): string {
+  return props.speed === 1 ? "" : `, at ${props.speed}x speed`;
+}
+
 export const clipDefinition: SceneDefinition<ClipProps> = {
   type: "clip",
   fields: Object.keys(clipSchema.shape),
@@ -64,7 +68,7 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
   minHoldSeconds: 0,
   // Its real length comes from the file; this stands in only where the file is not known.
   holdSeconds: () => 3,
-  summary: (props) => `video ${props.src}${span(props)}`,
+  summary: (props) => `video ${props.src}${span(props)}${pace(props)}`,
   texts(props) {
     const texts: SceneText[] = [];
     if (props.caption && props.fit !== "cover" && props.backdrop !== "blur") texts.push({ path: "caption", text: props.caption, font: "sans" });
@@ -93,7 +97,7 @@ export const clipDefinition: SceneDefinition<ClipProps> = {
       "backdrop": '"blur" fills the frame behind a clip that does not fill it (a tall clip in a wide video) with a blurred copy of itself.',
       "volume": "The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.",
       "captions": 'Set true to caption what is said in the clip: the words are heard from its sound, you do not write them. Give the language instead ("en", "ru") if it is heard wrongly. Not used on a clip with `say`.',
-      "caption": 'A line under the clip, up to 80 characters. Not shown with "cover".',
+      "caption": 'A line under the clip, up to 80 characters. Not shown with "cover" or a backdrop.',
     },
     example: {
       "type": "clip",

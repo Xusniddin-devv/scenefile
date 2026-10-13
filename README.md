@@ -243,7 +243,8 @@ and they are joined; put other scenes around them for titles and endings.
 - Effects, a small fixed set: `"speed": 2` plays twice as fast (0.25 to 4; the sound
   keeps its pitch), `"mono": true` is black and white, `"zoom": "in"` or `"out"` is a slow
   zoom, and `"backdrop": "blur"` fills the frame behind a clip that does not fill it, such
-  as a phone recording in a wide video, with a blurred copy of the clip.
+  as a phone recording in a wide video, with a blurred copy of the clip (a `caption` is
+  then not shown). Below half speed, voices sound choppy; mute the clip or narrate it.
 - Your files are only read. The result is a new file.
 
 What it is not: an editor with a timeline. Clips are joined with cuts; there are no

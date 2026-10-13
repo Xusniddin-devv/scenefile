@@ -249,3 +249,92 @@ describe("clip effects, rendered", () => {
     expect(isBlue(pixel(output, 1, 960, 540))).toBe(true);
   });
 });
+
+/** One point of one exact frame of a file, as [red, green, blue]. */
+function pixelAt(file: string, frame: number, x: number, y: number): number[] {
+  const { stdout } = spawnSync("ffmpeg", ["-loglevel", "error", "-i", file, "-vf", `select=eq(n\\,${frame}),crop=2:2:${x}:${y}`, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+  return [...stdout.subarray(0, 3)];
+}
+/** How bright the middle of one exact frame is, 0 to 255. */
+function brightnessAt(file: string, frame: number, filter = ""): number {
+  const { stdout } = spawnSync("ffmpeg", ["-loglevel", "error", "-i", file, "-vf", `${filter}select=eq(n\\,${frame}),scale=64:36,crop=4:4:30:16`, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", "-"]);
+  return stdout.length > 0 ? stdout[0] ?? -1 : -1;
+}
+
+describe("clips begin and end on exactly their own frames", () => {
+  it("whatever frame a clip starts on, its first and last frames are the footage's, and none is the page", async () => {
+    // Each frame of the footage is a different grey, so any frame can be told from its neighbours.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=gray:s=640x360:d=6:r=30", "-vf", "geq=lum='48+mod(N\\,20)*9':cb=128:cr=128", "-pix_fmt", "yuv420p", join(dir, "counted.mp4")]);
+    const source = (frame: number): number => brightnessAt(join(dir, "counted.mp4"), frame);
+    // A title of 61 frames, then clips of 61, 61 and 60 frames: starts on frames 61, 122 and 183, one of each phase.
+    const { output, composition } = await render("phases.mp4", [
+      { type: "title", heading: "Before", duration: 61 / 30 },
+      { type: "clip", src: "counted.mp4", from: 1, to: 1 + 61 / 30, fit: "cover" },
+      { type: "clip", src: "counted.mp4", from: 2, to: 2 + 61 / 30, fit: "cover" },
+      { type: "clip", src: "counted.mp4", from: 3, to: 5, fit: "cover" },
+      { type: "title", heading: "After", duration: 2 },
+    ]);
+    const starts = composition.manifest.scenes.slice(1, 4).map((scene) => [scene.startFrame, scene.durationFrames] as const);
+    expect(starts.map(([start]) => start % 3).sort()).toEqual([0, 1, 2]);
+    for (const [index, [start, frames]] of starts.entries()) {
+      const from = [30, 60, 90][index] ?? 0;
+      expect(Math.abs(brightnessAt(output, start) - source(from)), `clip ${index} first frame`).toBeLessThanOrEqual(3);
+      expect(Math.abs(brightnessAt(output, start + frames - 1) - source(from + frames - 1)), `clip ${index} last frame`).toBeLessThanOrEqual(3);
+      expect(Math.abs(brightnessAt(output, start + 1) - source(from + 1)), `clip ${index} second frame`).toBeLessThanOrEqual(3);
+    }
+  });
+});
+
+describe("clip effects, held to what they claim", () => {
+  it("a zoom starts or ends on the untouched picture, and moves steadily in between", async () => {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=640x360:d=3:r=30", "-vf", "drawbox=x=240:y=100:w=160:h=160:color=white:t=fill", "-pix_fmt", "yuv420p", join(dir, "box.mp4")]);
+    const scenes = (zoom: string) => [{ type: "clip", src: "box.mp4", fit: "cover", zoom }, { type: "title", heading: "After", duration: 2 }];
+    const plain = (await render("z-none.mp4", scenes("none"))).output;
+    const inward = (await render("z-in.mp4", scenes("in"))).output;
+    const outward = (await render("z-out.mp4", scenes("out"))).output;
+    /** Where the square's left edge is on a frame, to a fraction of a pixel. */
+    const edge = (file: string, frame: number): number => {
+      const { stdout } = spawnSync("ffmpeg", ["-loglevel", "error", "-i", file, "-vf", `select=eq(n\\,${frame}),crop=100:2:650:540`, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", "-"]);
+      for (let i = 1; i < 100; i++) {
+        const [a = 0, b = 0] = [stdout[i - 1], stdout[i]];
+        if (b >= 128 && a < 128) return 650 + i - 1 + (128 - a) / (b - a);
+      }
+      return Number.NaN;
+    };
+    const still = edge(plain, 0);
+    expect(Math.abs(edge(inward, 0) - still)).toBeLessThan(0.15);
+    expect(Math.abs(edge(outward, 89) - still)).toBeLessThan(0.15);
+    // Eight percent closer at the far end: the edge is 8% further from the centre.
+    const far = 960 - (960 - still) * 1.08;
+    expect(Math.abs(edge(inward, 89) - far)).toBeLessThan(0.5);
+    expect(Math.abs(edge(outward, 0) - far)).toBeLessThan(0.5);
+    // And it never steps backwards on the way.
+    const path = Array.from({ length: 30 }, (_, i) => edge(inward, i * 3));
+    for (let i = 1; i < path.length; i++) expect(path[i] ?? 0, `frame ${i * 3}`).toBeLessThanOrEqual((path[i - 1] ?? 0) + 0.02);
+  });
+
+  it("the backdrop is really blurred, and loses its color when the clip does", async () => {
+    // Fine vertical stripes: sharp, they swing between black and white; blurred, they are an even grey.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=360x640:d=2:r=25", "-vf", "geq=r='255*lt(mod(X\\,8)\\,4)':g=0:b=0", "-pix_fmt", "yuv420p", join(dir, "stripes.mp4")]);
+    const { output } = await render("blurred.mp4", [{ type: "clip", src: "stripes.mp4", backdrop: "blur" }, { type: "title", heading: "After", duration: 2 }]);
+    const reds = Array.from({ length: 12 }, (_, i) => pixelAt(output, 20, 60 + i * 7, 540)[0] ?? 0);
+    expect(Math.max(...reds) - Math.min(...reds)).toBeLessThan(40);
+    expect(Math.max(...reds)).toBeGreaterThan(20);
+    const mono = (await render("blurred-mono.mp4", [{ type: "clip", src: "stripes.mp4", backdrop: "blur", mono: true }, { type: "title", heading: "After", duration: 2 }])).output;
+    const [r = 0, g = 0, b = 0] = pixelAt(mono, 20, 100, 540);
+    expect(Math.abs(r - g) + Math.abs(g - b)).toBeLessThan(12);
+  });
+
+  it("keeps the sound whole at the slowest and fastest speeds", async () => {
+    for (const speed of [0.25, 4]) {
+      const { output, composition } = await render(`speed-${speed}.mp4`, [{ type: "clip", src: "red.mp4", from: 0, to: 2, speed }, { type: "title", heading: "After", duration: 3 }]);
+      const shown = composition.clips?.[0]?.seconds ?? 0;
+      expect(shown).toBeCloseTo(2 / speed, 1);
+      const track = soundTrack(output);
+      expect(Math.abs(track.start)).toBeLessThan(0.05);
+      expect(track.seconds).toBeCloseTo(composition.manifest.totalFrames / 30, 1);
+      expect(loudness(output, shown * 0.2, shown * 0.5)).toBeGreaterThan(-40);
+      expect(loudness(output, shown + 0.6, 1)).toBeLessThan(-60);
+    }
+  });
+});

@@ -118,7 +118,7 @@ export function resolve(
             "CLIP_TOO_SHORT",
             `scenes[${index}].say`,
             `This line takes about ${spoken.seconds.toFixed(1)}s to say, but the clip is on screen for ${(durationFrames / fps).toFixed(1)}s.`,
-            "Shorten the line, or show more of the clip.",
+            props.speed > 1 ? "Shorten the line, show more of the clip, or play it slower." : "Shorten the line, or show more of the clip.",
           ),
         );
       }

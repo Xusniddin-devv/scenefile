@@ -244,18 +244,22 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         const size = clip.cover
           ? `scale=${clip.width}:${clip.height}:force_original_aspect_ratio=increase:${color},crop=${clip.width}:${clip.height}`
           : `scale=${clip.width}:${clip.height}:${color}`;
-        // A slow zoom about the centre, eight percent over the clip. The picture is doubled in size first:
-        // the zoom moves in whole pixels, and at the picture's own size that shows as a tremble.
-        const frames = Math.max(1, Math.round(clip.seconds * fps));
-        const amount = clip.zoom === "in" ? `1+0.08*on/${frames}` : `1.08-0.08*on/${frames}`;
-        const zoom =
-          clip.zoom === "none"
-            ? ""
-            : `,scale=${clip.width * 2}:${clip.height * 2},zoompan=z='${amount}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${clip.width}x${clip.height}:fps=${fps}`;
+        // A slow zoom about the centre, eight percent over the clip, drawn between pixels so that it glides
+        // rather than steps. It begins (or ends) on exactly the untouched picture, so a zoomed clip joins an
+        // unzoomed one of the same footage without a jump.
+        const steps = Math.max(1, clip.frames - 1);
+        const amount = clip.zoom === "in" ? `(1+0.08*(on-1)/${steps})` : `(1.08-0.08*(on-1)/${steps})`;
+        const corner = (x: "-" | "+", y: "-" | "+"): string => `'W/2${x}W/2/${amount}':'H/2${y}H/2/${amount}'`;
+        const corners = [corner("-", "-"), corner("+", "-"), corner("-", "+"), corner("+", "+")].map((pair, i) => {
+          const [px, py] = pair.split("':'");
+          return `x${i}=${px}':y${i}='${py}`;
+        });
+        const zoom = clip.zoom === "none" ? "" : `,perspective=${corners.join(":")}:eval=frame:sense=source:interpolation=cubic`;
         const mono = clip.mono ? ",hue=s=0" : "";
-        const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.atSeconds.toFixed(6)}/TB`;
-        const until = clip.atSeconds + clip.seconds - 0.5 / fps;
-        const shown = `enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'`;
+        // Placed by frame number. After the frame rate is set, time is counted in frames, so this is exact;
+        // placing by seconds lands a frame early or late whenever the start is not a round number.
+        const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.startFrame}`;
+        const shown = `enable='between(n,${clip.startFrame},${clip.startFrame + clip.frames - 1})'`;
         // Brought to the speed it is played at and to the video's frame rate, starting from zero.
         const paced = `[${index + 1}:v]setpts=(PTS-STARTPTS)/${clip.speed},fps=${fps}`;
         if (clip.backdrop) {
@@ -263,7 +267,8 @@ export async function renderVideo(composition: Composition, options: RenderOptio
           filters.push(
             `${paced},split[front${index}][behind${index}]`,
             // Blurred small and enlarged, which is both softer and far quicker than blurring at full size.
-            `[behind${index}]scale=${width}:${height}:force_original_aspect_ratio=increase:${color},crop=${width}:${height},scale=iw/8:ih/8,boxblur=4:2,colorchannelmixer=rr=0.55:gg=0.55:bb=0.55,scale=${width}:${height}:${color}${mono},${placed}[back${index}]`,
+            // Cut to the stage's shape first, so even a sliver of a clip is never enlarged to an enormous picture.
+            `[behind${index}]crop='min(iw,ih*${width}/${height})':'min(ih,iw*${height}/${width})',scale=${width}:${height}:${color},scale=iw/8:ih/8,boxblur=4:2,colorchannelmixer=rr=0.55:gg=0.55:bb=0.55,scale=${width}:${height}:${color}${mono},${placed}[back${index}]`,
             `[${base}][back${index}]overlay=0:0:eof_action=repeat:${shown}[under${index}]`,
             `[front${index}]${size}${zoom}${mono},${placed}[clip${index}]`,
             `[under${index}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=repeat:${shown}[over${index}]`,
