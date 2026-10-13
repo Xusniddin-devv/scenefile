@@ -44,7 +44,19 @@ export interface LoadedAssets {
   speech?: Map<number, Speech>;
   /** Video clips that were found and read, by the `src` the scenefile gave. */
   clips?: Map<string, ClipInfo>;
+  /** What was heard in clips that are to be captioned, by scene index. Times are seconds from where the clip starts playing. */
+  transcripts?: Map<number, Heard[]>;
 }
+
+/** Something said: when it starts and ends, and the words. */
+export interface Heard {
+  start: number;
+  end: number;
+  text: string;
+}
+
+/** Listens to part of a file and returns what was said in it, timed from the start of that part. */
+export type Transcribe = (file: string, fromSeconds: number, seconds: number) => Promise<Heard[]>;
 
 /** What is known about a video file used as a clip. */
 export interface ClipInfo {

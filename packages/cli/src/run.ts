@@ -12,6 +12,8 @@ import {
   formatDiagnostics,
   sceneGuide,
   type Speak,
+  type Heard,
+  type Transcribe,
 } from "@scenefile/engine";
 import {
   EnvironmentError,
@@ -37,6 +39,10 @@ import {
   type CaptureReport,
   capturePage,
   probeClip,
+  HEARING_MODEL,
+  createTranscriber,
+  hearingInstalled,
+  installHearing,
 } from "@scenefile/render";
 import { THEMES, type Diagnostic, error, nearest, parseScenefileText, scenefileJsonSchema } from "@scenefile/schema";
 import { SCENE_TYPES, getScene, isSceneType } from "@scenefile/scenes";
@@ -60,6 +66,8 @@ export interface Io {
   capture?: (options: CaptureOptions) => Promise<CaptureReport>;
   /** Test seam. Defaults to asking GitHub. */
   repoFacts?: (ref: RepoRef) => Promise<RepoFacts>;
+  /** Test seam. Defaults to the listening model on this machine, downloading it the first time. */
+  transcribe?: Transcribe;
 }
 
 type ExitCode = 0 | 1 | 2;
@@ -72,6 +80,8 @@ const USAGE = `Usage:
   scenefile github <owner/name or address> [-o <out.mp4>] [--dir <folder>] [--theme <name>] [--narrate] [--no-screenshot]
                                    a scenefile, and a video, from a GitHub repository's own facts
   scenefile probe <video>...       the size, length and sound of video files, for planning clips
+  scenefile transcribe <file> [--language en] [--json] | --install
+                                   what is said in a video or sound file, with times
   scenefile guide                  how to write a scenefile
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
@@ -88,6 +98,16 @@ const USAGE = `Usage:
 Exit codes: 0 success, 1 the scenefile has errors, 2 usage or environment problem.`;
 
 class UsageError extends Error {}
+
+/** The listener the command line uses: it may download its model, and says so. */
+function listener(io: Io, language?: string): Transcribe {
+  return createTranscriber({
+    download: true,
+    onDownload: (megabytes) => io.err(`Downloading the listening model (${megabytes} MB). This happens once.`),
+    install: { onProgress: progress(io) },
+    ...(language ? { language } : {}),
+  });
+}
 
 /** Reports a download every tenth of the way, so a long one is seen to be moving. */
 function progress(io: Io): (received: number, total: number) => void {
@@ -132,6 +152,7 @@ async function load(path: string, io: Io): Promise<CheckResult> {
           io.err(`Downloading the voice "${name}" (${Math.round(info.bytes / 1e6)} MB). This happens once.`),
         install: { onProgress: progress(io) },
       }),
+    transcribe: io.transcribe ?? listener(io),
   });
   return { ...prepared, diagnostics: [...parsed.diagnostics, ...prepared.diagnostics] };
 }
@@ -293,6 +314,41 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out(`Next: scenefile check ${target}\nThen: scenefile render ${target} -o ${slug}.mp4`);
       return 0;
     }
+    if (command === "transcribe") {
+      if (values.install) {
+        if (hearingInstalled()) {
+          io.out("The listening model is installed.");
+          return 0;
+        }
+        io.err(`Downloading the listening model (${Math.round(HEARING_MODEL.bytes / 1e6)} MB). This happens once.`);
+        try {
+          await installHearing(undefined, { onProgress: progress(io) });
+        } catch (cause) {
+          io.err(cause instanceof Error ? cause.message : String(cause));
+          return 2;
+        }
+        io.out("The listening model is installed.");
+        return 0;
+      }
+      if (!file) throw new UsageError('"transcribe" needs a video or sound file, or --install.');
+      if (values.language !== undefined && !/^[a-z]{2}$/.test(values.language)) {
+        throw new UsageError(`--language is a two-letter code such as en or ru; got "${values.language}".`);
+      }
+      const found = await probeClip(resolvePath(file)).catch(() => null);
+      const length = found?.seconds ?? 86_400;
+      let heard: Heard[];
+      try {
+        heard = await (io.transcribe ?? listener(io, values.language))(resolvePath(file), 0, length);
+      } catch (cause) {
+        if (cause instanceof EnvironmentError) throw cause;
+        io.err(cause instanceof Error ? cause.message : String(cause));
+        return 2;
+      }
+      if (values.json) io.out(JSON.stringify(heard, null, 2));
+      else if (heard.length === 0) io.out("Nothing was heard being said.");
+      else io.out(heard.map((part) => `${part.start.toFixed(2).padStart(7)}s - ${part.end.toFixed(2).padStart(7)}s  ${part.text}`).join("\n"));
+      return 0;
+    }
     if (command === "probe") {
       const files = positionals.slice(1);
       if (files.length === 0) throw new UsageError('"probe" needs one or more video files.');
@@ -355,7 +411,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, capture, github, probe, guide, scenes, schema, init, setup, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, capture, github, probe, transcribe, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -430,6 +486,8 @@ function parse(argv: readonly string[]) {
       "with-deps": { type: "boolean", default: false },
       device: { type: "string" },
       dir: { type: "string" },
+      language: { type: "string" },
+      install: { type: "boolean", default: false },
       theme: { type: "string" },
       narrate: { type: "boolean", default: false },
       "no-screenshot": { type: "boolean", default: false },

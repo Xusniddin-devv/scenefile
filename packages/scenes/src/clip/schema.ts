@@ -15,6 +15,8 @@ export const clipSchema = z
     /** How loud the clip's own sound is: 0 is silent, 1 as recorded. */
     volume: z.number().min(0).max(1).default(1),
     caption: z.string().min(1).max(80).optional(),
+    /** Show what is said in the clip as captions, heard from its sound. */
+    captions: z.boolean().default(false),
     duration: durationSchema.default("auto"),
     /** How this scene arrives from the one before it. */
     transition: transitionSchema.default("auto"),

@@ -155,6 +155,7 @@ One of the person's own video files, or a part of it. Put several in a row to jo
 - `to`: Seconds into the file to stop at. Leave out to play to the end. The scene lasts exactly as long as what is shown, and is cut to and from.
 - `fit`: "contain" (default) shows the whole picture inside the frame; "cover" fills the frame and crops.
 - `volume`: The clip's own sound, from 0 (silent) to 1 (default). Use 0 when the scene is narrated.
+- `captions`: Set true to caption what is said in the clip. The words are heard from its sound; you do not write them.
 - `caption`: A line under the clip, up to 80 characters. Not shown with "cover".
 Example: `{"type":"clip","src":"demo.mp4","from":3,"to":9,"caption":"Signing in"}`
 

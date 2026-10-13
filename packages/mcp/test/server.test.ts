@@ -54,10 +54,10 @@ async function connect(options: Partial<ServerOptions> = {}) {
 }
 
 describe("the tools on offer", () => {
-  it("are five, each with a description a model can choose by", async () => {
+  it("are six, each with a description a model can choose by", async () => {
     const { client, close } = await connect();
     const { tools } = await client.listTools();
-    expect(tools.map((tool) => tool.name).sort()).toEqual(["check", "guide", "job", "render", "scene_docs"]);
+    expect(tools.map((tool) => tool.name).sort()).toEqual(["check", "guide", "job", "render", "scene_docs", "transcribe"]);
     for (const tool of tools) expect(tool.description?.length ?? 0, tool.name).toBeGreaterThan(40);
     await close();
   });
@@ -471,6 +471,26 @@ describe("capturing a web page through the server", () => {
     expect(isError).toBe(false);
     expect(seen).toEqual([join(root, "shots", "home.png")]);
     expect(text).toContain('"src": "shots/home.png"');
+    await close();
+  });
+});
+
+describe("listening to a file through the server", () => {
+  it("says what is spoken, only for files inside the root", async () => {
+    writeFileSync(join(root, "talk.mp4"), "x");
+    const asked: string[] = [];
+    const { call, close } = await connect({
+      transcribe: async (file) => {
+        asked.push(file);
+        return [{ start: 0.5, end: 3.2, text: "Here are two recordings." }];
+      },
+    });
+    const { text, isError } = await call("transcribe", { path: "talk.mp4" });
+    expect(isError).toBe(false);
+    expect(text).toBe("0.50s - 3.20s  Here are two recordings.");
+    expect((await call("transcribe", { path: "../talk.mp4" })).isError).toBe(true);
+    expect((await call("transcribe", { path: "missing.mp4" })).isError).toBe(true);
+    expect(asked).toHaveLength(1);
     await close();
   });
 });

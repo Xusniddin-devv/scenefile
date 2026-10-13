@@ -28,7 +28,7 @@ export {
 } from "./layout";
 export { CAPTION_CHARACTERS, type Cue, captionCues } from "./captions";
 export { type PlacedClip } from "./compile";
-export { type ClipInfo, MAX_CLIP_BYTES, clipRefs, loadClips } from "./assets";
+export { type ClipInfo, type Heard, MAX_CLIP_BYTES, type Transcribe, clipRefs, loadClips } from "./assets";
 export { type Composition, type Manifest, type ManifestScene, compile } from "./compile";
 export { type FontSubset, type LoadedFont, fontCovers, fontFaceCss, glyphDiagnostics, loadFont, videoTexts } from "./fonts";
 export { FORMAT_SIZES } from "./formats";

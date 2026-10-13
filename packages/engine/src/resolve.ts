@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, type ThemeName, error, warning } from "@scenefile/schema";
 import { type Scene, type TransitionKind, getScene } from "@scenefile/scenes";
-import type { AssetMap, ClipInfo } from "./assets";
+import type { AssetMap, ClipInfo, Heard } from "./assets";
 import { FORMAT_SIZES } from "./formats";
 import { contrastRatio, getTheme } from "./themes";
 import { TRANSITION_SECONDS, isOverlapping, pickTransitions } from "./transitions";
@@ -22,6 +22,8 @@ export interface ResolvedScene {
   speech?: { startFrame: number; seconds: number; file?: string };
   /** For a clip: the file once read, where in it this scene starts, and how long the file is. */
   clip?: { file?: string; fromSeconds: number; totalSeconds?: number; audio: boolean };
+  /** For a captioned clip: what is said in the part shown, in seconds from the scene's start. */
+  heard?: Heard[];
 }
 
 export interface ResolvedVideo {
@@ -34,8 +36,10 @@ export interface ResolvedVideo {
   scenes: ResolvedScene[];
   /** Loaded images, by the `src` the scenefile gave. */
   assets: AssetMap;
-  /** Whether spoken lines are also shown as captions. */
+  /** Whether anything is shown as captions, so the frame keeps a band for them. */
   captions: boolean;
+  /** Whether narrated lines are among them. */
+  voiceCaptions: boolean;
   /** Video clips that were read, by the `src` the scenefile gave. */
   clips: ReadonlyMap<string, ClipInfo>;
 }
@@ -60,6 +64,7 @@ export function resolve(
   assets: AssetMap = new Map(),
   speech: ReadonlyMap<number, Speech> = new Map(),
   clips: ReadonlyMap<string, ClipInfo> = new Map(),
+  transcripts: ReadonlyMap<number, Heard[]> = new Map(),
 ): { video: ResolvedVideo; diagnostics: Diagnostic[] } {
   const { fps } = scenefile;
   const diagnostics: Diagnostic[] = [];
@@ -123,6 +128,14 @@ export function resolve(
         transition: transitions[index] ?? "none", overlapFrames: 0,
         ...(spoken ? { speech: { startFrame: cursor + leadFrames, ...spoken } } : {}),
         clip: { ...(info ? { file: info.file, totalSeconds: info.seconds } : {}), fromSeconds: from, audio: info?.audio ?? false },
+        // Only what falls inside the part shown, and no later than the scene's end.
+        ...(props.captions && transcripts.has(index)
+          ? {
+              heard: (transcripts.get(index) ?? [])
+                .filter((part) => part.start < durationFrames / fps && part.end > 0)
+                .map((part) => ({ ...part, start: Math.max(0, part.start), end: Math.min(part.end, durationFrames / fps) })),
+            }
+          : {}),
       });
       cursor += durationFrames;
       continue;
@@ -233,7 +246,9 @@ export function resolve(
       totalFrames: cursor,
       scenes,
       assets,
-      captions: scenefile.voice?.captions === true && scenes.some((scene) => scene.speech),
+      captions:
+        (scenefile.voice?.captions === true && scenes.some((scene) => scene.speech)) || scenes.some((scene) => (scene.heard?.length ?? 0) > 0),
+      voiceCaptions: scenefile.voice?.captions === true && scenes.some((scene) => scene.speech),
       clips,
     },
     diagnostics,

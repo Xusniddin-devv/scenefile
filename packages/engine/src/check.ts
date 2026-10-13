@@ -1,6 +1,6 @@
 import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
-import { type AssetSources, type ClipInfo, type LoadedAssets, MAX_CLIP_SIDE, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
+import { type AssetSources, type ClipInfo, type Heard, type LoadedAssets, MAX_CLIP_SIDE, type Transcribe, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
 import { type Composition, compile } from "./compile";
 import { displayFace, glyphDiagnostics } from "./fonts";
 import { FONT_FAMILIES, getTheme } from "./themes";
@@ -40,6 +40,9 @@ export function storyboard(video: ResolvedVideo, report?: InspectReport, music =
           : `  (enters by ${scene.transition}${scene.overlapFrames > 0 ? ` over ${seconds(scene.overlapFrames)}` : ""})`
       }`,
     );
+    for (const part of scene.heard ?? []) {
+      lines.push(`     heard  ${part.start.toFixed(2)}s-${part.end.toFixed(2)}s  ${part.text}`);
+    }
     if (scene.speech) {
       const about = scene.speech.file === undefined ? "about " : "";
       lines.push(`     say  ${about}${scene.speech.seconds.toFixed(1)}s of speech from ${seconds(scene.speech.startFrame)}`);
@@ -180,7 +183,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
 
-  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech, loaded?.clips);
+  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech, loaded?.clips, loaded?.transcripts);
   const notes: Diagnostic[] = [];
   const headings = displayFace(resolved.video);
   if (headings.missing.length > 0) {
@@ -210,6 +213,16 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
       const shown = Math.min(scene.to ?? footage.seconds, footage.seconds) - (scene.from ?? 0);
       if (scene.duration !== "auto" && scene.duration > shown + 0.05) {
         notes.push(warning("FIELD_IGNORED", `${at}.duration`, `A clip lasts as long as the footage it shows, ${shown.toFixed(1)}s here; "duration" can only shorten it.`, 'Remove "duration", or show more of the clip with "from" and "to".'));
+      }
+    }
+    if (scene.type === "clip" && scene.captions && footage) {
+      const at = `scenes[${index}].captions`;
+      const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === at);
+      const heard = loaded?.transcripts?.get(index);
+      if (!heard && !reported) {
+        notes.push(error("CAPTIONS_FAILED", at, "This clip was to be captioned, but its sound has not been listened to.", "Check the scenefile with the scenefile command, which listens to its clips."));
+      } else if (heard && heard.length === 0) {
+        notes.push(warning("CAPTIONS_EMPTY", at, footage.audio ? "Nothing was heard being said in this part of the clip, so it has no captions." : "This clip has no sound, so it has no captions.", 'Remove "captions", or write a "caption" line instead.'));
       }
     }
     if (scene.type === "clip" && scene.fit === "cover" && scene.caption !== undefined) {
@@ -276,6 +289,8 @@ export async function checkWithAssets(
     speak?: Speak;
     /** Reads a video file's size, length and sound. Without it, clips cannot be used. */
     probeClip?: (file: string) => Promise<ClipInfo | null>;
+    /** Listens to a clip. Without it, clips cannot be captioned from their sound. */
+    transcribe?: Transcribe;
   },
 ): Promise<CheckResult> {
   const { scenefile } = normalize(input);
@@ -286,7 +301,7 @@ export async function checkWithAssets(
   const speech = new Map<number, Speech>();
   const spoken: Diagnostic[] = [];
   const footage = await loadClips(clipRefs(scenefile), sources);
-  const loaded = {
+  const loaded: LoadedAssets = {
     ...images,
     audio: music.audio,
     clips: footage.clips,
@@ -295,8 +310,27 @@ export async function checkWithAssets(
   // Speech is the slow part. A scenefile with other problems is reported before any is made;
   // only its length is left to judge afterwards, when the real lengths are known.
   const first = check(input, loaded);
-  if (first.diagnostics.some((diagnostic) => diagnostic.severity === "error" && diagnostic.code !== "TOTAL_DURATION")) {
+  // (A clip not yet listened to is the very thing about to be put right.)
+  if (first.diagnostics.some((diagnostic) => diagnostic.severity === "error" && diagnostic.code !== "TOTAL_DURATION" && diagnostic.code !== "CAPTIONS_FAILED")) {
     return first;
+  }
+  // Listening, like speaking, is slow: it is done only for a scenefile with nothing else wrong.
+  const transcripts = new Map<number, Heard[]>();
+  const unheard: Diagnostic[] = [];
+  if (sources.transcribe) {
+    for (const [index, scene] of scenefile.scenes.entries()) {
+      const resolved = first.video?.scenes[index];
+      if (scene.type !== "clip" || !scene.captions || !resolved?.clip?.file) continue;
+      const info = footage.clips.get(scene.src);
+      try {
+        transcripts.set(index, info?.audio ? await sources.transcribe(resolved.clip.file, resolved.clip.fromSeconds, resolved.durationFrames / scenefile.fps) : []);
+      } catch (cause) {
+        unheard.push(error("CAPTIONS_FAILED", `scenes[${index}].captions`, cause instanceof Error ? cause.message : String(cause), 'Fix what the message says and try again, or remove "captions" from the clip.'));
+        break;
+      }
+    }
+    loaded.transcripts = transcripts;
+    loaded.diagnostics = [...loaded.diagnostics, ...unheard];
   }
   if (sources.speak) {
     for (const [index, scene] of scenefile.scenes.entries()) {

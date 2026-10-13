@@ -30,6 +30,10 @@ export interface VoiceInfo {
   folder?: string;
   /** Which voice inside a model that holds several. */
   speaker?: number;
+  /** Where the archive is, when it is not among the voices. */
+  url?: string;
+  /** The files that must all be present, when they are not a voice's. */
+  files?: string[];
 }
 
 const KOKORO = {
@@ -74,6 +78,7 @@ function folderOf(voicesDir: string, name: VoiceName): string {
 
 /** A voice needs all of these; one missing makes the speech engine fail or crash. */
 function wholeVoice(folder: string, info: VoiceInfo): boolean {
+  if (info.files) return info.files.every((part) => existsSync(join(folder, part)));
   const parts = info.kind === "kokoro" ? ["model.onnx", "voices.bin", "tokens.txt"] : [`${info.model}.onnx`, "tokens.txt"];
   return [...parts, join("espeak-ng-data", "phontab")].every((part) => existsSync(join(folder, part)));
 }
@@ -131,8 +136,8 @@ async function sweepInstalls(voicesDir: string): Promise<void> {
 }
 
 /** Downloads a voice, checks it is the file expected, and unpacks it. Does nothing if it is already there. */
-export async function installVoice(name: VoiceName, options: InstallOptions): Promise<void> {
-  const info = options.info ?? VOICE_CATALOG[name];
+export async function installVoice(name: VoiceName | (string & {}), options: InstallOptions): Promise<void> {
+  const info = options.info ?? VOICE_CATALOG[name as VoiceName];
   const folder = folderName(info);
   const target = join(options.voicesDir, folder);
   if (wholeVoice(target, info)) return;
@@ -152,7 +157,7 @@ export async function installVoice(name: VoiceName, options: InstallOptions): Pr
       clearTimeout(quiet);
       quiet = setTimeout(() => stalled.abort(), patience);
     };
-    const response = await (options.fetch ?? fetch)(`${RELEASE}/${folder}.tar.bz2`, { redirect: "follow", signal: stalled.signal }).catch(
+    const response = await (options.fetch ?? fetch)(info.url ?? `${RELEASE}/${folder}.tar.bz2`, { redirect: "follow", signal: stalled.signal }).catch(
       (cause: unknown) => {
         clearTimeout(quiet);
         throw stalled.signal.aborted ? new Error(`The download for the voice "${name}" did not start. Check the connection and try again.`) : cause;
@@ -201,12 +206,13 @@ export type Synthesize = (voiceFolder: string, model: string, text: string, info
 interface Made {
   id: number;
   sampleRate?: number;
+  heard?: { start: number; end: number; text: string }[];
   error?: string;
 }
 
 let helper: ChildProcess | undefined;
 let asked = 0;
-const waiting = new Map<number, { out: string; resolve: (sound: Samples) => void; reject: (cause: Error) => void }>();
+const waiting = new Map<number, { out: string; resolve: (sound: Samples) => void; reject: (cause: Error) => void; heard?: (parts: NonNullable<Made["heard"]>) => void }>();
 
 /** While nothing is being made, the helper must not keep a finished command from exiting. */
 function hold(busy: boolean): void {
@@ -238,6 +244,7 @@ function speechHelper(): ChildProcess {
     waiting.delete(made.id);
     if (waiting.size === 0) hold(false);
     if (!pending) return;
+    if (made.heard && pending.heard) return pending.heard(made.heard);
     if (made.error !== undefined || !made.sampleRate) return pending.reject(new Error(made.error ?? "The speech engine returned nothing."));
     try {
       const raw = readFileSync(pending.out);
@@ -385,4 +392,15 @@ export function createSpeaker(options: SpeakerOptions): Speak {
     await prune(linesDir, options.maxCacheBytes ?? MAX_CACHE_BYTES, file).catch(() => undefined);
     return { file, seconds };
   };
+}
+
+/** Asks the helper process what is said in a file of raw sound (16 kHz, one channel, 32-bit floats). */
+export function hearInHelper(sound: string, model: string, vad: string, language: string): Promise<{ start: number; end: number; text: string }[]> {
+  return new Promise((resolve, reject) => {
+    asked += 1;
+    const process_ = speechHelper();
+    waiting.set(asked, { out: "", resolve: () => undefined, reject, heard: resolve });
+    hold(true);
+    process_.send({ id: asked, hear: true, sound, model, vad, language });
+  });
 }

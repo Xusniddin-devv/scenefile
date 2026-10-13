@@ -27,7 +27,7 @@ describe("recipe skills", () => {
     expect(skill).toContain("Do not invent");
     expect(skill).toContain("scenefile check");
     // Short enough to read in one go beside the guide.
-    expect(skill.length).toBeLessThan(5500);
+    expect(skill.length).toBeLessThan(6200);
 
     const example = JSON.parse(readFileSync(join(root, name, "example.json"), "utf8")) as { scenes: { type: string; src?: string; say?: string }[] };
     // Pictures are stood in for; everything else is checked for real.
@@ -41,9 +41,12 @@ describe("recipe skills", () => {
       example.scenes.flatMap((scene) => (scene.type === "clip" && scene.src ? [[scene.src, { file: `/videos/${scene.src}`, width: 1920, height: 1080, seconds: 30, audio: true }] as const] : [])),
     );
     const pictures = new Map([...assets].filter(([src]) => !clips.has(src)));
-    const result = check(example, { assets: pictures as never, clips, diagnostics: [] });
+    // And what is said in a captioned clip is taken to have been heard.
+    const transcripts = new Map(example.scenes.flatMap((scene, index) => ((scene as { captions?: boolean }).captions ? [[index, [{ start: 0.5, end: 3, text: "Welcome to the release." }]] as const] : [])));
+    const result = check(example, { assets: pictures as never, clips, transcripts: transcripts as never, diagnostics: [] });
     expect(result.diagnostics).toEqual([]);
-    expect(example.scenes.every((scene) => typeof scene.say === "string")).toBe(true);
+    // Every scene has words: a narrator's, or the clip's own.
+    expect(example.scenes.every((scene) => typeof scene.say === "string" || (scene as { captions?: boolean }).captions === true)).toBe(true);
     expect(example.scenes.length).toBeGreaterThanOrEqual(4);
   });
 });

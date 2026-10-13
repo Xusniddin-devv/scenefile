@@ -8,6 +8,8 @@ so this release carries everything listed here.
 - A `clip` scene for your own video files: cut, join, fit and mix their sound with
   music and narration. `scenefile probe` prints the size and length of video files, and
   a sixth recipe skill, `scenefile-edit-video`, teaches an agent to make the edit.
+- `"captions": true` on a clip captions what is said in it, heard on your machine by a
+  speech-recognition model; `scenefile transcribe <file>` prints what is said with times.
 - Two natural English voices, `en-emma` (now the default) and `en-george`, from the
   Kokoro model. `"voice": "female"` or `"male"` picks one.
 - A Claude Code plugin, and recipe skills for coding agents: explain code, walk

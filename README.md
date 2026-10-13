@@ -127,9 +127,10 @@ prints a JSON Schema for tools that can enforce one on a model's output.
 }
 ```
 
-The server offers five tools: `guide` (how to write a scenefile, in about 2,400 tokens),
-`scene_docs`, `check`, `render` (returns a job id at once) and `job` (progress, then the
-finished file; it can also cancel). A scenefile can be passed inline or as a path.
+The server offers six tools: `guide` (how to write a scenefile, in about 2,400 tokens),
+`scene_docs`, `check`, `render` (returns a job id at once), `job` (progress, then the
+finished file; it can also cancel) and `transcribe` (what is said in a video or sound
+file, with times). `capture` is a seventh, offered only when asked for; see below. A scenefile can be passed inline or as a path.
 
 What the server can touch:
 
@@ -229,11 +230,18 @@ and they are joined; put other scenes around them for titles and endings.
   recording stored on its side is turned upright.
 - A clip keeps its own sound unless you set `"volume": 0`; music and narration mix with
   it, and narrated lines get captions like any other scene.
+- `"captions": true` on a clip captions what is said in it. The words are heard from the
+  clip's sound by a speech-recognition model on your machine (Whisper base, MIT licence,
+  a 208 MB download on first use) and shown as they are spoken. `scenefile transcribe
+  clip.mp4` prints the same thing with times, so you, or an agent that cannot hear, can
+  see what a clip says before cutting it.
 - Your files are only read. The result is a new file.
 
 What it is not: an editor with a timeline. Clips are joined with cuts; there are no
-transitions through footage, no speed changes, no colour work, and it does not transcribe
-what is said in a clip. HDR footage (what recent phones record by default) is not
+transitions through footage, no speed changes and no colour work. Automatic captions
+are what a small model heard: clear speech in a common language comes out well, while
+names, noise and quiet voices are sometimes misheard, and there is no way yet to correct
+a word (write the line as a `caption` or narrate it instead). HDR footage (what recent phones record by default) is not
 converted and looks flat, and interlaced footage is not deinterlaced; `check` warns about
 HDR. Clips are MP4, MOV, MKV or WebM files of at most 8192 pixels on a side. Clips must be in the scenefile's folder, like images. Rendering
 re-encodes the whole video once more when it contains clips, so it takes longer.

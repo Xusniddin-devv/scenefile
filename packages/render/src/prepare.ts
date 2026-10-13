@@ -4,11 +4,13 @@ import {
   type Composition,
   type InspectReport,
   type Speak,
+  type Transcribe,
   applyLayout,
   checkWithAssets,
 } from "@scenefile/engine";
 import { error } from "@scenefile/schema";
 import { inspectComposition } from "./inspect";
+import { createTranscriber } from "./hearing";
 import { hasSound, probeClip } from "./probe";
 
 export interface PrepareOptions extends AssetSources {
@@ -18,6 +20,8 @@ export interface PrepareOptions extends AssetSources {
   hasSound?: (file: string) => Promise<boolean>;
   /** Makes the narration. Without it, narrated scenes are timed by estimate and rendered silent. */
   speak?: Speak;
+  /** Listens to clips that are to be captioned. Defaults to a listener that never downloads its model. */
+  transcribe?: Transcribe;
 }
 
 /**
@@ -28,7 +32,8 @@ export interface PrepareOptions extends AssetSources {
  */
 export async function prepareScenefile(input: unknown, options: PrepareOptions): Promise<CheckResult> {
   const { inspect, hasSound: probeSound, ...sources } = options;
-  const result = await checkWithAssets(input, { probeClip, ...sources });
+  // Listening uses a model already installed, unless the caller passes a listener that may download one.
+  const result = await checkWithAssets(input, { probeClip, transcribe: createTranscriber({ download: false }), ...sources });
   if (!result.ok || !result.composition) return result;
 
   // The first bytes said it was audio; make sure there is sound ffmpeg can actually read.

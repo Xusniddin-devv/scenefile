@@ -75,7 +75,7 @@ describe("scenefile mcp, as a client would start it", () => {
     const client = new Client({ name: "e2e", version: "0" });
     await client.connect(transport);
     try {
-      expect((await client.listTools()).tools.map((tool) => tool.name).sort()).toEqual(["check", "guide", "job", "render", "scene_docs"]);
+      expect((await client.listTools()).tools.map((tool) => tool.name).sort()).toEqual(["check", "guide", "job", "render", "scene_docs", "transcribe"]);
       const guide = await client.callTool({ name: "guide", arguments: {} });
       expect((guide.content as { text: string }[])[0]?.text).toContain("# Making a video with scenefile");
       const checked = await client.callTool({

@@ -168,3 +168,57 @@ describe("finding clips on disk", () => {
     expect(result.diagnostics).toEqual([expect.objectContaining({ code: "ASSET_UNSUPPORTED", path: "scenes[1].src" })]);
   });
 });
+
+describe("captions from what is said in a clip", () => {
+  const heard = [
+    { start: 0.5, end: 3, text: "Here are two recordings, cut and joined." },
+    { start: 4, end: 9, text: "This part is past the end of what is shown." },
+  ];
+  const withCaptions = (clip: Record<string, unknown> = {}) => video({ from: 2, to: 7, captions: true, ...clip });
+
+  it("shows each thing said, when it is said, in the caption band", () => {
+    const result = check(withCaptions(), { ...loaded({ "a.mp4": info() }), transcripts: new Map([[1, heard]]) });
+    expect(result.diagnostics).toEqual([]);
+    const clip = result.video?.scenes[1];
+    const html = result.composition?.html ?? "";
+    expect(html).toContain('id="sf-stage" class="sf-captioned"');
+    const from = (clip?.startFrame ?? 0) + 15;
+    expect(html).toContain(`<p data-sf-cue="${from},`);
+    expect(html).toContain("Here are two recordings, cut and joined.");
+    // Speech that runs past the end of the clip stops with it.
+    const last = [...html.matchAll(/data-sf-cue="(\d+),(\d+)"/g)].map((m) => Number(m[2])).sort((a, b) => b - a)[0] ?? 0;
+    expect(last).toBeLessThanOrEqual((clip?.startFrame ?? 0) + (clip?.durationFrames ?? 0));
+    expect(result.storyboard).toMatch(/heard\s+0\.50s-3\.00s\s+Here are two recordings, cut and joined\./);
+  });
+
+  it("says so when a clip was to be captioned but nobody listened to it", () => {
+    expect(check(withCaptions(), loaded({ "a.mp4": info() })).diagnostics).toEqual([
+      expect.objectContaining({ code: "CAPTIONS_FAILED", severity: "error", path: "scenes[1].captions" }),
+    ]);
+    // A clip with no sound has nothing to caption, which is worth a note, not a failure.
+    expect(check(withCaptions(), { ...loaded({ "a.mp4": info(12.4, 1920, 1080, false) }), transcripts: new Map([[1, []]]) }).diagnostics).toEqual([
+      expect.objectContaining({ code: "CAPTIONS_EMPTY", severity: "warning", path: "scenes[1].captions" }),
+    ]);
+  });
+
+  it("listens to exactly the part of the file that is shown, and reports a failure to", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "scenefile-heard-"));
+    writeFileSync(join(dir, "a.mp4"), "x");
+    const asked: unknown[] = [];
+    const probeClip = async (file: string) => ({ file, width: 640, height: 360, seconds: 12, audio: true });
+    const good = await checkWithAssets(withCaptions(), {
+      baseDir: dir,
+      probeClip,
+      transcribe: async (file, fromSeconds, seconds) => {
+        asked.push([file.endsWith("a.mp4"), fromSeconds, seconds]);
+        return heard;
+      },
+    });
+    expect(good.ok).toBe(true);
+    expect(asked).toEqual([[true, 2, 5]]);
+    const bad = await checkWithAssets(withCaptions(), { baseDir: dir, probeClip, transcribe: async () => Promise.reject(new Error("The listening model is not installed. Install it once with: scenefile transcribe --install")) });
+    expect(bad.diagnostics).toEqual([expect.objectContaining({ code: "CAPTIONS_FAILED", path: "scenes[1].captions" })]);
+    expect(bad.diagnostics[0]?.message).toContain("scenefile transcribe --install");
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

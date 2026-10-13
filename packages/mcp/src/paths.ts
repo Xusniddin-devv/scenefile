@@ -35,7 +35,7 @@ function outside(given: string): Confined {
 }
 
 /** An existing file named by the caller, confined to the root after links are followed. */
-export async function existingInside(root: string, given: string): Promise<Confined> {
+export async function existingInside(root: string, given: string, maxBytes: number = MAX_SCENEFILE_BYTES): Promise<Confined> {
   const candidate = resolvePath(root, given);
   if (!isInside(root, candidate)) return outside(given);
   try {
@@ -43,7 +43,7 @@ export async function existingInside(root: string, given: string): Promise<Confi
     if (!isInside(realRoot, real)) return outside(given);
     const info = await stat(real);
     if (!info.isFile()) return { ok: false, message: `"${given}" is a folder, not a file. Give the path of a scenefile.` };
-    if (info.size > MAX_SCENEFILE_BYTES) return { ok: false, message: `"${given}" is too large to be a scenefile.` };
+    if (info.size > maxBytes) return { ok: false, message: `"${given}" is too large to be read here.` };
     return { ok: true, path: real };
   } catch {
     return { ok: false, message: `There is no file "${given}" in the folder this server works in.` };

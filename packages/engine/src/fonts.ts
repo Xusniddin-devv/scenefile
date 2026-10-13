@@ -138,9 +138,10 @@ export function videoTexts(video: ResolvedVideo): { path: string; text: string; 
       .texts(scene.props)
       .map((entry) => ({ ...entry, path: `scenes[${scene.index}].${entry.path}` })),
     // Captions put the narration on screen, so it has to be drawable too.
-    ...(video.captions && scene.props.say !== undefined
+    ...(video.voiceCaptions && scene.props.say !== undefined
       ? [{ path: `scenes[${scene.index}].say`, text: scene.props.say, font: "sans" as const }]
       : []),
+    ...(scene.heard ?? []).map((part) => ({ path: `scenes[${scene.index}].captions`, text: part.text, font: "sans" as const })),
   ]);
 }
 

@@ -1,5 +1,6 @@
 export { installBrowser } from "./browser";
 export { captureFrame } from "./capture";
+export { HEARING_MODEL, type TranscriberOptions, createTranscriber, hearingInstalled, installHearing } from "./hearing";
 export { CAPTURE_DEVICES, type CaptureDevice, type CaptureOptions, type CaptureReport, capturePage } from "./capture-page";
 export { type Finding, diagnose } from "./doctor";
 export { type Encoder, runFfmpeg, startEncoder } from "./encode";

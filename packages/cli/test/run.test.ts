@@ -464,3 +464,32 @@ describe("probe", () => {
     expect(await run(["probe"], io)).toBe(2);
   });
 });
+
+describe("transcribe", () => {
+  it("prints what is said with its times, or as JSON", async () => {
+    const heard = [{ start: 0.5, end: 3.25, text: "Here are two recordings." }, { start: 4, end: 7, text: "Cut and joined." }];
+    const sample = join(import.meta.dirname, "..", "..", "scenes", "test", "assets", "demo.mp4");
+    const asked: unknown[] = [];
+    const transcribe = async (file: string, from: number, seconds: number) => {
+      asked.push([file.endsWith("demo.mp4"), from, Math.round(seconds)]);
+      return heard;
+    };
+    const plain = capture();
+    expect(await run(["transcribe", sample], { ...plain.io, transcribe })).toBe(0);
+    expect(plain.out()).toMatch(/0\.50s -\s+3\.25s  Here are two recordings\./);
+    expect(asked).toEqual([[true, 0, 10]]);
+    const json = capture();
+    expect(await run(["transcribe", sample, "--json"], { ...json.io, transcribe })).toBe(0);
+    expect(JSON.parse(json.out())).toEqual(heard);
+    const none = capture();
+    expect(await run(["transcribe", sample], { ...none.io, transcribe: async () => [] })).toBe(0);
+    expect(none.out()).toContain("Nothing was heard");
+  });
+
+  it("explains what is missing", async () => {
+    const { io, err } = capture();
+    expect(await run(["transcribe"], io)).toBe(2);
+    expect(await run(["transcribe", "x.mp4", "--language", "english"], io)).toBe(2);
+    expect(err()).toContain("two-letter");
+  });
+});

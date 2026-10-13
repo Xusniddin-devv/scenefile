@@ -15,9 +15,7 @@
       "src": "first.mp4",
       "from": 2,
       "to": 14,
-      "caption": "Signing in",
-      "volume": 0,
-      "say": "First, signing in with one tap."
+      "captions": true
     },
     {
       "type": "clip",

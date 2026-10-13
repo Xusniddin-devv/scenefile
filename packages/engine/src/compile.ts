@@ -112,13 +112,25 @@ export function compile(video: ResolvedVideo): Composition {
       return `<section class="sf-scene" data-sf-scene="${scene.index}" data-sf-type="${scene.type}" hidden>${inner}</section>`;
     })
     .join("\n");
-  const cues = video.captions
+  const narrated = video.voiceCaptions
     ? video.scenes.flatMap((scene) =>
         scene.speech && scene.props.say !== undefined
           ? captionCues(scene.props.say, scene.speech.startFrame, scene.speech.seconds, video.fps)
           : [],
       )
     : [];
+  // What is said in a clip, phrase by phrase, each from when it is heard. A phrase gives way to the next.
+  const overheard = video.scenes.flatMap((scene) =>
+    (scene.heard ?? []).flatMap((part, at, all) => {
+      const until = Math.min(part.end + 0.3, all[at + 1]?.start ?? Number.POSITIVE_INFINITY, scene.durationFrames / video.fps);
+      const last = scene.startFrame + Math.round(until * video.fps);
+      return captionCues(part.text, scene.startFrame + Math.round(part.start * video.fps), part.end - part.start, video.fps).map((cue) => ({
+        ...cue,
+        to: Math.min(cue.to, last),
+      }));
+    }),
+  );
+  const cues = [...narrated, ...overheard].filter((cue) => cue.to > cue.from).sort((a, b) => a.from - b.from);
   const captions =
     cues.length > 0
       ? `\n<div class="sf-captions">${cues.map((cue) => `<p data-sf-cue="${cue.from},${cue.to}" hidden>${escapeHtml(cue.text)}</p>`).join("")}</div>`

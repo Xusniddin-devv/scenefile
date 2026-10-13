@@ -6,7 +6,9 @@ import {
   type CheckResult,
   type Composition,
   type InspectReport,
+  MAX_CLIP_BYTES,
   type Speak,
+  type Transcribe,
   authoringGuide,
   formatDiagnostics,
   sceneGuide,
@@ -18,7 +20,7 @@ import {
   type RenderOptions,
   type RenderReport,
   prepareScenefile,
-  renderVideo, createSpeaker, type CaptureOptions, type CaptureReport, capturePage } from "@scenefile/render";
+  renderVideo, createSpeaker, type CaptureOptions, type CaptureReport, capturePage, createTranscriber, probeClip } from "@scenefile/render";
 import { type Diagnostic, nearest, parseScenefileText } from "@scenefile/schema";
 import { SCENE_TYPES, isSceneType } from "@scenefile/scenes";
 import { z } from "zod";
@@ -42,6 +44,8 @@ export interface ServerOptions {
   allowCapture?: boolean;
   /** Replaces opening a page in the browser. For tests. */
   capture?: (options: CaptureOptions) => Promise<CaptureReport>;
+  /** Listens to files. The server never downloads the model for it. For tests. */
+  transcribe?: Transcribe;
   /** Makes narration. The server never downloads a voice; one that is missing is reported with how to install it. */
   speak?: Speak;
   /** Replaces name lookup and https requests for image downloads. For tests. */
@@ -322,6 +326,27 @@ ${cause.remedy}`));
         `Rendering started as ${job.id}: ${job.total} frames, ${seconds}s of video, to ${job.output}${exists ? " (replacing the file that was there)" : ""}. ` +
           `Call the \`job\` tool with id "${job.id}" to see progress and the result.${warnings}`,
       );
+    },
+  );
+
+  server.registerTool(
+    "transcribe",
+    {
+      description:
+        "Says what is spoken in a video or sound file in the working folder, with the time each part starts and ends. Use it to learn what a clip contains before cutting it: you cannot hear the file yourself.",
+      inputSchema: { path: z.string().describe("The file, relative to the working folder.") },
+    },
+    async ({ path }) => {
+      const located = await existingInside(root, path, MAX_CLIP_BYTES);
+      if (!located.ok) return refuse(located.message);
+      try {
+        const found = await probeClip(located.path).catch(() => null);
+        const heard = await oneAtATime(() => (options.transcribe ?? createTranscriber({ download: false }))(located.path, 0, found?.seconds ?? 86_400));
+        if (heard.length === 0) return say("Nothing was heard being said in this file.");
+        return say(heard.map((part) => `${part.start.toFixed(2)}s - ${part.end.toFixed(2)}s  ${part.text}`).join("\n"));
+      } catch (cause) {
+        return refuse(withoutRoot(cause instanceof Error ? cause.message : String(cause)));
+      }
     },
   );
 

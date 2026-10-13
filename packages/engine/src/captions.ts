@@ -24,6 +24,8 @@ function spokenLength(text: string): number {
 
 /** Cuts one sentence into parts of about equal length, none longer than `most` unless a single word is. */
 function balanced(sentence: string, most: number): string[] {
+  // A sentence that fits is shown whole; a comma is no reason to cut it.
+  if (sentence.length <= most) return [sentence];
   const words = sentence.split(" ");
   const parts: string[] = [];
   let current = "";
