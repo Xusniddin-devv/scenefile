@@ -256,10 +256,13 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         });
         const zoom = clip.zoom === "none" ? "" : `,perspective=${corners.join(":")}:eval=frame:sense=source:interpolation=cubic`;
         const mono = clip.mono ? ",hue=s=0" : "";
-        // Placed by frame number. After the frame rate is set, time is counted in frames, so this is exact;
-        // placing by seconds lands a frame early or late whenever the start is not a round number.
-        const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.startFrame}`;
-        const shown = `enable='between(n,${clip.startFrame},${clip.startFrame + clip.frames - 1})'`;
+        // Placed by frame number, not by a rounded number of seconds, which lands a frame early or late
+        // whenever the start is not a round number. The shift is written as frames over the frame rate
+        // and left to ffmpeg to turn into its own time units: versions differ in what unit they count in.
+        const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.startFrame}/(${fps}*TB)`;
+        // Shown from half a frame before its first frame to half a frame before the one after its last,
+        // so each frame's time falls clearly inside or outside whatever the arithmetic of that version.
+        const shown = `enable='between(t,${((clip.startFrame - 0.5) / fps).toFixed(6)},${((clip.startFrame + clip.frames - 0.5) / fps).toFixed(6)})'`;
         // Brought to the speed it is played at and to the video's frame rate, starting from zero.
         // Its last frame is then held for a further second. Versions of ffmpeg differ in whether footage
         // yields its final frame and in what they draw once it has run out; with frames to spare, the

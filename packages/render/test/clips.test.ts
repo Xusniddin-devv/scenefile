@@ -263,8 +263,9 @@ function brightnessAt(file: string, frame: number, filter = ""): number {
 
 describe("clips begin and end on exactly their own frames", () => {
   it("whatever frame a clip starts on, its first and last frames are the footage's, and none is the page", async () => {
-    // Each frame of the footage is a different grey, so any frame can be told from its neighbours.
-    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=gray:s=640x360:d=6:r=30", "-vf", "geq=lum='48+mod(N\\,20)*9':cb=128:cr=128", "-pix_fmt", "yuv420p", join(dir, "counted.mp4")]);
+    // Each frame of the footage is a different grey, in a cycle of 23 so that frames a whole second
+    // apart differ too: any frame can be told from its neighbours and from the wrong part of the file.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=gray:s=640x360:d=6:r=30", "-vf", "geq=lum='48+mod(N\\,23)*8':cb=128:cr=128", "-pix_fmt", "yuv420p", join(dir, "counted.mp4")]);
     const source = (frame: number): number => brightnessAt(join(dir, "counted.mp4"), frame);
     // A title of 61 frames, then clips of 61, 61 and 60 frames: starts on frames 61, 122 and 183, one of each phase.
     const { output, composition } = await render("phases.mp4", [
