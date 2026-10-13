@@ -106,7 +106,8 @@ export function resolve(
           error("CLIP_RANGE", `scenes[${index}].to`, `This clip is ${length}s long, so it cannot run to ${to}s.`, `Set "to" to at most ${(Math.floor(total * 10) / 10).toFixed(1)}, or remove it to play to the end.`),
         );
       }
-      const span = Math.max(1 / fps, Math.min(to, total) - Math.min(from, total));
+      // What is shown lasts as long as the footage does at the speed it is played.
+      const span = Math.max(1 / fps, (Math.min(to, total) - Math.min(from, total)) / props.speed);
       const asked = props.duration === "auto" ? Number.POSITIVE_INFINITY : toFrames(props.duration, fps);
       const durationFrames = Math.max(1, Math.min(Math.round(span * fps), asked));
       const spoken = props.say === undefined ? undefined : (speech.get(index) ?? { seconds: estimateSpeechSeconds(props.say) });
@@ -132,6 +133,8 @@ export function resolve(
         ...(props.captions !== false && transcripts.has(index)
           ? {
               heard: (transcripts.get(index) ?? [])
+                // Heard at the footage's own pace; shown at the pace it is played.
+                .map((part) => ({ ...part, start: part.start / props.speed, end: part.end / props.speed }))
                 .filter((part) => part.start < durationFrames / fps && part.end > 0)
                 .map((part) => ({ ...part, start: Math.max(0, part.start), end: Math.min(part.end, durationFrames / fps) })),
             }

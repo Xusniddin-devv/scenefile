@@ -200,3 +200,52 @@ describe("rendering clips", () => {
     expect((await probeVideo(output)).audio).toBe(false);
   });
 });
+
+describe("clip effects, rendered", () => {
+  const grey = ([r = 0, g = 0, b = 0]: number[]) => Math.abs(r - g) < 12 && Math.abs(g - b) < 12;
+
+  it("plays at double speed: the second half of the footage arrives in half the time, and the sound is whole", async () => {
+    // Two seconds of red, then two of blue, with a tone throughout.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=640x360:d=2:r=25", "-f", "lavfi", "-i", "color=c=blue:s=640x360:d=2:r=25", "-f", "lavfi", "-i", "sine=frequency=440:duration=4", "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-map", "2:a", "-pix_fmt", "yuv420p", join(dir, "halves.mp4")]);
+    const { output, composition } = await render("fast.mp4", [{ type: "clip", src: "halves.mp4", speed: 2, fit: "cover" }, { type: "title", heading: "After", duration: 2 }]);
+    expect(composition.clips?.[0]?.seconds).toBeCloseTo(2, 1);
+    expect(isRed(pixel(output, 0.5, 960, 540))).toBe(true);
+    expect(isBlue(pixel(output, 1.5, 960, 540))).toBe(true);
+    expect(isBlue(pixel(output, 2.5, 960, 540))).toBe(false);
+    const track = soundTrack(output);
+    expect(Math.abs(track.start)).toBeLessThan(0.05);
+    expect(loudness(output, 0.3, 1.4)).toBeGreaterThan(-40);
+    expect(loudness(output, 2.6, 1)).toBeLessThan(-60);
+  });
+
+  it("can be drawn in black and white", async () => {
+    const { output, composition } = await render("mono.mp4", [{ type: "clip", src: "red.mp4", to: 2, mono: true }, { type: "title", heading: "After", duration: 2 }]);
+    const placed = composition.clips?.[0];
+    const seen = pixel(output, 1, Math.round((placed?.x ?? 0) + (placed?.width ?? 0) / 2), Math.round((placed?.y ?? 0) + (placed?.height ?? 0) / 2));
+    expect(grey(seen)).toBe(true);
+    expect(isRed(seen)).toBe(false);
+  });
+
+  it("zooms in slowly: what is at the centre grows", async () => {
+    // A white square on black, a quarter of the picture wide.
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=640x360:d=4:r=25", "-vf", "drawbox=x=240:y=100:w=160:h=160:color=white:t=fill", "-pix_fmt", "yuv420p", join(dir, "square.mp4")]);
+    const { output } = await render("zoom.mp4", [{ type: "clip", src: "square.mp4", fit: "cover", zoom: "in" }, { type: "title", heading: "After", duration: 2 }]);
+    // Just outside the square's left edge at the start; inside it by the end.
+    const edge = Math.round(1920 * (240 / 640)) - 14;
+    const bright = ([r = 0]: number[]) => r > 180;
+    expect(bright(pixel(output, 0.1, edge, 540))).toBe(false);
+    expect(bright(pixel(output, 3.8, edge, 540))).toBe(true);
+  });
+
+  it("fills the sides of a tall clip with a blurred, darkened copy of itself", async () => {
+    const { output, composition } = await render("backdrop.mp4", [{ type: "clip", src: "blue.mp4", backdrop: "blur" }, { type: "title", heading: "After", duration: 2 }]);
+    const placed = composition.clips?.[0];
+    expect(placed?.height).toBe(1080);
+    const [r = 0, g = 0, b = 0] = pixel(output, 1, 40, 540);
+    // Blue, but darker than the clip itself, where the page's black would otherwise be.
+    expect(b).toBeGreaterThan(60);
+    expect(b).toBeLessThan(200);
+    expect(r + g).toBeLessThan(80);
+    expect(isBlue(pixel(output, 1, 960, 540))).toBe(true);
+  });
+});

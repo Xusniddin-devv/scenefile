@@ -48,8 +48,8 @@ describe.each(SCENE_TYPES)("documentation of the %s scene", (type) => {
 describe("the authoring guide", () => {
   const guide = authoringGuide();
 
-  it("fits in a small model's context: under 9,500 characters, about 2,400 tokens", () => {
-    expect(guide.length).toBeLessThan(9500);
+  it("fits in a small model's context: under 10,500 characters, about 2,600 tokens", () => {
+    expect(guide.length).toBeLessThan(10_500);
     expect(guide.length).toBeGreaterThan(3000);
   });
 

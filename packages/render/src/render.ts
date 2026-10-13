@@ -239,15 +239,41 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       const filters: string[] = [];
       let base = "0:v";
       for (const [index, clip] of clips.entries()) {
-        inputs.push(...footage, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
+        inputs.push(...footage, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.sourceSeconds.toFixed(3), "-i", clip.file);
+        const color = "out_color_matrix=bt709:out_range=tv";
         const size = clip.cover
-          ? `scale=${clip.width}:${clip.height}:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv,crop=${clip.width}:${clip.height}`
-          : `scale=${clip.width}:${clip.height}:out_color_matrix=bt709:out_range=tv`;
+          ? `scale=${clip.width}:${clip.height}:force_original_aspect_ratio=increase:${color},crop=${clip.width}:${clip.height}`
+          : `scale=${clip.width}:${clip.height}:${color}`;
+        // A slow zoom about the centre, eight percent over the clip. The picture is doubled in size first:
+        // the zoom moves in whole pixels, and at the picture's own size that shows as a tremble.
+        const frames = Math.max(1, Math.round(clip.seconds * fps));
+        const amount = clip.zoom === "in" ? `1+0.08*on/${frames}` : `1.08-0.08*on/${frames}`;
+        const zoom =
+          clip.zoom === "none"
+            ? ""
+            : `,scale=${clip.width * 2}:${clip.height * 2},zoompan=z='${amount}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${clip.width}x${clip.height}:fps=${fps}`;
+        const mono = clip.mono ? ",hue=s=0" : "";
+        const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.atSeconds.toFixed(6)}/TB`;
         const until = clip.atSeconds + clip.seconds - 0.5 / fps;
-        filters.push(
-          `[${index + 1}:v]fps=${fps},${size},setsar=1,format=yuv420p,setpts=PTS-STARTPTS+${clip.atSeconds.toFixed(6)}/TB[clip${index}]`,
-          `[${base}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=repeat:enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'[over${index}]`,
-        );
+        const shown = `enable='between(t,${clip.atSeconds.toFixed(6)},${until.toFixed(6)})'`;
+        // Brought to the speed it is played at and to the video's frame rate, starting from zero.
+        const paced = `[${index + 1}:v]setpts=(PTS-STARTPTS)/${clip.speed},fps=${fps}`;
+        if (clip.backdrop) {
+          const { width, height } = clip.stage;
+          filters.push(
+            `${paced},split[front${index}][behind${index}]`,
+            // Blurred small and enlarged, which is both softer and far quicker than blurring at full size.
+            `[behind${index}]scale=${width}:${height}:force_original_aspect_ratio=increase:${color},crop=${width}:${height},scale=iw/8:ih/8,boxblur=4:2,colorchannelmixer=rr=0.55:gg=0.55:bb=0.55,scale=${width}:${height}:${color}${mono},${placed}[back${index}]`,
+            `[${base}][back${index}]overlay=0:0:eof_action=repeat:${shown}[under${index}]`,
+            `[front${index}]${size}${zoom}${mono},${placed}[clip${index}]`,
+            `[under${index}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=repeat:${shown}[over${index}]`,
+          );
+        } else {
+          filters.push(
+            `${paced},${size}${zoom}${mono},${placed}[clip${index}]`,
+            `[${base}][clip${index}]overlay=${clip.x}:${clip.y}:eof_action=repeat:${shown}[over${index}]`,
+          );
+        }
         base = `over${index}`;
       }
       await runFfmpeg(
@@ -284,6 +310,12 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       // A sound is put at its time by numbering its samples from there and filling what comes before with
       // silence. Delaying it instead loses the timestamps of sound cut from the middle of a file, and the
       // track that results cannot be played.
+      // Sound played faster or slower keeps its pitch. One step changes speed by at most two times.
+      const tempo = (speed: number): string => {
+        if (speed === 1) return "";
+        const steps = speed > 2 || speed < 0.5 ? [Math.sqrt(speed), Math.sqrt(speed)] : [speed];
+        return `${steps.map((step) => `atempo=${step.toFixed(6)}`).join(",")},`;
+      };
       const placedAt = (at: number): string => `asetpts=N/SR/TB+${at.toFixed(6)}/TB,aresample=async=1:first_pts=0`;
       let next = 1;
       if (composition.audio) {
@@ -317,8 +349,8 @@ export async function renderVideo(composition: Composition, options: RenderOptio
       else if (lines.length > 0) tracks.push("[voice]");
       for (const [index, clip] of heard.entries()) {
         // The clip's own sound, for the part of it that is shown, starting when it does.
-        inputs.push("-protocol_whitelist", "file", "-format_whitelist", CLIP_FORMATS, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.seconds.toFixed(3), "-i", clip.file);
-        filters.push(`[${next}:a]${SHAPE},volume=${clip.volume},${placedAt(clip.atSeconds)}[heard${index}]`);
+        inputs.push("-protocol_whitelist", "file", "-format_whitelist", CLIP_FORMATS, "-ss", clip.fromSeconds.toFixed(3), "-t", clip.sourceSeconds.toFixed(3), "-i", clip.file);
+        filters.push(`[${next}:a]${tempo(clip.speed)}${SHAPE},volume=${clip.volume},${placedAt(clip.atSeconds)}[heard${index}]`);
         tracks.push(`[heard${index}]`);
         next += 1;
       }

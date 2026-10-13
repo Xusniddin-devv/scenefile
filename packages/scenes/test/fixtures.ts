@@ -42,7 +42,7 @@ export const HOSTILE: Record<SceneType, Record<string, unknown>> = {
   statement: { type: "statement", text: NASTY, highlight: "<u>x</u>" },
   quote: { type: "quote", text: NASTY, author: NASTY, role: NASTY },
   bullets: { type: "bullets", heading: NASTY, items: [NASTY, NASTY] },
-  clip: { type: "clip", src: NASTY, from: 1, to: 2, fit: "contain", volume: 0.5, caption: NASTY, captions: false },
+  clip: { type: "clip", src: NASTY, from: 1, to: 2, fit: "contain", volume: 0.5, speed: 1, mono: false, zoom: "none", backdrop: "none", caption: NASTY, captions: false },
   chart: { type: "chart", heading: NASTY, unit: "<b>", bars: [{ label: "<i>a</i>", value: 2 }, { label: "<u>b</u>", value: 1 }], highlight: "<i>a</i>" },
   stat: { type: "stat", value: "<u>9</u>", label: NASTY, note: NASTY },
   code: { type: "code", lang: "html", source: `${NASTY}\n<script>alert(1)</script>`, highlight: [1], caption: NASTY },

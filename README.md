@@ -127,7 +127,7 @@ prints a JSON Schema for tools that can enforce one on a model's output.
 }
 ```
 
-The server offers six tools: `guide` (how to write a scenefile, in about 2,400 tokens),
+The server offers six tools: `guide` (how to write a scenefile, in about 2,600 tokens),
 `scene_docs`, `check`, `render` (returns a job id at once), `job` (progress, then the
 finished file; it can also cancel) and `transcribe` (what is said in a video or sound
 file, with times). `capture` is a seventh, offered only when asked for; see below. A scenefile can be passed inline or as a path.
@@ -240,10 +240,15 @@ and they are joined; put other scenes around them for titles and endings.
   prints the same thing with times, so you, or an agent that cannot hear, can see what a
   clip says before cutting it. The language is guessed; if it is guessed wrong, give it:
   `"captions": "ru"`, or `--language ru`.
+- Effects, a small fixed set: `"speed": 2` plays twice as fast (0.25 to 4; the sound
+  keeps its pitch), `"mono": true` is black and white, `"zoom": "in"` or `"out"` is a slow
+  zoom, and `"backdrop": "blur"` fills the frame behind a clip that does not fill it, such
+  as a phone recording in a wide video, with a blurred copy of the clip.
 - Your files are only read. The result is a new file.
 
 What it is not: an editor with a timeline. Clips are joined with cuts; there are no
-transitions through footage, no speed changes and no colour work. Automatic captions
+transitions through footage and no colour work beyond black and white, and an effect
+applies to a whole clip, not to a moment in it. Automatic captions
 are what a small model heard, and it is wrong more often than a person would be:
 
 - Ordinary clear English came out about 1 word in 100 wrong in our tests. Sentences full

@@ -27,7 +27,7 @@ describe("recipe skills", () => {
     expect(skill).toContain("Do not invent");
     expect(skill).toContain("scenefile check");
     // Short enough to read in one go beside the guide.
-    expect(skill.length).toBeLessThan(6200);
+    expect(skill.length).toBeLessThan(6600);
 
     const example = JSON.parse(readFileSync(join(root, name, "example.json"), "utf8")) as { scenes: { type: string; src?: string; say?: string }[] };
     // Pictures are stood in for; everything else is checked for real.

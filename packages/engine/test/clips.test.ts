@@ -289,3 +289,46 @@ describe("captions that cannot or should not be shown", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe("effects on a clip", () => {
+  const made = (clip: Record<string, unknown>, extra: Parameters<typeof loaded>[0] = { "a.mp4": info() }, more: Record<string, unknown> = {}) =>
+    check(video({ from: 2, to: 8, ...clip }), { ...loaded(extra), ...more });
+
+  it("plays faster or slower, and lasts accordingly", () => {
+    const fast = made({ speed: 2 });
+    expect(fast.video?.scenes[1]?.durationFrames).toBe(90);
+    expect(fast.composition?.clips?.[0]).toMatchObject({ fromSeconds: 2, seconds: 3, sourceSeconds: 6, speed: 2 });
+    const slow = made({ speed: 0.5 });
+    expect(slow.video?.scenes[1]?.durationFrames).toBe(360);
+    expect(slow.composition?.clips?.[0]).toMatchObject({ seconds: 12, sourceSeconds: 6, speed: 0.5 });
+    expect(normalize(video({ speed: 9 })).diagnostics[0]).toMatchObject({ severity: "error", path: "scenes[1].speed" });
+  });
+
+  it("moves what was heard along with the picture", () => {
+    const heard = new Map([[1, [{ start: 2, end: 4, text: "Hello there." }]]]);
+    const result = made({ speed: 2, captions: true }, undefined, { transcripts: heard });
+    const clip = result.video?.scenes[1];
+    expect(clip?.heard).toEqual([{ start: 1, end: 2, text: "Hello there." }]);
+    expect(result.composition?.html).toContain(`<p data-sf-cue="${(clip?.startFrame ?? 0) + 30},`);
+  });
+
+  it("carries the looks to the renderer", () => {
+    expect(made({ mono: true, zoom: "in" }).composition?.clips?.[0]).toMatchObject({ mono: true, zoom: "in", backdrop: false });
+    expect(made({}).composition?.clips?.[0]).toMatchObject({ mono: false, zoom: "none", backdrop: false, speed: 1 });
+  });
+
+  it("fills the frame behind a clip that does not, when asked", () => {
+    const tall = { "a.mp4": info(12.4, 1080, 1920) };
+    const placed = made({ backdrop: "blur" }, tall).composition?.clips?.[0];
+    // The clip stands as tall as the frame, in the middle, with its own picture blurred behind it.
+    expect(placed).toMatchObject({ backdrop: true, y: 0, height: 1080 });
+    expect(Math.abs((placed?.x ?? 0) + (placed?.width ?? 0) / 2 - 960)).toBeLessThanOrEqual(1);
+    expect(placed?.stage).toEqual({ width: 1920, height: 1080 });
+    expect(made({ backdrop: "blur", caption: "Signing in" }, tall).diagnostics).toEqual([
+      expect.objectContaining({ code: "FIELD_IGNORED", severity: "warning", path: "scenes[1].caption" }),
+    ]);
+    expect(made({ backdrop: "blur", fit: "cover" }, tall).diagnostics).toEqual([
+      expect.objectContaining({ code: "FIELD_IGNORED", severity: "warning", path: "scenes[1].backdrop" }),
+    ]);
+  });
+});

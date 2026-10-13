@@ -41,9 +41,18 @@ export interface Composition {
 
 export interface PlacedClip {
   file: string;
-  /** Seconds into the file at which to start, and how long it plays. */
+  /** Seconds into the file at which to start, how long it is on screen, and how much of the file that uses. */
   fromSeconds: number;
   seconds: number;
+  sourceSeconds: number;
+  /** How fast it plays: 1 as recorded. */
+  speed: number;
+  mono: boolean;
+  zoom: "none" | "in" | "out";
+  /** True to fill the stage behind the clip with a blurred copy of it. */
+  backdrop: boolean;
+  /** The area scenes are drawn in, which a backdrop fills. */
+  stage: { width: number; height: number };
   /** When it starts in the video. */
   atSeconds: number;
   x: number;
@@ -181,6 +190,12 @@ ${sceneChrome(total)}${captions}
         file: scene.clip.file,
         fromSeconds: scene.clip.fromSeconds,
         seconds: scene.durationFrames / video.fps,
+        sourceSeconds: (scene.durationFrames / video.fps) * scene.props.speed,
+        speed: scene.props.speed,
+        mono: scene.props.mono,
+        zoom: scene.props.zoom,
+        backdrop: scene.props.backdrop === "blur" && scene.props.fit !== "cover",
+        stage: { width: video.width, height: Math.floor(stageHeight / 2) * 2 },
         atSeconds: scene.startFrame / video.fps,
         ...clipPlacement(scene.props, frame, size),
         volume: scene.clip.audio ? scene.props.volume : 0,

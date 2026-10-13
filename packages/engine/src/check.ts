@@ -238,7 +238,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
       if (scene.transition !== "auto" && scene.transition !== "cut") {
         notes.push(warning("FIELD_IGNORED", `${at}.transition`, "Footage is cut to and cut from, so this transition is not used.", 'Remove "transition" from the clip.'));
       }
-      const shown = Math.min(scene.to ?? footage.seconds, footage.seconds) - (scene.from ?? 0);
+      const shown = (Math.min(scene.to ?? footage.seconds, footage.seconds) - (scene.from ?? 0)) / scene.speed;
       if (scene.duration !== "auto" && scene.duration > shown + 0.05) {
         notes.push(warning("FIELD_IGNORED", `${at}.duration`, `A clip lasts as long as the footage it shows, ${shown.toFixed(1)}s here; "duration" can only shorten it.`, 'Remove "duration", or show more of the clip with "from" and "to".'));
       }
@@ -252,6 +252,11 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
       } else if (heard && heard.length === 0) {
         notes.push(warning("CAPTIONS_EMPTY", at, footage.audio ? "Nothing was heard being said in this part of the clip, so it has no captions." : "This clip has no sound, so it has no captions.", 'Remove "captions", or write a "caption" line instead.'));
       }
+    }
+    if (scene.type === "clip" && scene.backdrop === "blur" && scene.fit === "cover") {
+      notes.push(warning("FIELD_IGNORED", `scenes[${index}].backdrop`, "A clip that fills the frame has nothing behind it to fill, so the backdrop is not used.", 'Remove "backdrop", or remove "fit" to show the whole clip with the backdrop behind it.'));
+    } else if (scene.type === "clip" && scene.backdrop === "blur" && scene.caption !== undefined) {
+      notes.push(warning("FIELD_IGNORED", `scenes[${index}].caption`, "A clip with a backdrop takes the whole frame, leaving no room for a caption, so it is not shown.", 'Remove "caption", or remove "backdrop".'));
     }
     if (scene.type === "clip" && scene.fit === "cover" && scene.caption !== undefined) {
       notes.push(warning("FIELD_IGNORED", `scenes[${index}].caption`, "A clip that fills the frame leaves no room for a caption, so it is not shown.", 'Remove "caption", or remove "fit" to show the clip inside the frame with its caption.'));
@@ -354,7 +359,7 @@ export async function checkWithAssets(
       const info = footage.clips.get(scene.src);
       const language = typeof scene.captions === "string" ? scene.captions : undefined;
       try {
-        transcripts.set(index, info?.audio ? await sources.transcribe(resolved.clip.file, resolved.clip.fromSeconds, resolved.durationFrames / scenefile.fps, language) : []);
+        transcripts.set(index, info?.audio ? await sources.transcribe(resolved.clip.file, resolved.clip.fromSeconds, (resolved.durationFrames / scenefile.fps) * scene.speed, language) : []);
       } catch (cause) {
         unheard.push(error("CAPTIONS_FAILED", `scenes[${index}].captions`, cause instanceof Error ? cause.message : String(cause), 'Fix what the message says and try again, or remove "captions" from the clip.'));
         break;

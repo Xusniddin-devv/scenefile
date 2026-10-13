@@ -14,6 +14,14 @@ export const clipSchema = z
     fit: z.enum(["contain", "cover"]).default("contain"),
     /** How loud the clip's own sound is: 0 is silent, 1 as recorded. */
     volume: z.number().min(0).max(1).default(1),
+    /** How fast it plays: 2 is twice as fast, 0.5 half speed. Its sound keeps its pitch. */
+    speed: z.number().min(0.25).max(4).default(1),
+    /** Draw it in black and white. */
+    mono: z.boolean().default(false),
+    /** Move slowly closer ("in") or pull slowly back ("out") while it plays. */
+    zoom: z.enum(["none", "in", "out"]).default("none"),
+    /** Fill the frame behind a clip that does not fill it with a blurred copy of the clip. */
+    backdrop: z.enum(["none", "blur"]).default("none"),
     caption: z.string().min(1).max(80).optional(),
     /** Show what is said in the clip as captions, heard from its sound. */
     captions: z

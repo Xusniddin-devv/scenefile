@@ -20,7 +20,7 @@ The person has recordings; you turn them into a finished video. Each recording, 
 1. **Find out what there is.** Ask which files, or list the folder. Run `scenefile probe <files>`: it prints each file's size, length in seconds and whether it has sound. You cannot plan a cut without the lengths. Then run `scenefile transcribe <file>` on each clip that has speech: it prints what is said and when, which is how you know where to cut. The first run downloads a 208 MB listening model; give it a long timeout. Times are given per stretch of speech, which can be 20 seconds or more: to cut inside one, estimate the moment from how far through the words it is, then read the `heard` lines that `check` prints and adjust.
 2. **Put the scenefile in the same folder as the clips** (or above them): `src` is read from the scenefile's folder, and files outside it are refused.
 3. **One `clip` scene per piece of footage, in order.** `from` and `to` are seconds into the file; leave them out to use the whole file. To drop the middle of a recording, use the same file twice with different cuts.
-4. **Fit.** The default shows the whole picture inside the frame. `"fit": "cover"` fills the frame and crops; use it when the clip's shape matches the video's. For phone footage in a phone-shaped video, set `"format": "portrait-1080p"`.
+4. **Fit.** The default shows the whole picture inside the frame. `"fit": "cover"` fills the frame and crops; use it when the clip's shape matches the video's. For phone footage in a phone-shaped video, set `"format": "portrait-1080p"`; for phone footage in a wide video, add `"backdrop": "blur"` so the sides are not empty.
 5. **Sound.** A clip keeps its own sound. Set `"volume": 0` on a clip you narrate over, or lower it (for example 0.2) to keep it underneath.
 6. **Around the clips,** add what was asked for: a `title` at the start, an `outro` at the end, a `statement` between sections, music with the top-level `audio`.
 7. **Captions.** To caption what people say in a clip, set `"captions": true` on it: the words are heard from the clip's own sound and shown as they are spoken. `check` lists what it heard under each clip as `heard`; read it, because a small model mishears some words. `caption` instead puts one fixed line under a clip. To add a narrator, write `say` and set `"voice": { "name": "en-emma", "captions": true }`; a narrated line must be shorter than its clip.
@@ -37,7 +37,7 @@ The person has recordings; you turn them into a finished video. Each recording, 
 
 - Never write over, move or delete the person's files. The output is always a new file.
 - Use only facts from the person and the files. Do not invent what a clip shows, or numbers, quotations, names or web addresses.
-- Clips are joined with cuts. Do not promise effects scenefile does not have: no colour grading, no speed changes, no transitions through footage, and no correcting of what the captions heard.
+- Clips are joined with cuts. Do not promise effects scenefile does not have: no colour grading, no transitions through footage, and no correcting of what the captions heard. The effects there are: `speed` (0.25 to 4), `mono`, `zoom` ("in" or "out") and `backdrop` ("blur"), each for a whole clip.
 
 ## A worked example
 
