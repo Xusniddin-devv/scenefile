@@ -161,10 +161,10 @@ describe("rendering clips", () => {
     expect(probed.frames).toBe(composition.manifest.totalFrames);
     expect(report.audio).toBe(true);
     const centre: [number, number] = [Math.round(placed.x + placed.width / 2), Math.round(placed.y + placed.height / 2)];
-    expect(isRed(pixel(output, placed.atSeconds + 1, ...centre))).toBe(true);
+    expect(pixel(output, placed.atSeconds + 1, ...centre), "middle of the clip").toSatisfy(isRed);
     // First and last frames of the clip's scene are the clip; the scenes around it are not.
-    expect(isRed(pixel(output, placed.atSeconds + 0.02, ...centre))).toBe(true);
-    expect(isRed(pixel(output, placed.atSeconds + placed.seconds - 0.05, ...centre))).toBe(true);
+    expect(pixel(output, placed.atSeconds + 0.02, ...centre), "first frame of the clip").toSatisfy(isRed);
+    expect(pixel(output, placed.atSeconds + placed.seconds - 0.05, ...centre), "last frames of the clip").toSatisfy(isRed);
     expect(isRed(pixel(output, placed.atSeconds - 0.1, ...centre))).toBe(false);
     expect(isRed(pixel(output, placed.atSeconds + placed.seconds + 0.1, ...centre))).toBe(false);
     // Outside the clip's box the frame is still the scene's own background.
@@ -195,8 +195,8 @@ describe("rendering clips", () => {
     ]);
     const [first, second] = composition.clips ?? [];
     expect(second?.atSeconds).toBeCloseTo((first?.atSeconds ?? 0) + 2, 5);
-    expect(isRed(pixel(output, 1, 5, 5))).toBe(true);
-    expect(isBlue(pixel(output, 2.5, 1900, 1070))).toBe(true);
+    expect(pixel(output, 1, 5, 5), "first clip, one second in").toSatisfy(isRed);
+    expect(pixel(output, 2.5, 1900, 1070), "second clip, half a second in").toSatisfy(isBlue);
     expect((await probeVideo(output)).audio).toBe(false);
   });
 });

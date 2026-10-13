@@ -261,7 +261,10 @@ export async function renderVideo(composition: Composition, options: RenderOptio
         const placed = `setsar=1,format=yuv420p,setpts=PTS+${clip.startFrame}`;
         const shown = `enable='between(n,${clip.startFrame},${clip.startFrame + clip.frames - 1})'`;
         // Brought to the speed it is played at and to the video's frame rate, starting from zero.
-        const paced = `[${index + 1}:v]setpts=(PTS-STARTPTS)/${clip.speed},fps=${fps}`;
+        // Its last frame is then held for a further second. Versions of ffmpeg differ in whether footage
+        // yields its final frame and in what they draw once it has run out; with frames to spare, the
+        // clip's own last frame is there to be shown whichever way that goes.
+        const paced = `[${index + 1}:v]setpts=(PTS-STARTPTS)/${clip.speed},fps=${fps},tpad=stop_mode=clone:stop_duration=1`;
         if (clip.backdrop) {
           const { width, height } = clip.stage;
           filters.push(
