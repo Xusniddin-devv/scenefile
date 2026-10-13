@@ -70,6 +70,8 @@ interface Job {
   failure?: string;
 }
 
+/** The longest file the `transcribe` tool listens to in one call. */
+const MAX_LISTEN_SECONDS = 30 * 60;
 /** How many finished jobs are remembered. */
 const MAX_JOBS = 50;
 /** How many renders may wait behind the one that is running. Each holds a whole video's images in memory. */
@@ -83,6 +85,7 @@ const TOOLS_NOTE = [
   "- `render`: starts rendering a scenefile to an .mp4 and returns a job id at once.",
   "- `job`: reports a render's progress, and the finished file.",
   "- `scene_docs`: one scene type in full.",
+  "- `transcribe`: what is said in a video or sound file, with times. Use it before cutting a clip.",
 ].join("\n");
 
 const SOURCE = {
@@ -97,7 +100,7 @@ const SOURCE = {
 };
 
 /**
- * A Model Context Protocol server for scenefile. Five tools: read the guide,
+ * A Model Context Protocol server for scenefile. Its tools: read the guide,
  * read one scene's documentation, check a scenefile, start a render, and
  * follow a render. Every path it is given is confined to `root`.
  */
@@ -113,6 +116,12 @@ export function createServer(options: ServerOptions): McpServer {
   function oneAtATime<T>(work: () => Promise<T>): Promise<T> {
     const turn = checks.then(work, work);
     checks = turn.catch(() => undefined);
+    return turn;
+  }
+  let hearing: Promise<unknown> = Promise.resolve();
+  function inTurn<T>(work: () => Promise<T>): Promise<T> {
+    const turn = hearing.then(work, work);
+    hearing = turn.catch(() => undefined);
     return turn;
   }
   /** Absolute paths mean nothing to the caller and say more about the machine than it needs to know. */
@@ -341,7 +350,11 @@ ${cause.remedy}`));
       if (!located.ok) return refuse(located.message);
       try {
         const found = await probeClip(located.path).catch(() => null);
-        const heard = await oneAtATime(() => (options.transcribe ?? createTranscriber({ download: false }))(located.path, 0, found?.seconds ?? 86_400));
+        if ((found?.seconds ?? 0) > MAX_LISTEN_SECONDS) {
+          return refuse(`This file is ${Math.round((found?.seconds ?? 0) / 60)} minutes long; at most ${MAX_LISTEN_SECONDS / 60} minutes can be listened to in one call. Ask the person for a shorter file.`);
+        }
+        // Listening waits its turn among other listening, not among checks: a long file does not hold them up.
+        const heard = await inTurn(() => (options.transcribe ?? createTranscriber({ download: false }))(located.path, 0, found?.seconds ?? MAX_LISTEN_SECONDS));
         if (heard.length === 0) return say("Nothing was heard being said in this file.");
         return say(heard.map((part) => `${part.start.toFixed(2)}s - ${part.end.toFixed(2)}s  ${part.text}`).join("\n"));
       } catch (cause) {

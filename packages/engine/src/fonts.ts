@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { type Diagnostic, error, warning } from "@scenefile/schema";
+import { type Diagnostic, type ThemeName, error, warning } from "@scenefile/schema";
 import { getScene } from "@scenefile/scenes";
 import { woff2CodePoints } from "./cmap";
 import type { ResolvedVideo } from "./resolve";
@@ -129,6 +129,17 @@ export function displayFace(video: ResolvedVideo): { face: FontKey; missing: str
     }
   }
   return { face: missing.size > 0 ? theme.fontSans : theme.fontDisplay, missing: [...missing] };
+}
+
+/** Characters of a text that the theme's text face cannot draw, emoji and spaces aside. */
+export function undrawable(text: string, theme: ThemeName): string[] {
+  const font = loadFont(getTheme(theme).fontSans);
+  const missing = new Set<string>();
+  for (const char of text) {
+    if (/\s/u.test(char) || EMOJI.test(char) || fontCovers(font, char.codePointAt(0) ?? 0)) continue;
+    missing.add(char);
+  }
+  return [...missing];
 }
 
 /** Every string the video draws, with its full scenefile path. */

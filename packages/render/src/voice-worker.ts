@@ -140,6 +140,9 @@ function hear(request: HearRequest): { start: number; end: number; text: string 
   return heard;
 }
 
+// If the process that asked is gone, there is nobody to answer.
+process.on("disconnect", () => process.exit(0));
+
 process.on("message", (request: Request | HearRequest) => {
   if ("hear" in request) {
     try {

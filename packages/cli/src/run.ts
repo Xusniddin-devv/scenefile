@@ -81,7 +81,8 @@ const USAGE = `Usage:
                                    a scenefile, and a video, from a GitHub repository's own facts
   scenefile probe <video>...       the size, length and sound of video files, for planning clips
   scenefile transcribe <file> [--language en] [--json] | --install
-                                   what is said in a video or sound file, with times
+                                   what is said in a video or sound file, with times. --language is
+                                   the language spoken, for when it is guessed wrong; it does not translate
   scenefile guide                  how to write a scenefile
   scenefile scenes [type]          the scene types, or one in full
   scenefile schema                 the scenefile as a JSON Schema
@@ -317,6 +318,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     if (command === "transcribe") {
       if (values.install) {
         if (hearingInstalled()) {
+          await installHearing();
           io.out("The listening model is installed.");
           return 0;
         }
@@ -335,7 +337,8 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         throw new UsageError(`--language is a two-letter code such as en or ru; got "${values.language}".`);
       }
       const found = await probeClip(resolvePath(file)).catch(() => null);
-      const length = found?.seconds ?? 86_400;
+      // A sound file has no picture to measure; it is listened to up to the most that can be at once.
+      const length = found?.seconds ?? 2 * 60 * 60;
       let heard: Heard[];
       try {
         heard = await (io.transcribe ?? listener(io, values.language))(resolvePath(file), 0, length);
@@ -345,7 +348,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         return 2;
       }
       if (values.json) io.out(JSON.stringify(heard, null, 2));
-      else if (heard.length === 0) io.out("Nothing was heard being said.");
+      else if (heard.length === 0) io.out(found && !found.audio ? "This file has no sound track." : "Nothing was heard being said.");
       else io.out(heard.map((part) => `${part.start.toFixed(2).padStart(7)}s - ${part.end.toFixed(2).padStart(7)}s  ${part.text}`).join("\n"));
       return 0;
     }

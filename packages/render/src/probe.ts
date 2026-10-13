@@ -36,10 +36,10 @@ function run(file: string, args: string[]): Promise<string> {
  * unreadable file, or one that is not media at all. A missing ffprobe is still
  * an environment problem and is thrown.
  */
-export async function hasSound(file: string, ffprobePath = "ffprobe"): Promise<boolean> {
+export async function hasSound(file: string, ffprobePath = "ffprobe", formats?: string): Promise<boolean> {
   try {
     const found = await run(ffprobePath, [
-      "-v", "error", "-protocol_whitelist", "file", "-select_streams", "a:0",
+      "-v", "error", "-protocol_whitelist", "file", ...(formats ? ["-format_whitelist", formats] : []), "-select_streams", "a:0",
       "-show_entries", "stream=codec_name", "-of", "csv=p=0", file,
     ]);
     return found.trim() !== "";

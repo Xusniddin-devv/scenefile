@@ -113,6 +113,8 @@ export interface InstallOptions {
   onProgress?: (received: number, total: number) => void;
   /** Seconds without a single byte arriving after which the download is given up. */
   stallSeconds?: number;
+  /** What is being installed, for messages, when it is not a voice. */
+  what?: string;
 }
 
 /** A download may take as long as it needs, so long as it keeps arriving. */
@@ -138,6 +140,7 @@ async function sweepInstalls(voicesDir: string): Promise<void> {
 /** Downloads a voice, checks it is the file expected, and unpacks it. Does nothing if it is already there. */
 export async function installVoice(name: VoiceName | (string & {}), options: InstallOptions): Promise<void> {
   const info = options.info ?? VOICE_CATALOG[name as VoiceName];
+  const what = options.what ?? `the voice "${name}"`;
   const folder = folderName(info);
   const target = join(options.voicesDir, folder);
   if (wholeVoice(target, info)) return;
@@ -145,7 +148,7 @@ export async function installVoice(name: VoiceName | (string & {}), options: Ins
   await sweepInstalls(options.voicesDir);
   // Everything happens in a folder of its own and is moved into place only when
   // whole, so a download or unpack that is cut short never looks like a voice.
-  const work = join(options.voicesDir, `.${name}.installing-${process.pid}`);
+  const work = join(options.voicesDir, `.${info.model}.installing-${process.pid}`);
   const archive = join(work, "voice.tar.bz2");
   try {
     await rm(work, { recursive: true, force: true });
@@ -160,32 +163,32 @@ export async function installVoice(name: VoiceName | (string & {}), options: Ins
     const response = await (options.fetch ?? fetch)(info.url ?? `${RELEASE}/${folder}.tar.bz2`, { redirect: "follow", signal: stalled.signal }).catch(
       (cause: unknown) => {
         clearTimeout(quiet);
-        throw stalled.signal.aborted ? new Error(`The download for the voice "${name}" did not start. Check the connection and try again.`) : cause;
+        throw stalled.signal.aborted ? new Error(`The download for ${what} did not start. Check the connection and try again.`) : cause;
       },
     );
     if (!response.ok || !response.body) {
       clearTimeout(quiet);
-      throw new Error(`The voice "${name}" could not be downloaded (${response.status}).`);
+      throw new Error(`The download for ${what} failed (${response.status}).`);
     }
     const hash = createHash("sha256");
     let received = 0;
     const body = Readable.fromWeb(response.body as import("node:stream/web").ReadableStream<Uint8Array>);
     stalled.signal.addEventListener("abort", () => {
-      body.destroy(new Error(`The download for the voice "${name}" stopped arriving, so it was given up. Run the command again to retry.`));
+      body.destroy(new Error(`The download for ${what} stopped arriving, so it was given up. Run the command again to retry.`));
     });
     body.on("data", (chunk: Buffer) => {
       heard();
       hash.update(chunk);
       received += chunk.length;
       options.onProgress?.(Math.min(received, info.bytes), info.bytes);
-      if (received > info.bytes) body.destroy(new Error(`The download for the voice "${name}" is larger than expected, so it was stopped.`));
+      if (received > info.bytes) body.destroy(new Error(`The download for ${what} is larger than expected, so it was stopped.`));
     });
     await pipeline(body, createWriteStream(archive)).finally(() => clearTimeout(quiet));
     if (hash.digest("hex") !== info.sha256) {
-      throw new Error(`The download for the voice "${name}" is not the file that was expected, so it was not used.`);
+      throw new Error(`The download for ${what} is not the file that was expected, so it was not used.`);
     }
     await (options.unpack ?? ((file, into) => run("tar", ["-xjf", file, "-C", into])))(archive, work);
-    if (!wholeVoice(join(work, folder), info)) throw new Error(`The voice "${name}" was downloaded but could not be unpacked.`);
+    if (!wholeVoice(join(work, folder), info)) throw new Error(`The download for ${what} arrived but could not be unpacked.`);
     // A half-made folder from an earlier version, or another process that finished first.
     if (!wholeVoice(target, info)) {
       await rm(target, { recursive: true, force: true });
@@ -257,6 +260,14 @@ function speechHelper(): ChildProcess {
   started.on("error", (cause) => failAll(cause));
   started.on("exit", () => failAll(new Error("The speech engine stopped unexpectedly. Try again.")));
   process.once("exit", () => started.kill("SIGKILL"));
+  // A signal ends this process without the "exit" above running, which would leave the helper at work.
+  // It is stopped first, and the signal is then left to do what it always does.
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    process.once(signal, () => {
+      started.kill("SIGKILL");
+      if (process.listenerCount(signal) === 0) process.kill(process.pid, signal);
+    });
+  }
   helper = started;
   return started;
 }

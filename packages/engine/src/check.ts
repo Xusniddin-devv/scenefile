@@ -2,7 +2,7 @@ import { type Diagnostic, type Scenefile, error, hasErrors, normalize, warning }
 import { getScene } from "@scenefile/scenes";
 import { type AssetSources, type ClipInfo, type Heard, type LoadedAssets, MAX_CLIP_SIDE, type Transcribe, assetRefs, clipRefs, loadAssets, loadAudio, loadClips } from "./assets";
 import { type Composition, compile } from "./compile";
-import { displayFace, glyphDiagnostics } from "./fonts";
+import { displayFace, glyphDiagnostics, undrawable } from "./fonts";
 import { FONT_FAMILIES, getTheme } from "./themes";
 import { type InspectReport, verifyLayout } from "./layout";
 import { type ResolvedVideo, resolve } from "./resolve";
@@ -183,7 +183,35 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     );
   }
 
-  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech, loaded?.clips, loaded?.transcripts);
+  // What was heard is not the author's text: where it cannot be shown, or a narrator's words take
+  // its place, it is left out with a note rather than failing the video.
+  const transcripts = new Map(loaded?.transcripts ?? []);
+  const unshown: Diagnostic[] = [];
+  const settled = new Set<number>();
+  for (const [index, scene] of normalized.scenefile.scenes.entries()) {
+    if (scene.type !== "clip" || scene.captions === false) continue;
+    const at = `scenes[${index}].captions`;
+    if (scene.say !== undefined) {
+      transcripts.delete(index);
+      settled.add(index);
+      unshown.push(warning("FIELD_IGNORED", at, "This clip is narrated, so the narrator's words are captioned and what is said in the clip is not.", 'Remove "captions", or remove "say" to caption the clip\'s own speech.'));
+      continue;
+    }
+    const missing = undrawable((transcripts.get(index) ?? []).map((part) => part.text).join(" "), normalized.scenefile.theme);
+    if (missing.length > 0) {
+      transcripts.set(index, []);
+      settled.add(index);
+      unshown.push(
+        warning(
+          "CAPTIONS_UNDRAWABLE",
+          at,
+          `What was heard in this clip is in a script the captions cannot show (${missing.slice(0, 6).join(" ")}), so it has no captions. Only Latin and Cyrillic writing can be drawn.`,
+          'If the speech was heard in the wrong language, set "captions" to its two-letter code, such as "en" or "ru". Otherwise remove "captions".',
+        ),
+      );
+    }
+  }
+  const resolved = resolve(normalized.scenefile, loaded?.assets, loaded?.speech, loaded?.clips, transcripts);
   const notes: Diagnostic[] = [];
   const headings = displayFace(resolved.video);
   if (headings.missing.length > 0) {
@@ -215,9 +243,9 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
         notes.push(warning("FIELD_IGNORED", `${at}.duration`, `A clip lasts as long as the footage it shows, ${shown.toFixed(1)}s here; "duration" can only shorten it.`, 'Remove "duration", or show more of the clip with "from" and "to".'));
       }
     }
-    if (scene.type === "clip" && scene.captions && footage) {
+    if (scene.type === "clip" && scene.captions !== false && footage && !settled.has(index)) {
       const at = `scenes[${index}].captions`;
-      const reported = assetDiagnostics.some((diagnostic) => diagnostic.path === at);
+      const reported = loaded?.listeningFailed === true || assetDiagnostics.some((diagnostic) => diagnostic.path === at);
       const heard = loaded?.transcripts?.get(index);
       if (!heard && !reported) {
         notes.push(error("CAPTIONS_FAILED", at, "This clip was to be captioned, but its sound has not been listened to.", "Check the scenefile with the scenefile command, which listens to its clips."));
@@ -249,6 +277,7 @@ export function check(input: unknown, loaded?: LoadedAssets): CheckResult {
     ...assetDiagnostics,
     ...resolved.diagnostics,
     ...glyphDiagnostics(resolved.video),
+    ...unshown,
     ...notes,
   ];
   if (hasErrors(diagnostics)) {
@@ -320,10 +349,12 @@ export async function checkWithAssets(
   if (sources.transcribe) {
     for (const [index, scene] of scenefile.scenes.entries()) {
       const resolved = first.video?.scenes[index];
-      if (scene.type !== "clip" || !scene.captions || !resolved?.clip?.file) continue;
+      // A narrated clip shows the narrator's words, so there is nothing to listen for.
+      if (scene.type !== "clip" || scene.captions === false || scene.say !== undefined || !resolved?.clip?.file) continue;
       const info = footage.clips.get(scene.src);
+      const language = typeof scene.captions === "string" ? scene.captions : undefined;
       try {
-        transcripts.set(index, info?.audio ? await sources.transcribe(resolved.clip.file, resolved.clip.fromSeconds, resolved.durationFrames / scenefile.fps) : []);
+        transcripts.set(index, info?.audio ? await sources.transcribe(resolved.clip.file, resolved.clip.fromSeconds, resolved.durationFrames / scenefile.fps, language) : []);
       } catch (cause) {
         unheard.push(error("CAPTIONS_FAILED", `scenes[${index}].captions`, cause instanceof Error ? cause.message : String(cause), 'Fix what the message says and try again, or remove "captions" from the clip.'));
         break;
@@ -331,6 +362,8 @@ export async function checkWithAssets(
     }
     loaded.transcripts = transcripts;
     loaded.diagnostics = [...loaded.diagnostics, ...unheard];
+    // One failure is reported once, and nothing slower is started on a scenefile that cannot be finished.
+    if (unheard.length > 0) return check(input, { ...loaded, listeningFailed: true });
   }
   if (sources.speak) {
     for (const [index, scene] of scenefile.scenes.entries()) {

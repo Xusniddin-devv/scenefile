@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -40,6 +40,37 @@ describe("listening to a clip", () => {
     const transcribe = createTranscriber({ home: join(dir, "home-b"), download: false, installed: true, recognize: async () => { asked += 1; return []; } });
     expect(await transcribe(join(dir, "mute.mp4"), 0, 2)).toEqual([]);
     expect(asked).toBe(0);
+  });
+
+  it("tells a file that is not there, or is not sound at all, from one in which nobody speaks", async () => {
+    const transcribe = createTranscriber({ home: join(dir, "home-d"), download: false, installed: true, recognize: async () => [] });
+    await expect(transcribe(join(dir, "missing.mp4"), 0, 2)).rejects.toThrow(/no file/i);
+    await expect(transcribe(dir, 0, 2)).rejects.toThrow(/not a file/i);
+    writeFileSync(join(dir, "notes.txt"), "just words");
+    await expect(transcribe(join(dir, "notes.txt"), 0, 2)).rejects.toThrow(/not a video or sound file/i);
+    expect(await transcribe(join(dir, "tone.mp4"), 0, 2)).toEqual([]);
+  });
+
+  it("drops what the model says of sounds that are not words, and refuses a language it does not know", async () => {
+    const transcribe = createTranscriber({
+      home: join(dir, "home-e"),
+      download: false,
+      installed: true,
+      recognize: async () => [{ start: 0, end: 1, text: "(sad music)" }, { start: 1, end: 2, text: "*Dogs*" }, { start: 2, end: 3, text: "[BLANK_AUDIO]" }, { start: 3, end: 4, text: "Real words (mostly)." }],
+    });
+    expect(await transcribe(join(dir, "tone.mp4"), 0, 5)).toEqual([{ start: 3, end: 4, text: "Real words (mostly)." }]);
+    await expect(transcribe(join(dir, "tone.mp4"), 0, 5, "zz")).rejects.toThrow(/not a language/);
+  });
+
+  it("keeps what it heard, and the sound it is working on, where only this user can read them", async () => {
+    const home = join(dir, "home-f");
+    const transcribe = createTranscriber({ home, download: false, installed: true, recognize: async () => [{ start: 0, end: 1, text: "Private words." }] });
+    await transcribe(join(dir, "tone.mp4"), 0, 2);
+    expect(statSync(join(home, "heard")).mode & 0o077).toBe(0);
+    const note = readdirSync(join(home, "heard"))[0] ?? "";
+    expect(statSync(join(home, "heard", note)).mode & 0o077).toBe(0);
+    // Nothing is left of the sound that was listened to.
+    expect(readdirSync(join(home, "tmp"))).toEqual([]);
   });
 
   it("says how to install the listening model when it may not download it", async () => {

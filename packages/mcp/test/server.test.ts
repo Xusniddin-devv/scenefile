@@ -489,6 +489,8 @@ describe("listening to a file through the server", () => {
     expect(isError).toBe(false);
     expect(text).toBe("0.50s - 3.20s  Here are two recordings.");
     expect((await call("transcribe", { path: "../talk.mp4" })).isError).toBe(true);
+    // A check waiting its turn is not held up by listening, which has a queue of its own.
+    expect((await call("guide")).text).toContain("transcribe");
     expect((await call("transcribe", { path: "missing.mp4" })).isError).toBe(true);
     expect(asked).toHaveLength(1);
     await close();

@@ -136,8 +136,10 @@ What the server can touch:
 
 - It reads and writes only inside `--root` (the folder it was started in, if not given).
   Paths that leave it, or links that lead out of it, are refused.
-- Inside the root it can read any scenefile, image or music file it is pointed at, and a
-  failed check may quote a few characters of a file that was not a scenefile.
+- Inside the root it can read any scenefile, image, music, video or sound file it is
+  pointed at, and a failed check may quote a few characters of a file that was not a
+  scenefile. With `transcribe`, the words spoken in a video or sound file (up to 30
+  minutes per call) are returned to the model.
 - It does not replace an existing file unless the caller passes `overwrite: true`.
 - It does not download images unless started with `--allow-remote-images`.
 - It offers no `capture` tool unless started with `--allow-capture`. With it, the model
@@ -190,7 +192,9 @@ the Piper voices are 67 MB each, several times faster, and sound plainly synthet
 not scenefile's own code: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
 (installed with scenefile as an optional dependency; Apache-2.0, with espeak-ng,
 GPL-3.0, built in), the Kokoro model and [Piper](https://github.com/rhasspy/piper)
-voices (downloaded on first use), each with the history in the table. The bundled fonts
+voices (downloaded on first use), each with the history in the table, and for listening,
+OpenAI's Whisper base model and the Silero voice-activity detector (both MIT, downloaded
+on first use as converted by the sherpa-onnx project). The bundled fonts
 (Onest, Cascadia Code, Unbounded, Geologica) are OFL-1.1. For commercial work, read the
 model card of the voice you use; `en-kristin` is the one voice here trained only on
 public-domain recordings.
@@ -231,17 +235,32 @@ and they are joined; put other scenes around them for titles and endings.
 - A clip keeps its own sound unless you set `"volume": 0`; music and narration mix with
   it, and narrated lines get captions like any other scene.
 - `"captions": true` on a clip captions what is said in it. The words are heard from the
-  clip's sound by a speech-recognition model on your machine (Whisper base, MIT licence,
-  a 208 MB download on first use) and shown as they are spoken. `scenefile transcribe
-  clip.mp4` prints the same thing with times, so you, or an agent that cannot hear, can
-  see what a clip says before cutting it.
+  clip's sound by a speech-recognition model on your machine (Whisper base, a 208 MB
+  download on first use) and shown as they are spoken. `scenefile transcribe clip.mp4`
+  prints the same thing with times, so you, or an agent that cannot hear, can see what a
+  clip says before cutting it. The language is guessed; if it is guessed wrong, give it:
+  `"captions": "ru"`, or `--language ru`.
 - Your files are only read. The result is a new file.
 
 What it is not: an editor with a timeline. Clips are joined with cuts; there are no
 transitions through footage, no speed changes and no colour work. Automatic captions
-are what a small model heard: clear speech in a common language comes out well, while
-names, noise and quiet voices are sometimes misheard, and there is no way yet to correct
-a word (write the line as a `caption` or narrate it instead). HDR footage (what recent phones record by default) is not
+are what a small model heard, and it is wrong more often than a person would be:
+
+- Ordinary clear English came out about 1 word in 100 wrong in our tests. Sentences full
+  of names and numbers came out about 1 in 8 wrong, and unfamiliar names and product
+  names were wrong nearly every time ("pgsnap" became "PG Snap"). Russian was between 1
+  in 8 and 1 in 3 wrong. These are small tests on synthetic voices, not a benchmark.
+- Singing and sounds that are not speech can be heard as words that were never said.
+- Only speech written in Latin or Cyrillic letters can be captioned; a clip in Korean,
+  Arabic or Chinese gets no captions and a warning.
+- Unbroken speech comes back in stretches of up to about 25 seconds, so a cut inside one
+  has to be worked out from the words.
+- There is no way yet to correct a word. `check` lists what was heard under each clip;
+  if a line is wrong, write it as a `caption` or narrate it instead.
+- At most two hours of sound can be listened to at once.
+
+What was heard is kept in `~/.cache/scenefile/heard`, readable only by you, so that the
+same clip is not listened to twice. HDR footage (what recent phones record by default) is not
 converted and looks flat, and interlaced footage is not deinterlaced; `check` warns about
 HDR. Clips are MP4, MOV, MKV or WebM files of at most 8192 pixels on a side. Clips must be in the scenefile's folder, like images. Rendering
 re-encodes the whole video once more when it contains clips, so it takes longer.

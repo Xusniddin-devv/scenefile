@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Heard, Transcribe } from "@scenefile/engine";
 import { runFfmpeg } from "./encode";
-import { hasSound } from "./probe";
+import { hasSound, probeClip } from "./probe";
 import { type InstallOptions, type VoiceInfo, hearInHelper, installVoice, voiceHome } from "./voice";
 
 /**
@@ -28,8 +27,34 @@ export const HEARING_MODEL: VoiceInfo = {
 };
 const DETECTOR = { file: "silero_vad.onnx", url: `${ASR}/silero_vad.onnx`, sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6" };
 
-/** Kinds of file that may be listened to: the clip kinds, and plain sound files. */
+/** Kinds of file that may be listened to: the clip kinds, and plain sound files. All hold their own sound; none names other files. */
 const HEARABLE = "mov,mp4,m4a,3gp,3g2,mj2,matroska,webm,wav,mp3,flac,ogg,aac";
+/** The longest part listened to in one go. It is held in memory whole. */
+const MAX_HEAR_SECONDS = 2 * 60 * 60;
+/** The languages the model knows, by their two-letter codes. */
+const LANGUAGES = new Set(
+  "en zh de es ru ko fr ja pt tr pl ca nl ar sv it id hi fi vi he uk el ms cs ro da hu ta no th ur hr bg lt la mi ml cy sk te fa lv bn sr az sl kn et mk br eu is hy ne mn bs kk sq sw gl mr pa si km sn yo so af oc ka be tg sd gu am yi lo uz fo ht ps tk nn mt sa lb my bo tl mg as tt ln ha ba jw su".split(" "),
+);
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (cause) {
+    return (cause as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/** A private folder for sound being worked on, cleared of what a killed run left behind. */
+async function workFolder(home: string): Promise<string> {
+  const dir = join(home, "tmp");
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  for (const name of await readdir(dir).catch(() => [] as string[])) {
+    const pid = Number(/^hear-(\d+)-/.exec(name)?.[1]);
+    if (Number.isInteger(pid) && pid !== process.pid && !alive(pid)) await rm(join(dir, name), { force: true });
+  }
+  return dir;
+}
 
 function places(home: string): { dir: string; model: string; detector: string } {
   const dir = join(home, "hearing");
@@ -45,7 +70,12 @@ export function hearingInstalled(home: string = voiceHome()): boolean {
 /** Downloads the listening model (about 200 MB) and its detector. Does nothing if they are there. */
 export async function installHearing(home: string = voiceHome(), options: Omit<InstallOptions, "voicesDir" | "info"> = {}): Promise<void> {
   const at = places(home);
-  await installVoice("the listening model", { ...options, voicesDir: at.dir, info: HEARING_MODEL });
+  await installVoice("whisper-base", { ...options, voicesDir: at.dir, info: HEARING_MODEL, what: "the listening model" });
+  // The archive also holds larger copies of the model that are not used, and sample recordings.
+  // Removed on every call, so an install made before this was done is tidied too.
+  for (const unused of ["base-encoder.onnx", "base-decoder.onnx", "test_wavs"]) {
+    await rm(join(at.model, unused), { recursive: true, force: true });
+  }
   if (existsSync(at.detector)) return;
   const response = await (options.fetch ?? fetch)(DETECTOR.url, { redirect: "follow", signal: AbortSignal.timeout(120_000) });
   if (!response.ok) throw new Error(`The speech detector could not be downloaded (${response.status}).`);
@@ -84,11 +114,23 @@ export function createTranscriber(options: TranscriberOptions): Transcribe {
   const home = options.home ?? voiceHome();
   const modelHome = options.modelHome ?? home;
   const kept = join(home, "heard");
-  return async (file, fromSeconds, seconds): Promise<Heard[]> => {
-    if (!(await hasSound(file))) return [];
-    const info = await stat(file);
+  return async (file, fromSeconds, seconds, language = options.language): Promise<Heard[]> => {
+    if (language !== undefined && language !== "" && !LANGUAGES.has(language)) {
+      throw new Error(`"${language}" is not a language the listening model knows. Give a two-letter code such as en, ru, de or es, or leave it out.`);
+    }
+    // Is there a file, is it sound at all, and is anyone on it: three different answers.
+    const info = await stat(file).catch(() => null);
+    if (!info) throw new Error(`There is no file "${file}".`);
+    if (!info.isFile()) throw new Error(`"${file}" is not a file.`);
+    if (seconds > MAX_HEAR_SECONDS) {
+      throw new Error(`This is ${Math.round(seconds / 60)} minutes of sound; at most ${MAX_HEAR_SECONDS / 60} can be listened to at once. Cut the file into parts first.`);
+    }
+    if (!(await hasSound(file, undefined, HEARABLE))) {
+      if (await probeClip(file).catch(() => null)) return [];
+      throw new Error(`"${file}" is not a video or sound file that can be read.`);
+    }
     const id = createHash("sha256")
-      .update(JSON.stringify(["heard-3", file, info.size, info.mtimeMs, fromSeconds, seconds, options.language ?? ""]))
+      .update(JSON.stringify(["heard-4", file, info.size, info.mtimeMs, fromSeconds, seconds, language ?? ""]))
       .digest("hex")
       .slice(0, 32);
     const note = join(kept, `${id}.json`);
@@ -103,27 +145,36 @@ export function createTranscriber(options: TranscriberOptions): Transcribe {
       await installHearing(modelHome, options.install);
     }
     // The part asked for, as the model wants it: one channel at 16 kHz.
-    const sound = join(tmpdir(), `scenefile-hear-${process.pid}-${id}.f32`);
+    const sound = join(await workFolder(home), `hear-${process.pid}-${id}.f32`);
     try {
-      await runFfmpeg([
-        "-protocol_whitelist", "file", "-format_whitelist", HEARABLE,
-        "-ss", fromSeconds.toFixed(3), "-t", seconds.toFixed(3), "-i", file,
-        "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", sound,
-      ]);
+      await runFfmpeg(
+        [
+          "-protocol_whitelist", "file", "-format_whitelist", HEARABLE,
+          "-ss", fromSeconds.toFixed(3), "-t", seconds.toFixed(3), "-i", file,
+          "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", sound,
+        ],
+        undefined,
+        { timeoutMs: Math.max(60, seconds) * 1000 },
+      ).catch(() => {
+        throw new Error(`"${file}" is not a kind of file that can be listened to. Use an MP4, MOV, MKV, WebM, WAV, MP3, FLAC or OGG file.`);
+      });
       let heard: Heard[];
       if (options.recognize) {
         const raw = await readFile(sound);
         heard = await options.recognize(new Float32Array(raw.buffer, raw.byteOffset, Math.floor(raw.byteLength / 4)));
       } else {
         const at = places(modelHome);
-        heard = await hearInHelper(sound, at.model, at.detector, options.language ?? "");
+        heard = await hearInHelper(sound, at.model, at.detector, language ?? "");
       }
-      // The model sometimes returns a stretch with nothing in it; those are dropped.
       const said = heard
         .map((part) => ({ start: Math.max(0, part.start), end: Math.min(part.end, seconds), text: part.text.replace(/\s+/g, " ").trim() }))
-        .filter((part) => part.text !== "" && part.end > part.start);
-      await mkdir(kept, { recursive: true });
-      await writeFile(note, JSON.stringify(said));
+        // The model sometimes returns a stretch with nothing in it, or a remark about a sound that is
+        // not words ("(sad music)", "*Dogs*", "[BLANK_AUDIO]"). Neither is something that was said.
+        .filter((part) => part.text !== "" && part.end > part.start && !/^[\[(*][^\])*]*[\])*]$/.test(part.text));
+      // What people said is theirs: kept where only this user can read it.
+      await mkdir(kept, { recursive: true, mode: 0o700 });
+      await chmod(kept, 0o700);
+      await writeFile(note, JSON.stringify(said), { mode: 0o600 });
       return said;
     } finally {
       await rm(sound, { force: true });

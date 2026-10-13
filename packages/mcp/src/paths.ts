@@ -42,7 +42,7 @@ export async function existingInside(root: string, given: string, maxBytes: numb
     const [realRoot, real] = await Promise.all([realpath(root), realpath(candidate)]);
     if (!isInside(realRoot, real)) return outside(given);
     const info = await stat(real);
-    if (!info.isFile()) return { ok: false, message: `"${given}" is a folder, not a file. Give the path of a scenefile.` };
+    if (!info.isFile()) return { ok: false, message: `"${given}" is a folder, not a file. Give the path of a file.` };
     if (info.size > maxBytes) return { ok: false, message: `"${given}" is too large to be read here.` };
     return { ok: true, path: real };
   } catch {

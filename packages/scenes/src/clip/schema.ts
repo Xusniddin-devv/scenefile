@@ -16,7 +16,9 @@ export const clipSchema = z
     volume: z.number().min(0).max(1).default(1),
     caption: z.string().min(1).max(80).optional(),
     /** Show what is said in the clip as captions, heard from its sound. */
-    captions: z.boolean().default(false),
+    captions: z
+      .union([z.boolean(), z.string().regex(/^[a-z]{2}$/)], { error: 'Must be true, false, or the two-letter code of the language spoken, such as "en" or "ru".' })
+      .default(false),
     duration: durationSchema.default("auto"),
     /** How this scene arrives from the one before it. */
     transition: transitionSchema.default("auto"),

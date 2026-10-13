@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { normalize } from "@scenefile/schema";
 import { type ClipInfo, check, checkWithAssets } from "../src/index";
 
 const info = (seconds = 12.4, width = 1920, height = 1080, audio = true): ClipInfo => ({ file: "/abs/a.mp4", width, height, seconds, audio });
@@ -219,6 +220,72 @@ describe("captions from what is said in a clip", () => {
     const bad = await checkWithAssets(withCaptions(), { baseDir: dir, probeClip, transcribe: async () => Promise.reject(new Error("The listening model is not installed. Install it once with: scenefile transcribe --install")) });
     expect(bad.diagnostics).toEqual([expect.objectContaining({ code: "CAPTIONS_FAILED", path: "scenes[1].captions" })]);
     expect(bad.diagnostics[0]?.message).toContain("scenefile transcribe --install");
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("captions that cannot or should not be shown", () => {
+  const said = (text: string) => new Map([[1, [{ start: 0.5, end: 3, text }]]]);
+  const run = (clip: Record<string, unknown>, text = "Hello there.") =>
+    check(video({ from: 2, to: 9, captions: true, ...clip }), { ...loaded({ "a.mp4": info() }), transcripts: said(text) });
+
+  it("leaves out captions in a script the fonts cannot draw, and still makes the video", () => {
+    const result = run({}, "전자 전자 전자");
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual([expect.objectContaining({ code: "CAPTIONS_UNDRAWABLE", severity: "warning", path: "scenes[1].captions" })]);
+    expect(result.composition?.html).not.toContain("data-sf-cue");
+  });
+
+  it("shows the narrator's words, not the clip's, when a clip has both", () => {
+    const result = run({ say: "A short line.", volume: 0 });
+    expect(result.diagnostics).toEqual([expect.objectContaining({ code: "FIELD_IGNORED", severity: "warning", path: "scenes[1].captions" })]);
+    expect(result.composition?.html).not.toContain("Hello there.");
+  });
+
+  it("takes the language spoken, for when the model would guess it wrong", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "scenefile-lang-"));
+    writeFileSync(join(dir, "a.mp4"), "x");
+    const asked: (string | undefined)[] = [];
+    const sources = {
+      baseDir: dir,
+      probeClip: async (file: string) => ({ file, width: 640, height: 360, seconds: 12, audio: true }),
+      transcribe: async (_file: string, _from: number, _seconds: number, language?: string) => {
+        asked.push(language);
+        return [{ start: 0.5, end: 2, text: "Привет." }];
+      },
+    };
+    expect((await checkWithAssets(video({ captions: "ru" }), sources)).ok).toBe(true);
+    expect((await checkWithAssets(video({ captions: true }), sources)).ok).toBe(true);
+    expect(asked).toEqual(["ru", undefined]);
+    expect(normalize(video({ captions: "russian" })).diagnostics[0]).toMatchObject({ severity: "error", path: "scenes[1].captions" });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("reports one failure to listen once, and does not go on to make narration", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "scenefile-fail-"));
+    writeFileSync(join(dir, "a.mp4"), "x");
+    let spoken = 0;
+    const result = await checkWithAssets(
+      {
+        version: 1,
+        scenes: [
+          { type: "clip", src: "a.mp4", to: 4, captions: true },
+          { type: "clip", src: "a.mp4", to: 4, captions: true },
+          { type: "outro", heading: "End", say: "The end." },
+        ],
+      },
+      {
+        baseDir: dir,
+        probeClip: async (file: string) => ({ file, width: 640, height: 360, seconds: 12, audio: true }),
+        transcribe: async () => Promise.reject(new Error("The listening model is not installed.")),
+        speak: async () => {
+          spoken += 1;
+          return { file: "/x.wav", seconds: 1 };
+        },
+      },
+    );
+    expect(result.diagnostics.map((d) => [d.code, d.path])).toEqual([["CAPTIONS_FAILED", "scenes[0].captions"]]);
+    expect(spoken).toBe(0);
     rmSync(dir, { recursive: true, force: true });
   });
 });

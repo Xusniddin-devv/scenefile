@@ -129,7 +129,7 @@ export function resolve(
         ...(spoken ? { speech: { startFrame: cursor + leadFrames, ...spoken } } : {}),
         clip: { ...(info ? { file: info.file, totalSeconds: info.seconds } : {}), fromSeconds: from, audio: info?.audio ?? false },
         // Only what falls inside the part shown, and no later than the scene's end.
-        ...(props.captions && transcripts.has(index)
+        ...(props.captions !== false && transcripts.has(index)
           ? {
               heard: (transcripts.get(index) ?? [])
                 .filter((part) => part.start < durationFrames / fps && part.end > 0)
