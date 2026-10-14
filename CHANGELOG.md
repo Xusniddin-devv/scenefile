@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (14 October 2026)
 
 - `scenefile record <url> --steps steps.json -o walk.mp4` does a list of steps to a
   page (type, click, hover, press, scroll, wait, go to a page) and saves it as a video

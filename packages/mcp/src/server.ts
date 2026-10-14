@@ -108,7 +108,7 @@ const SOURCE = {
  */
 export function createServer(options: ServerOptions): McpServer {
   const root = resolveRoot(options.root);
-  const server = new McpServer({ name: "scenefile", version: "0.3.1" });
+  const server = new McpServer({ name: "scenefile", version: "0.4.0" });
   const jobs = new Map<string, Job>();
   let nextJob = 1;
   /** Renders run one after another; each waits on this. */
