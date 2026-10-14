@@ -144,8 +144,10 @@ What the server can touch:
 - It does not download images unless started with `--allow-remote-images`.
 - It offers no `capture` or `record` tool unless started with `--allow-capture`. With it, the model
   can open any http address this machine can reach, including `localhost` and private
-  network addresses (link-local ones are refused), the page's code runs, and the
-  picture is saved inside the root where the model can use it. The address itself can
+  network addresses (link-local ones are refused, including through links and
+  redirects), the page's code runs, and the picture is saved inside the root where the
+  model can use it. With `record`, the model can also click, type and submit forms on
+  those pages: an admin page on your network that needs no sign-in can be operated. The address itself can
   also carry out anything the model knows. Turn it on only for a model you trust with
   that.
 - It renders one video at a time, keeps at most five waiting, and stops at once when
@@ -333,8 +335,15 @@ a path on the same site). Selectors are CSS, or `text=` for the words on the pag
 `--device phone` records at a phone's size (1080x2340, taps instead of a pointer),
 `--dark` asks for the dark look, `--zoom` sets how far the view moves in (1 to 2.5,
 1.8 by default). A step that cannot be done is named, with the reason, and no video is
-saved. The video is drawn from the page itself, not filmed from the screen, so it is
-sharp at any zoom; pages that animate are seen at about their own speed.
+saved, the same as when the target is hidden, covered by something else (a cookie
+banner, say), or the click opens a new tab, an error page or a page that answers with an
+error. The video is drawn from the page itself, not filmed from the screen, so it is
+sharp at any zoom. While a step waits, and just after each click, the page is shown at
+about its own speed; the pointer's moves and typing are paced for watching, not real time.
+
+What it does not do: it does not reach inside frames (`<iframe>`) or follow new tabs, and
+with `--device phone` a page made only for desktops is shown at its own size and scrolled
+sideways to what is used, not shrunk to fit the screen as a phone's browser would.
 
 ## A video from a GitHub repository
 

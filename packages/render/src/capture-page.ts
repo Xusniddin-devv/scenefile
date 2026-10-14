@@ -15,11 +15,11 @@ export type CaptureDevice = keyof typeof CAPTURE_DEVICES;
 
 /** The tallest picture saved, in its own pixels: a whole long page is cut off here. */
 const MAX_PICTURE_HEIGHT = 8000;
-const PHONE_AGENT =
+export const PHONE_AGENT =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
 /** Addresses that reach only the local link, which is where cloud machines keep their credentials. */
-const LINK_LOCAL = new BlockList();
+export const LINK_LOCAL = new BlockList();
 LINK_LOCAL.addSubnet("169.254.0.0", 16, "ipv4");
 LINK_LOCAL.addSubnet("fe80::", 10, "ipv6");
 
