@@ -207,7 +207,7 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
       serviceWorkers: "block",
     });
     const page = await context.newPage();
-    const cdp = await context.newCDPSession(page);
+    let cdp = await context.newCDPSession(page);
 
     let frames = 0;
     let camera: Camera = { x: W / 2, y: H / 2, zoom: 1 };
@@ -223,9 +223,25 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
       await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
     };
 
+    /**
+     * Runs code in the page. A click or a script can send the page elsewhere at any moment,
+     * which ends the code it was running; then the new page is waited for and asked again.
+     */
+    const inPage = async <R, A>(code: (arg: A) => R, arg: A): Promise<R> => {
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          return await page.evaluate(code as (arg: unknown) => R, arg as unknown);
+        } catch (cause) {
+          const moved = /Execution context was destroyed|navigat/i.test(cause instanceof Error ? cause.message : "");
+          if (!moved || attempt >= 4) throw cause;
+          await page.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => undefined);
+        }
+      }
+    };
+
     /** Draws the pointer and a click's ring on the page, then saves one frame of the view. */
     const shoot = async (ring = 0, times = 1): Promise<void> => {
-      const scroll = await page.evaluate(
+      const scroll = await inPage(
         ({ x, y, ring, phone }) => {
           const id = "__scenefile_pointer";
           let mark = document.getElementById(id);
@@ -256,11 +272,27 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
       const height = H / zoom;
       const left = Math.min(Math.max(camera.x - width / 2, 0), W - width);
       const top = Math.min(Math.max(camera.y - height / 2, 0), H - height);
-      const shot = (await cdp.send("Page.captureScreenshot", {
-        format: "png",
-        clip: { x: left + (scroll[0] ?? 0), y: top + (scroll[1] ?? 0), width, height, scale: zoom * device.scale },
-      })) as { data: string };
-      const picture = Buffer.from(shot.data, "base64");
+      const clip = { x: left + (scroll[0] ?? 0), y: top + (scroll[1] ?? 0), width, height, scale: zoom * device.scale };
+      let picture: Buffer | undefined;
+      for (let attempt = 1; picture === undefined; attempt += 1) {
+        // A picture asked for just as the page is replaced by another is never answered.
+        // Then the new page is waited for, and asked for again on a fresh connection.
+        let stalled: NodeJS.Timeout | undefined;
+        const answer = await Promise.race([
+          cdp.send("Page.captureScreenshot", { format: "png", clip }).then((shot) => (shot as { data: string }).data),
+          new Promise<null>((resolve) => {
+            stalled = setTimeout(() => resolve(null), 5000);
+          }),
+        ]).catch(() => null);
+        clearTimeout(stalled);
+        if (answer !== null) picture = Buffer.from(answer, "base64");
+        else {
+          if (attempt >= 3) throw new Error("the browser stopped drawing the page.");
+          await cdp.detach().catch(() => undefined);
+          await page.waitForLoadState("load", { timeout: 10000 }).catch(() => undefined);
+          cdp = await context.newCDPSession(page);
+        }
+      }
       for (let i = 0; i < times; i += 1) {
         await encoder.write(picture);
         frames += 1;
@@ -295,13 +327,13 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
 
     /** Animates the page's scroll to a position, frame by frame. */
     const scrollTo = async (target: number): Promise<void> => {
-      const from = await page.evaluate(() => window.scrollY);
-      const furthest = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+      const from = await inPage(() => window.scrollY, undefined);
+      const furthest = await inPage(() => document.documentElement.scrollHeight - window.innerHeight, undefined);
       const to = Math.max(0, Math.min(target, furthest));
       const count = Math.round(Math.min(40, Math.max(12, Math.abs(to - from) / 40)));
       if (Math.abs(to - from) < 2) return;
       for (let i = 1; i <= count; i += 1) {
-        await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), between(from, to, ease(i / count)));
+        await inPage((y) => window.scrollTo({ top: y, behavior: "instant" }), between(from, to, ease(i / count)));
         await shoot();
       }
     };
@@ -317,7 +349,7 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
       let box = await target.boundingBox();
       if (box && (box.y < 0 || box.y + box.height > H)) {
         await outward();
-        const scrolled = await page.evaluate(() => window.scrollY);
+        const scrolled = await inPage(() => window.scrollY, undefined);
         await scrollTo(scrolled + box.y - H * 0.35);
         box = await target.boundingBox();
       }
@@ -396,7 +428,7 @@ export async function recordPage(options: RecordOptions): Promise<RecordReport> 
             await outward();
             marks.push({ step: index, action: step.action, frame: frames });
             if ("by" in step) {
-              await scrollTo((await page.evaluate(() => window.scrollY)) + step.by);
+              await scrollTo((await inPage(() => window.scrollY, undefined)) + step.by);
             } else {
               const target = page.locator(step.to).first();
               try {

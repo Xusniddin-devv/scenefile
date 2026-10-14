@@ -15,6 +15,11 @@ beforeAll(async () => {
     response.setHeader("content-type", "text/html");
     const head = '<meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;font:20px sans-serif;background:#fff}</style>';
     if (request.url === "/wide") return response.end(`${head}<div style="padding:200px 360px"><input id="wide" style="width:560px;height:60px;background:#06f;border:0;color:#fff;font-size:20px"></div>`);
+    if (request.url === "/links") return response.end(`${head}<a href="/slow" style="display:block;margin:80px">Go on</a>`);
+    if (request.url === "/slow") {
+      // A page that keeps the browser waiting, then sends it on by script while frames are being taken.
+      return void setTimeout(() => response.end(`${head}<a href="#" style="display:block;margin:80px" onclick="setTimeout(()=>location.href='/next',30);return false">Slowly on</a>`), 300);
+    }
     if (request.url === "/next") return response.end(`${head}<h1 style="margin:40px">The second page</h1>`);
     response.end(`${head}<div style="padding:60px">
       <input id="email" style="font-size:20px;width:300px">
@@ -94,6 +99,13 @@ describe("recording a walkthrough of a page", () => {
     expect(probed.width).toBe(1080);
     expect(probed.height).toBeGreaterThan(2000);
     expect(probed.frames).toBe(recorded.frames);
+  });
+
+  it("follows a link that is clicked to the page it opens", async () => {
+    const output = join(dir, "link.mp4");
+    const recorded = await recordPage({ url: `${base}/links`, output, steps: parseSteps([{ click: "text=Go on" }, { click: "text=Slowly on" }]) });
+    expect(recorded.url).toBe(`${base}/next`);
+    expect((await probeVideo(output)).frames).toBe(recorded.frames);
   });
 
   it("names the step that could not be done, and leaves no file", async () => {
