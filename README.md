@@ -130,7 +130,7 @@ prints a JSON Schema for tools that can enforce one on a model's output.
 The server offers six tools: `guide` (how to write a scenefile, in about 2,600 tokens),
 `scene_docs`, `check`, `render` (returns a job id at once), `job` (progress, then the
 finished file; it can also cancel) and `transcribe` (what is said in a video or sound
-file, with times). `capture` is a seventh, offered only when asked for; see below. A scenefile can be passed inline or as a path.
+file, with times). `capture` and `record` are offered only when asked for; see below. A scenefile can be passed inline or as a path.
 
 What the server can touch:
 
@@ -142,7 +142,7 @@ What the server can touch:
   minutes per call) are returned to the model.
 - It does not replace an existing file unless the caller passes `overwrite: true`.
 - It does not download images unless started with `--allow-remote-images`.
-- It offers no `capture` tool unless started with `--allow-capture`. With it, the model
+- It offers no `capture` or `record` tool unless started with `--allow-capture`. With it, the model
   can open any http address this machine can reach, including `localhost` and private
   network addresses (link-local ones are refused), the page's code runs, and the
   picture is saved inside the root where the model can use it. The address itself can
@@ -298,6 +298,43 @@ this way. Take those pictures with the simulator or the phone itself and use the
 same way; a picture taller than a phone's screen shows its top part. Capturing runs
 the page's own code and loads whatever the page asks for, which rendering never does,
 so it is a separate, deliberate step.
+
+## Recordings of your app in use
+
+`scenefile record` opens a page, does a list of steps to it the way a person would, and
+saves what happens as a video for a `clip` scene. A pointer moves to each thing that is
+used, a click shows as a ring, typing appears a letter at a time, and the view moves in
+on what is being used and back out to scroll or change page.
+
+```json
+[
+  { "type": "ada@example.com", "into": "#email" },
+  { "click": "text=Continue" },
+  { "wait": 1 },
+  { "scroll": "#pricing" }
+]
+```
+
+```bash
+scenefile record http://localhost:3000 --steps steps.json -o signup.mp4
+```
+
+It prints the scene to use and the second each step happens at, so narration can be
+written to match:
+
+```text
+Use it in a scene: { "type": "clip", "src": "signup.mp4" }
+In it: step 1 (type) at 1.00s, step 2 (click) at 2.93s, step 3 (wait) at 3.87s, step 4 (scroll) at 5.33s.
+```
+
+Steps: `type` (with `into`), `click`, `hover`, `press` (a key such as `Enter`), `scroll`
+(pixels, or a selector to bring into view), `wait` (seconds) and `goto` (an address or
+a path on the same site). Selectors are CSS, or `text=` for the words on the page.
+`--device phone` records at a phone's size (1080x2340, taps instead of a pointer),
+`--dark` asks for the dark look, `--zoom` sets how far the view moves in (1 to 2.5,
+1.8 by default). A step that cannot be done is named, with the reason, and no video is
+saved. The video is drawn from the page itself, not filmed from the screen, so it is
+sharp at any zoom; pages that animate are seen at about their own speed.
 
 ## A video from a GitHub repository
 

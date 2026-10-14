@@ -475,6 +475,48 @@ describe("capturing a web page through the server", () => {
   });
 });
 
+describe("recording a walkthrough through the server", () => {
+  const recorder = (seen: { output: string; steps: unknown[] }[]) => async (options: { output: string; steps: unknown[] }) => {
+    seen.push(options);
+    return {
+      output: options.output,
+      width: 1920,
+      height: 1080,
+      frames: 240,
+      seconds: 8,
+      marks: [{ step: 0, action: "click" as const, frame: 45 }],
+      title: "Home",
+      url: "http://localhost:3000/",
+    };
+  };
+
+  it("is offered only with capture allowed, and saves only new .mp4 files inside the root", async () => {
+    const seen: { output: string; steps: unknown[] }[] = [];
+    const steps = [{ click: "text=Sign in" }];
+    const off = await connect({ record: recorder(seen) });
+    expect((await off.call("record", { url: "http://localhost:3000", output: "walk.mp4", steps }).catch(() => ({ isError: true }))).isError).toBe(true);
+    await off.close();
+
+    writeFileSync(join(root, "kept.mp4"), "mine");
+    const { call, close } = await connect({ allowCapture: true, record: recorder(seen) });
+    for (const output of ["../walk.mp4", join(outer, "walk.mp4"), "walk.gif", "kept.mp4"]) {
+      expect((await call("record", { url: "http://localhost:3000", output, steps })).isError, output).toBe(true);
+    }
+    const bad = await call("record", { url: "http://localhost:3000", output: "walk.mp4", steps: [{ tap: "#go" }] });
+    expect(bad.isError).toBe(true);
+    expect(bad.text).toContain("Step 1");
+    expect(seen).toEqual([]);
+
+    const { text, isError } = await call("record", { url: "http://localhost:3000", output: "clips/walk.mp4", steps });
+    expect(isError).toBe(false);
+    expect(seen.map((asked) => asked.output)).toEqual([join(root, "clips", "walk.mp4")]);
+    expect(seen[0]?.steps).toEqual([{ action: "click", target: "text=Sign in" }]);
+    expect(text).toContain('{ "type": "clip", "src": "clips/walk.mp4" }');
+    expect(text).toContain("step 1 (click) at 1.50s");
+    await close();
+  });
+});
+
 describe("listening to a file through the server", () => {
   it("says what is spoken, only for files inside the root", async () => {
     writeFileSync(join(root, "talk.mp4"), "x");

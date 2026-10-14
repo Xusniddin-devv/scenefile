@@ -385,6 +385,76 @@ describe("capture", () => {
   });
 });
 
+describe("record", () => {
+  const made = (options: { output: string; device?: string }) => ({
+    output: options.output,
+    width: options.device === "phone" ? 1080 : 1920,
+    height: options.device === "phone" ? 2340 : 1080,
+    frames: 255,
+    seconds: 8.5,
+    marks: [
+      { step: 0, action: "type" as const, frame: 30 },
+      { step: 1, action: "click" as const, frame: 112 },
+    ],
+    title: "Tasks",
+    url: "http://localhost:3000/",
+  });
+
+  it("records the steps in a file and says how to use the video, and when each step happens", async () => {
+    const asked: { url: string; output: string; steps: unknown[]; device?: string; dark?: boolean; zoom?: number }[] = [];
+    const { io, out } = capture();
+    const steps = join(dir, "steps.json");
+    writeFileSync(steps, JSON.stringify({ steps: [{ type: "Buy milk", into: "#task" }, { click: "text=Add" }] }));
+    const record = async (options: (typeof asked)[number]) => {
+      asked.push(options);
+      return made(options);
+    };
+    expect(await run(["record", "http://localhost:3000", "--steps", steps, "-o", "walk.mp4", "--zoom", "1.5"], { ...io, record })).toBe(0);
+    expect(asked[0]?.steps).toEqual([
+      { action: "type", text: "Buy milk", into: "#task" },
+      { action: "click", target: "text=Add" },
+    ]);
+    expect([asked[0]?.url, asked[0]?.output, asked[0]?.device, asked[0]?.zoom]).toEqual(["http://localhost:3000", "walk.mp4", "desktop", 1.5]);
+    expect(out()).toContain("1920x1080, 8.5 seconds");
+    expect(out()).toContain('{ "type": "clip", "src": "walk.mp4" }');
+    expect(out()).toContain("step 2 (click) at 3.73s");
+  });
+
+  it("takes the steps written out in place of a file, and suggests a backdrop for a phone's tall video", async () => {
+    const { io, out } = capture();
+    const record = async (options: { output: string; device?: string; steps: unknown[] }) => {
+      expect(options.steps).toHaveLength(1);
+      return made(options);
+    };
+    expect(await run(["record", "http://localhost:3000", "--steps", '[{"click":"#go"}]', "-o", "phone.mp4", "--device", "phone"], { ...io, record })).toBe(0);
+    expect(out()).toContain('"backdrop": "blur"');
+  });
+
+  it("explains what is missing or wrong before opening anything", async () => {
+    const { io, err } = capture();
+    let opened = 0;
+    const record = async (options: { output: string }) => {
+      opened += 1;
+      return made(options);
+    };
+    expect(await run(["record", "http://localhost:3000", "-o", "a.mp4"], { ...io, record })).toBe(2);
+    expect(err()).toContain("--steps");
+    expect(await run(["record", "http://localhost:3000", "--steps", "[]"], { ...io, record })).toBe(2);
+    expect(await run(["record", "http://localhost:3000", "--steps", '[{"tap":"#go"}]', "-o", "a.mp4"], { ...io, record })).toBe(2);
+    expect(err()).toContain("Step 1");
+    expect(await run(["record", "http://localhost:3000", "--steps", join(dir, "nowhere.json"), "-o", "a.mp4"], { ...io, record })).toBe(2);
+    expect(err()).toContain("nowhere.json");
+    expect(await run(["record", "http://localhost:3000", "--steps", '[{"click":"#go"}]', "-o", "a.mp4", "--zoom", "9"], { ...io, record })).toBe(2);
+    expect(err()).toContain("--zoom");
+    expect(opened).toBe(0);
+    const failing = async () => {
+      throw new Error('Step 2 (click #nothing) could not be done: nothing on the page matched "#nothing" within 10 seconds.');
+    };
+    expect(await run(["record", "http://localhost:3000", "--steps", '[{"click":"#go"}]', "-o", "a.mp4"], { ...io, record: failing })).toBe(2);
+    expect(err()).toContain("Step 2 (click #nothing)");
+  });
+});
+
 describe("github", () => {
   const facts = {
     owner: "acme",

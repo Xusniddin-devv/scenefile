@@ -20,7 +20,7 @@ import {
   type RenderOptions,
   type RenderReport,
   prepareScenefile,
-  renderVideo, createSpeaker, type CaptureOptions, type CaptureReport, capturePage, createTranscriber, probeClip } from "@scenefile/render";
+  renderVideo, createSpeaker, type CaptureOptions, type CaptureReport, capturePage, type RecordOptions, type RecordReport, parseSteps, recordPage, useRecording, createTranscriber, probeClip } from "@scenefile/render";
 import { type Diagnostic, nearest, parseScenefileText } from "@scenefile/schema";
 import { SCENE_TYPES, isSceneType } from "@scenefile/scenes";
 import { z } from "zod";
@@ -44,6 +44,8 @@ export interface ServerOptions {
   allowCapture?: boolean;
   /** Replaces opening a page in the browser. For tests. */
   capture?: (options: CaptureOptions) => Promise<CaptureReport>;
+  /** Replaces driving a page in the browser. For tests. */
+  record?: (options: RecordOptions) => Promise<RecordReport>;
   /** Listens to files. The server never downloads the model for it. For tests. */
   transcribe?: Transcribe;
   /** Makes narration. The server never downloads a voice; one that is missing is reported with how to install it. */
@@ -408,6 +410,64 @@ ${cause.remedy}`));
             `Saved ${args.output}: ${shot.width}x${shot.height} (${shot.device}), page title "${shot.title}", from ${shot.url}. ` +
               `Use it as { "type": "screenshot", "src": "${args.output}"${shot.device === "phone" && tall ? ', "device": "phone"' : ""} }.`,
           );
+        } catch (cause) {
+          return refuse(withoutRoot(cause instanceof Error ? cause.message : String(cause)));
+        }
+      },
+    );
+  }
+
+  if (options.allowCapture === true) {
+    server.registerTool(
+      "record",
+      {
+        description:
+          "Opens a web page, does steps to it the way a person would (type, click, hover, press a key, scroll, wait, go to a page) and saves it as an MP4 in the working folder: a pointer moves to each thing used, clicks show as rings, typing appears letter by letter, and the view moves in on what is used. Use the video as the `src` of a `clip` scene. The reply says at what second each step happens, for timing narration.",
+        inputSchema: {
+          url: z.string().describe("The address to start at, http or https, such as http://localhost:3000."),
+          output: z.string().describe("Where to save the video, inside the working folder, ending in .mp4."),
+          steps: z
+            .array(z.record(z.string(), z.unknown()))
+            .describe(
+              'The steps, in order. Each has one action: { "type": "text", "into": "#email" }, { "click": "text=Sign in" }, { "hover": "nav >> text=Pricing" }, { "press": "Enter" }, { "scroll": 600 } or { "scroll": "#faq" }, { "wait": 1.5 }, { "goto": "/settings" }. Selectors are CSS, or text= for words shown on the page.',
+            ),
+          device: z.enum(["desktop", "phone"]).optional().describe('"desktop" (default, 1920x1080) or "phone" (1080x2340).'),
+          dark: z.boolean().optional().describe("Set true to ask the page for its dark appearance."),
+          zoom: z.number().min(1).max(2.5).optional().describe("How far the view moves in on what is used: 1 never, 1.8 by default, at most 2.5."),
+          overwrite: z.boolean().optional().describe("Set true to replace a file that already exists at `output`."),
+        },
+      },
+      async (args) => {
+        if (extname(args.output).toLowerCase() !== ".mp4") return refuse(`The output must be a .mp4 file; got "${args.output}".`);
+        let steps: RecordOptions["steps"];
+        try {
+          steps = parseSteps(args.steps);
+        } catch (cause) {
+          return refuse(cause instanceof Error ? cause.message : String(cause));
+        }
+        const target = await writableInside(root, args.output);
+        if (!target.ok) return refuse(target.message);
+        try {
+          const made = await oneAtATime(async () => {
+            const exists = await lstat(target.path).then(
+              () => true,
+              () => false,
+            );
+            if (exists && args.overwrite !== true) return null;
+            return (options.record ?? recordPage)({
+              url: args.url,
+              output: target.path,
+              steps,
+              refuseLinkLocal: true,
+              ...(args.device ? { device: args.device } : {}),
+              ...(args.dark ? { dark: true } : {}),
+              ...(args.zoom === undefined ? {} : { zoom: args.zoom }),
+            });
+          });
+          if (made === null) {
+            return refuse(`"${args.output}" already exists and was left alone. Choose another name, or pass \`overwrite: true\` to replace it.`);
+          }
+          return say([`Saved ${args.output}: ${made.width}x${made.height}, ${made.seconds} seconds, ending at "${made.title}" (${made.url}).`, ...useRecording(made, args.output)].join("\n"));
         } catch (cause) {
           return refuse(withoutRoot(cause instanceof Error ? cause.message : String(cause)));
         }
