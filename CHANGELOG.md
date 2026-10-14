@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `scenefile record <url> --steps steps.json -o walk.mp4` does a list of steps to a
+  page (type, click, hover, press, scroll, wait, go to a page) and saves it as a video
+  for a `clip` scene, with a pointer, click rings, letter-by-letter typing and a view
+  that moves in on what is used. It prints when each step happens, for narration. The
+  MCP server offers it as `record` when started with `--allow-capture`. The
+  app-walkthrough recipe uses it.
+
 ## 0.3.1 (13 October 2026)
 
 - Fixed: on Linux with the ffmpeg that Ubuntu ships, a clip after the first scene played

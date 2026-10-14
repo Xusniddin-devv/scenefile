@@ -38,6 +38,12 @@ import {
   type CaptureOptions,
   type CaptureReport,
   capturePage,
+  type RecordOptions,
+  type RecordReport,
+  RECORD_DEVICES,
+  parseSteps,
+  recordPage,
+  useRecording,
   probeClip,
   HEARING_MODEL,
   createTranscriber,
@@ -64,6 +70,8 @@ export interface Io {
   installBrowser?: (withDeps: boolean) => Promise<number>;
   /** Test seam. Defaults to opening the page in the bundled browser. */
   capture?: (options: CaptureOptions) => Promise<CaptureReport>;
+  /** Test seam. Defaults to driving the page in the bundled browser. */
+  record?: (options: RecordOptions) => Promise<RecordReport>;
   /** Test seam. Defaults to asking GitHub. */
   repoFacts?: (ref: RepoRef) => Promise<RepoFacts>;
   /** Test seam. Defaults to the listening model on this machine, downloading it the first time. */
@@ -77,6 +85,9 @@ const USAGE = `Usage:
   scenefile render <file> -o <out.mp4> [--quality draft|standard|high] [--workers <n>] [--json]
   scenefile capture <url> -o <shot.png> [--device desktop|phone] [--full] [--dark] [--wait <seconds>]
                                    save a picture of a web page, to use in a screenshot scene
+  scenefile record <url> --steps <steps.json> -o <walk.mp4> [--device desktop|phone] [--dark] [--zoom <1-2.5>]
+                                   do the steps to a page (type, click, scroll...) and save it as a video,
+                                   with a pointer and the view moving in on what is used, for a clip scene
   scenefile github <owner/name or address> [-o <out.mp4>] [--dir <folder>] [--theme <name>] [--narrate] [--no-screenshot]
                                    a scenefile, and a video, from a GitHub repository's own facts
   scenefile probe <video>...       the size, length and sound of video files, for planning clips
@@ -264,6 +275,42 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       io.out("(`src` is read from the scenefile's own folder; adjust it if the scenefile is elsewhere.)");
       return 0;
     }
+    if (command === "record") {
+      if (!file) throw new UsageError('"record" needs a web address, such as http://localhost:3000.');
+      if (!values.steps) throw new UsageError('"record" needs the steps to do: --steps steps.json, a file holding a list such as [{ "click": "text=Sign in" }].');
+      if (!values.output) throw new UsageError('"record" needs somewhere to save the video: -o walk.mp4');
+      const device = values.device ?? "desktop";
+      if (!(device in RECORD_DEVICES)) throw new UsageError(`Unknown device "${device}". Use one of: ${Object.keys(RECORD_DEVICES).join(", ")}.`);
+      const zoom = values.zoom === undefined ? undefined : Number(values.zoom);
+      if (zoom !== undefined && !(zoom >= 1 && zoom <= 2.5)) throw new UsageError(`--zoom is how far the view moves in, from 1 (not at all) to 2.5; got "${values.zoom}".`);
+      // The steps are a file, or written out in place when they start like JSON.
+      let text = values.steps;
+      if (!/^\s*[[{]/.test(text)) {
+        try {
+          text = await readFile(text, "utf8");
+        } catch {
+          throw new UsageError(`Cannot read the steps file "${values.steps}".`);
+        }
+      }
+      let steps: RecordOptions["steps"];
+      try {
+        steps = parseSteps(JSON.parse(text));
+      } catch (cause) {
+        throw new UsageError(cause instanceof SyntaxError ? `The steps are not valid JSON: ${cause.message}` : cause instanceof Error ? cause.message : String(cause));
+      }
+      let made: RecordReport;
+      try {
+        made = await (io.record ?? recordPage)({ url: file, output: values.output, steps, device: device as keyof typeof RECORD_DEVICES, dark: values.dark, ...(zoom === undefined ? {} : { zoom }) });
+      } catch (cause) {
+        if (cause instanceof EnvironmentError) throw cause;
+        throw new UsageError(cause instanceof Error ? cause.message : String(cause));
+      }
+      io.out(`Recorded ${made.output}: ${made.width}x${made.height}, ${made.seconds} seconds${made.title ? `, "${made.title}"` : ""}.`);
+      const src = relative(process.cwd(), resolvePath(made.output)).split(sep).join("/");
+      for (const line of useRecording(made, src)) io.out(line);
+      io.out("(`src` is read from the scenefile's own folder; adjust it if the scenefile is elsewhere.)");
+      return 0;
+    }
     if (command === "github") {
       if (!file) throw new UsageError('"github" needs a repository, such as github.com/owner/name.');
       let ref: RepoRef;
@@ -414,7 +461,7 @@ export async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       return 0;
     }
     if (command !== "check" && command !== "render") {
-      throw new UsageError("Expected a command: check, render, capture, github, probe, transcribe, guide, scenes, schema, init, setup, doctor, voices or mcp.");
+      throw new UsageError("Expected a command: check, render, capture, record, github, probe, transcribe, guide, scenes, schema, init, setup, doctor, voices or mcp.");
     }
     if (!file) throw new UsageError(`"${command}" needs a scenefile path.`);
 
@@ -497,6 +544,8 @@ function parse(argv: readonly string[]) {
       full: { type: "boolean", default: false },
       dark: { type: "boolean", default: false },
       wait: { type: "string" },
+      steps: { type: "string" },
+      zoom: { type: "string" },
     },
   });
 }
