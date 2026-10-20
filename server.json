@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Xusniddin-devv/scenefile",
+  "description": "Make MP4 videos from a short JSON file: scenes, narration, captions. Local and free.",
+  "repository": {
+    "url": "https://github.com/Xusniddin-devv/scenefile",
+    "source": "github"
+  },
+  "version": "0.4.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "scenefile",
+      "version": "0.4.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        { "type": "positional", "value": "mcp" }
+      ]
+    }
+  ]
+}

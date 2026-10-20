@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 (20 October 2026)
+
+- The README and npm page now start with what scenefile is for: letting a coding agent
+  make videos, with a quick start for Claude Code, any MCP client and the shell.
+- `scenefile` is listed for the official MCP registry (`mcpName` in its package and a
+  `server.json`). No change to how videos are made.
+
 ## 0.4.0 (14 October 2026)
 
 - `scenefile record <url> --steps steps.json -o walk.mp4` does a list of steps to a
