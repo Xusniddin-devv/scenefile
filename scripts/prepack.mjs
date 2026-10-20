@@ -12,5 +12,5 @@ if (name === "scenefile") {
   const readme = readFileSync(resolve(root, "README.md"), "utf8").replace(/\]\((docs|examples)\//g, `](${home}/blob/main/$1/`);
   writeFileSync("README.md", readme.replace(/blob\/main\/(docs\/media\/[^)]+)/g, "raw/main/$1"));
 } else {
-  writeFileSync("README.md", `# ${name}\n\n${description}\n\nA part of [scenefile](${home}), which turns a JSON scenefile into a video. Most people want the \`scenefile\` package; this one is for building on its internals, and its interface may change between minor versions until 1.0.\n`);
+  writeFileSync("README.md", `# ${name}\n\n${description}\n\nA part of [scenefile](${home}), which turns a JSON scenefile into a video. Most people want the [\`scenefile\`](https://www.npmjs.com/package/scenefile) package, which lets a coding agent or any language model make videos; this one is for building on its internals, and its interface may change between minor versions until 1.0.\n`);
 }

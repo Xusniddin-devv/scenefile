@@ -1,7 +1,8 @@
 {
   "name": "scenefile",
-  "version": "0.4.0",
-  "description": "Turn a JSON scenefile into a video. Built for language models.",
+  "version": "0.4.1",
+  "description": "Let any coding agent or LLM make videos: a short JSON file becomes an MP4 with narration and captions. MCP server included. Free and local.",
+  "mcpName": "io.github.Xusniddin-devv/scenefile",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -34,7 +35,17 @@
     "mcp",
     "json",
     "ffmpeg",
-    "scenefile"
+    "scenefile",
+    "mcp-server",
+    "model-context-protocol",
+    "claude-code",
+    "video-generation",
+    "text-to-video",
+    "ai-video",
+    "narration",
+    "captions",
+    "screen-recording",
+    "remotion-alternative"
   ],
   "author": "Xusniddin Qalandarov",
   "repository": {

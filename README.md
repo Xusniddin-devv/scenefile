@@ -3,20 +3,71 @@
 [![CI](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml/badge.svg)](https://github.com/Xusniddin-devv/scenefile/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/scenefile)](https://www.npmjs.com/package/scenefile)
 
-Turn a small JSON file into a video. Built so that any language model, including
-ones that cannot see images, can produce a correct video and fix its own mistakes.
-
-**Status: early development.** Twelve scene types (`title`, `statement`, `quote`,
-`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `clip`, `outro`, `terminal`), ten
-themes, screenshots captured from your own web app, narration in English and Russian made on your own machine, captions and a music
-bed work today. Fonts are bundled, so Latin and
-Cyrillic text is set in the same typefaces and layout on every machine (edges differ
-slightly between operating systems); emoji use the machine's own emoji font.
+**Your coding agent can make videos now.** Claude Code, Codex, opencode, Cursor, or any
+model over MCP writes a short JSON file. scenefile checks it, tells the model exactly how
+to fix each mistake, and renders an MP4 on your machine, with narration and captions. No
+account, no API key, nothing to pay.
 
 ![The opening of a video made from examples/tour.json](docs/media/tour.gif)
 
 Every frame above came from [`examples/tour.json`](examples/tour.json): 53 lines of JSON,
 no drawing, narrated and captioned on the machine that rendered it.
+
+Ask your agent for things like:
+
+- "Make a 30 second video explaining how auth works in this repo."
+- "Record a walkthrough of the app on localhost:3000: sign up, then open the dashboard."
+- "Make a release video for v2.1 from the changelog."
+- "Cut these three screen recordings together, with titles and captions."
+
+## Quick start
+
+**Claude Code** (the skills and the MCP server in one step):
+
+```
+/plugin install scenefile --marketplace Xusniddin-devv/scenefile
+```
+
+**Any MCP client** (Cursor, Claude Desktop, Windsurf, opencode, ...). Run
+`npx scenefile setup` once to download the browser it draws with, then add:
+
+```json
+{ "mcpServers": { "scenefile": { "command": "npx", "args": ["-y", "scenefile", "mcp", "--root", "/path/to/your/project"] } } }
+```
+
+The server reads and writes only inside `--root`; see [Use from an AI agent](#use-from-an-ai-agent)
+for what it can touch.
+
+**From a shell** (you, or an agent with a terminal):
+
+```bash
+npm install -g scenefile && scenefile setup
+scenefile init && scenefile render scenefile.json -o video.mp4
+```
+
+## Why it exists
+
+Code-based video tools such as [Remotion](https://www.remotion.dev) and HeyGen's
+HyperFrames hand the model a blank canvas: React or HTML, keyframes, layout. Strong models
+do well with that. Smaller models and models that cannot see the result do not, because
+nothing tells them that a heading spilled off the frame.
+
+scenefile gives the model a closed vocabulary instead: twelve scene types, each with a
+few fields, with good timing, layout and transitions decided by the engine. Then `check`
+measures the real layout in a browser and reports every problem as text, with the field's
+path and a fix, so a model that cannot see can still get to a correct video. In one small
+informal trial, four inexpensive models (DeepSeek, MiniMax, Qwen, GLM) wrote a passing
+scenefile on the first reply 11 times out of 12 ([details](docs/trials/2026-10-12-four-models)).
+
+Everything runs locally: rendering in a bundled Chromium, narration and speech
+recognition with open models on your CPU. scenefile is MIT licensed.
+
+**Status: early development.** Twelve scene types (`title`, `statement`, `quote`,
+`bullets`, `stat`, `chart`, `code`, `screenshot`, `compare`, `clip`, `outro`, `terminal`), ten
+themes, screenshots and scripted recordings of your own web app, narration in English and
+Russian, captions, your own clips and a music bed work today. Fonts are bundled, so Latin and
+Cyrillic text is set in the same typefaces and layout on every machine (edges differ
+slightly between operating systems); emoji use the machine's own emoji font.
 
 ## Install
 
